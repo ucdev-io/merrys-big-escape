@@ -3,6 +3,7 @@ import { HeistRoom, BAKERY_IDS, lootKind } from '../heistRules.js';
 import { Lookout } from './heist/lookout.js';
 import { baker as bakerPerson } from './heist/people.js';
 import { SausageHeist } from './heist/butcher.js';
+import { BbqParty } from './heist/party.js';
 import { dogBowl, PILE } from './heist/models.js';
 import { heistSfx } from './heist/sounds.js';
 import { treatGeometry, treatMaterial, treatMesh, TREATS } from '../../entities/treats.js';
@@ -50,6 +51,7 @@ export class Heists {
     if (!this.data?.bakery) return;
     this.buildBakery();
     if (this.data.butcher) this.sausages = new SausageHeist(this, this.data.butcher);
+    this.party = new BbqParty(this);
     this.reset();
   }
 
@@ -72,7 +74,7 @@ export class Heists {
     this.lookouts.baker = new Lookout({ hud: this.hud, person, pos: B.baker, faces: { busy: B.busy, look: B.look }, zone: B.zone, work: 'knead' });
     const stall = V(B.zone.x, 0, B.zone.z);
     this.lookouts.baker.site = {
-      door: B.door, lines: BAKER, goods: () => stall,
+      door: B.door, lines: BAKER, whom: 'the baker', goods: () => stall,
       prompts: { busy: '🤫 Her back’s turned… grab a treat! 🐾', warn: '❗ She’s about to look round!', look: '👀 She’s watching! Wait for it…', door: '❓ She’s distracted… quick, grab one! 🐾', woof: '🗣️ Woof at the door to distract the baker!' },
     };
     // Each tray of treats is one instanced mesh (two draw calls for twelve treats); the treat you
@@ -147,12 +149,14 @@ export class Heists {
       case 'restock': return this.onRestock(m);
       case 'links': return this.sausages?.onLinks(m);
       case 'tug': return this.sausages?.onTug(m);
+      case 'party': return this.party.onParty(m);
     }
   }
 
   /** Everything as the room has it right now (we've just arrived, or changed rooms). */
   adopt(m) {
     if (this.carry.held?.loot) { this.carry.remove(this.carry.held); this.lastHeld = this.carry.held; }
+    this.party.onParty({ n: m.party?.n ?? null }); // (first: is there a grill to put things on?)
     for (const [id, n] of Object.entries(m.npcs ?? {})) this.lookouts[id]?.setState(n.s, n.ms, n.by, false);
     const where = new Map((m.loot ?? []).map(([id, s, by, x, z]) => [id, { s, by, x, z }]));
     for (const [id, it] of this.items) { const w = where.get(id); this.place(it, w?.s ?? 'home', w?.by ?? null, w?.x, w?.z); }
@@ -169,7 +173,7 @@ export class Heists {
     else if (m.s === 'look' && near) {
       if (this.missing(m.id) && !L.noticed) { L.noticed = true; this.say(L, `😮 ${this.line(`${m.id}-missing`, lines.missing)}`, 3); }
       else if (Math.random() < 0.35) this.say(L, this.line(`${m.id}-look`, lines.look), 2.4);
-    } else if (m.s === 'door' && this.near(L, 26)) this.say(L, `😠 ${this.line(`${m.id}-door`, lines.door)}`, 3, 'angry');
+    } else if (m.s === 'door' && this.near(L, 26)) { const [face, cls] = L.site.doorMood ?? ['😠', 'angry']; this.say(L, `${face} ${this.line(`${m.id}-door`, lines.door)}`, 3, cls); }
     else if (m.s === 'busy' && was === 'look' && near && Math.random() < 0.3) this.say(L, this.line(`${m.id}-hum`, lines.hum), 2.4);
   }
 
@@ -197,7 +201,7 @@ export class Heists {
       const T = TREATS[it.loot.kind];
       if (m.by === me) this.banked(it);
       else this.othersHeist(m.by, T.emoji, `a ${T.name}`);
-      if (m.helper === me && m.by !== me) this.teamHeist(m.by, 'the baker', `the ${T.name}`);
+      if (m.helper === me && m.by !== me) this.teamHeist(m.by, L?.site.whom ?? 'them', `the ${T.name}`);
     }
     this.place(it, m.s, m.by, m.x, m.z);
   }
@@ -221,6 +225,7 @@ export class Heists {
 
   /** Put a treat where the room says it is: on its tray, in someone's mouth, on the ground, or gone. */
   place(it, s, by = null, x = 0, z = 0) {
+    if (s === 'home' && it.loot.lookout === 'cook' && !this.party?.on) s = 'gone'; // (no party, no grill)
     const L = it.loot, mine = s === 'held' && by === this.me();
     if (this.carry.held === it && !mine) { this.carry.remove(it); this.lastHeld = this.carry.held; } // (taken off us)
     const listed = this.carry.items.includes(it), obj = it.obj;
@@ -260,7 +265,11 @@ export class Heists {
       held.obj.visible = true;
       L.state = 'held'; L.by = this.me();
       this.send({ a: 'grab', id: L.id });
-      if (who && !(who.watching && who.inZone(this.player.pos))) { heistSfx.sneak(); this.hud.float(this.line('sneaky', SNEAKY), this.actions.anchor(), 'sniff'); }
+      if (who && !(who.watching && who.inZone(this.player.pos))) {
+        heistSfx.sneak();
+        this.hud.float(this.line('sneaky', SNEAKY), this.actions.anchor(), 'sniff');
+        if (L.lookout === 'cook') this.party.cheer();
+      }
     }
   }
 
@@ -373,6 +382,7 @@ export class Heists {
       if (canAct && barked && flat(P, L.site.door) < 2.6) this.send({ a: 'distract', npc: id }); // woof at the door!
     }
     this.sausages?.update(dt, P, canAct);
+    this.party.update(dt);
     this.updateFlyers(dt);
     if (!canAct) { this.prompt = null; return; }
     this.watchMouth();
@@ -403,4 +413,7 @@ export class Heists {
     if (!(it?.loot || it?.links) || !this.bowl) return null;
     return { pos: this.bowl.position, label: '🏠 Stash' };
   }
+
+  /** For the compass, when nothing more important's going on: a BBQ party. */
+  partyTarget() { return this.party?.target() ?? null; }
 }

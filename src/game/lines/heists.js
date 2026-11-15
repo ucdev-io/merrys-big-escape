@@ -73,8 +73,54 @@ export const BUTCHER = {
   tug: ['Ha! Tug of war with my sausages!', 'Pull! PULL! Er… I mean, stop that!', 'Don’t you dare snap my bangers!', 'My sausages are stretching!'],
 };
 
+// The BBQ cook mostly watches the grill. "Busy" is when he turns round to chat with the guests.
+export const COOK = {
+  hum: [
+    '…and THEN the deckchair folded up with me in it!', 'Have you tried my special sauce?', 'Ha! No, honestly, it was THIS big!',
+    'Who brought the potato salad? Lovely.', 'Is it me, or is it getting cloudy?', 'Did I tell you about my new barbecue tongs?',
+    'Don’t worry, it’s meant to be that colour.', 'We had a hedgehog in the garden last week!',
+  ],
+  warn: ['Hang on, the sausages!', 'Ooh, better check the grill…', 'Is something burning?', 'Mustn’t forget the burgers…', 'Back in a tick…'],
+  look: [
+    'Who wants a burger?', 'Nearly done! Five more minutes!', 'Sizzle sizzle!', 'Turn, turn, turn…',
+    'These are going to be PERFECT.', 'Ketchup or brown sauce, anyone?', 'Not long now, everyone!',
+  ],
+  missing: [
+    'Has anyone seen a sausage? I had three!', 'Where’s that burger gone?!', 'I’m SURE there were more on here…',
+    'Somebody’s pinched a sausage!', 'Who’s been at the barbie?!',
+  ],
+  caught: [
+    'Oi! That’s for the guests!', 'Get your nose off my bangers!', 'OI! Put that {treat} back!', 'Shoo! Shoo! Not the barbie!',
+    'Ha! Caught you, cheeky chops!', 'That {treat} has someone’s name on it! …Not yours.', 'No dogs at the grill, it’s hot!',
+    'Oi! You’ll burn your whiskers!', 'Nice try, sausage-sniffer!', 'Not today, hungry hound!',
+  ],
+  door: [
+    'Aww, look at the doggy!', 'Who’s a good dog? Are you a good dog?', 'Ooh, hello! Did you smell the sausages?',
+    'Ha! Party crasher!', 'Someone’s come for a burger!', 'Hello, pup! Come to say hi?',
+  ],
+  wise: ['Oh no you don’t. I’m watching the grill!', 'Nice try, but the sausages come first!', 'I know that trick, pup!'],
+  restock: ['More bangers on the barbie!', 'Next batch, everyone!', 'Another round of burgers coming up!', 'Sizzle! Fresh sausages!'],
+  over: ['Right, that’s the lot! Thanks for coming!', 'Party’s over, folks! Mind how you go!', 'Who’s doing the washing up? …Not me!'],
+};
+
+// Party guests chat in pairs (the first says one, the second answers).
+export const GUESTS = {
+  chat: [
+    ['Lovely weather for it!', 'Is that a raincloud?'], ['Have you tried the potato salad?', 'Three times!'],
+    ['Is it going to rain?', 'It’s a British barbecue. Of course it is.'], ['These sausages smell AMAZING.', 'I know! I can hardly wait.'],
+    ['Did you see that dog earlier?', 'Which one? There are LOADS of dogs round here.'], ['Our Kevin’s taken up the bagpipes.', 'Oh dear.'],
+    ['I’ve brought a trifle!', 'Ooh! Is there sherry in it?'], ['Mind the wasps!', 'Wasps? WHERE?!'],
+    ['Nice garden, this.', 'The gnome’s new, apparently.'], ['What’s the cook’s secret?', 'Burning it. He always burns it.'],
+    ['Pass the ketchup?', 'We’ve only got brown sauce.'], ['Who invited the pigeons?', 'Nobody. They just turn up.'],
+  ],
+  // A guest spots a dog getting away with something (and thinks it's hilarious).
+  cheer: ['Ha! Did you SEE that?!', 'That dog’s got a sausage!', 'Cheeky little thing!', 'Run, doggy, run!', 'Ha ha! Go on, pup!', 'Somebody’s having a party of their own!'],
+};
+
 // Toasts when a treat gets home safely.
 export const GETAWAY = {
+  sausage: ['A sizzling sausage, safely home!', 'Hot dog! Er… dog’s hot sausage!', 'Straight off the barbie and into the bowl!', 'Perfectly cooked. Perfectly pinched.'],
+  burger: ['A whole burger! Bun, cheese and all!', 'Burger heist complete!', 'The cook will never notice. Probably.', 'One burger, extra cheeky.'],
   links: ['ALL the sausages! The butcher will be furious.', 'A whole string of bangers, safely home!', 'Sausages for tea! All of them!', 'The great sausage heist!'],
   half: ['Half a string of sausages: still sausages!', 'Snapped, but still delicious.', 'Five sausages, all yours!', 'Shared fair and square. Ish.'],
   croissant: ['Croissant stashed! The baker will never know.', 'One croissant, safely home. Ooh la la!', 'Flaky, buttery, and ALL YOURS.', 'A perfect pastry heist!'],

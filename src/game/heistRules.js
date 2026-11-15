@@ -1,4 +1,4 @@
-// 🥐🌭 Heists: cheeky food raids on the bakery street. Shared by the game and the server (no three.js
+// 🥐🌭🍔 Heists: cheeky food raids on the bakery street (and at BBQ parties). Shared by the game and the server (no three.js
 // here). Whoever runs a HeistRoom decides when the grown-ups look round and who has which treat, so
 // every dog sees the same thing: the server, for a pack; your own game, when you play on your own.
 // Times go out as "for so many ms" (everyone's clock is a bit different).
@@ -11,7 +11,17 @@
 export const LOOKOUTS = {
   baker: { busy: [3.5, 6.5], warn: 1.3, look: [2, 3.2], door: 4, cool: 4 },
   butcher: { busy: [4, 7.5], warn: 1.3, look: [2, 3], door: 4, cool: 4 },
+  // At a BBQ party the cook mostly watches the grill: "busy" is chatting with the guests, back turned.
+  cook: { busy: [2.6, 4.2], warn: 1.1, look: [3, 4.6], door: 3.5, cool: 6, party: true },
 };
+
+/**
+ * Now and then a garden holds a BBQ party (n picks which: see heist/party.js), with sausages
+ * (bq0–bq2) and burgers (bq3–bq5) on the grill. The first one starts a little while after you
+ * arrive; each lasts a few minutes, then there's a break before the next.
+ */
+export const PARTY = { sausage: 3, burger: 3, firstMs: 40000, ms: 180000, gap: [60000, 100000] };
+export const PARTY_IDS = Array.from({ length: PARTY.sausage + PARTY.burger }, (_, i) => `bq${i}`);
 
 /**
  * The butcher's string of sausages: n links, which snap into two halves of `half` in a tug of war.
@@ -25,17 +35,18 @@ export const LINKS = { n: 10, half: 5, snapSecs: 9, tidyMs: 30000, restockMs: 25
 /** The baker's trays: bk0–bk5 are croissants, bk6–bk11 iced buns. */
 export const BAKERY = { croissant: 6, bun: 6 };
 export const BAKERY_IDS = Array.from({ length: BAKERY.croissant + BAKERY.bun }, (_, i) => `bk${i}`);
-const RESTOCK_MS = 20000, TIDY_MS = 45000; // fresh batches; treats left lying about go back
+const RESTOCK_MS = { bk: 20000, bq: 25000 }, TIDY_MS = 45000; // fresh batches; treats left lying about go back
 
-/** What a loot id is ('croissant', 'bun'…), or null if it isn't one. */
+/** What a loot id is ('croissant', 'bun', 'sausage', 'burger'), or null if it isn't one. */
 export function lootKind(id) {
-  const m = /^bk(\d{1,2})$/.exec(String(id));
+  const m = /^(bk|bq)(\d{1,2})$/.exec(String(id));
   if (!m) return null;
-  const n = Number(m[1]);
+  const n = Number(m[2]);
+  if (m[1] === 'bq') return n < PARTY.sausage ? 'sausage' : n < PARTY.sausage + PARTY.burger ? 'burger' : null;
   return n < BAKERY.croissant ? 'croissant' : n < BAKERY.croissant + BAKERY.bun ? 'bun' : null;
 }
 /** Whose eye is on a loot id. */
-export const lookoutFor = (id) => (String(id).startsWith('bk') ? 'baker' : null);
+export const lookoutFor = (id) => ({ bk: 'baker', bq: 'cook' })[String(id).slice(0, 2)] ?? null;
 
 const rand = ([a, b]) => a + Math.random() * (b - a);
 const coord = (v) => (Number.isFinite(v) ? Math.max(-150, Math.min(150, Math.round(v * 100) / 100)) : 0);
@@ -49,8 +60,10 @@ export class HeistRoom {
     this.npcs = {};
     for (const id of Object.keys(LOOKOUTS)) this.npcs[id] = { s: 'busy', until: now + rand(LOOKOUTS[id].busy) * 1000, cool: 0, by: null, doorEnd: 0, wiseAt: 0 };
     this.loot = new Map(); // id → { s: 'home' | 'held' | 'ground' | 'gone', by, x, z, at, helper } (missing = home)
-    this.restockAt = 0;
+    this.restock = { bk: 0, bq: 0 }; // when the next fresh batch comes out
     this.budget = new Map();
+    this.party = null;               // { n, until }: a BBQ party's on
+    this.nextParty = now + PARTY.firstMs;
     this.links = hooked();
     this.noGrab = new Map(); // dog → when they can grab the sausages again (after losing a tug)
   }
@@ -60,7 +73,8 @@ export class HeistRoom {
     const npcs = {};
     for (const [id, n] of Object.entries(this.npcs)) npcs[id] = { s: n.s, ms: Math.max(0, n.until - now), by: n.by };
     const loot = [...this.loot].filter(([, l]) => l.s !== 'home').map(([id, l]) => [id, l.s, l.by, l.x ?? 0, l.z ?? 0]);
-    return { a: 'state', npcs, loot, links: this.linksMsg('state') };
+    const party = this.party && { n: this.party.n, ms: Math.max(0, this.party.until - now) };
+    return { a: 'state', npcs, loot, links: this.linksMsg('state'), party };
   }
 
   /** A message from a dog (never trust it: check everything). */
@@ -90,27 +104,34 @@ export class HeistRoom {
   leave(pid, now) {
     const out = this.linksHeld(pid) >= 0 ? this.linksLetGo(pid, this.linksHeld(pid), now, 'drop') : [];
     this.noGrab.delete(pid);
-    for (const [id, l] of this.loot) if (l.s === 'held' && l.by === pid) { Object.assign(l, { s: 'home', by: null, at: now }); out.push(all({ a: 'loot', id, s: 'home', why: 'left' })); }
+    for (const [id, l] of this.loot) {
+      if (l.s !== 'held' || l.by !== pid) continue;
+      const s = this.homeless(id) ? 'gone' : 'home'; // (no party now: no grill to put it back on)
+      Object.assign(l, { s, by: null, at: now });
+      out.push(all({ a: 'loot', id, s, why: 'left' }));
+    }
     this.budget.delete(pid);
     return out;
   }
 
   /** The grown-ups looking round, fresh batches out of the oven, tidying up. */
   tick(now) {
-    const out = [];
+    const out = this.partyTick(now);
     for (const [id, n] of Object.entries(this.npcs)) {
-      if (now < n.until) continue;
+      if (now < n.until || (LOOKOUTS[id].party && !this.party)) continue;
       const L = LOOKOUTS[id];
       if (n.s === 'busy') this.set(n, 'warn', L.warn, now);
       else if (n.s === 'warn') this.set(n, 'look', rand(L.look), now);
       else this.set(n, 'busy', rand(L.busy), now); // (after a look, or a distraction)
       out.push(all(this.npcMsg(id, now)));
     }
-    if (this.restockAt && now >= this.restockAt) {
-      this.restockAt = 0;
+    for (const g of ['bk', 'bq']) {
+      if (!this.restock[g] || now < this.restock[g]) continue;
+      this.restock[g] = 0;
+      if (g === 'bq' && !this.party) continue;
       const ids = [];
-      for (const [id, l] of this.loot) if (l.s === 'gone') { Object.assign(l, { s: 'home', by: null, at: now }); ids.push(id); }
-      if (ids.length) out.push(all({ a: 'restock', npc: 'baker', ids }));
+      for (const [id, l] of this.loot) if (id.startsWith(g) && l.s === 'gone') { Object.assign(l, { s: 'home', by: null, at: now }); ids.push(id); }
+      if (ids.length) out.push(all({ a: 'restock', npc: lookoutFor(g), ids }));
     }
     for (const [id, l] of this.loot) {
       if (l.s === 'ground' && now - l.at > TIDY_MS) { Object.assign(l, { s: 'home', at: now }); out.push(all({ a: 'loot', id, s: 'home', why: 'tidy' })); }
@@ -128,10 +149,12 @@ export class HeistRoom {
   }
 
   get(id) { let l = this.loot.get(id); if (!l) this.loot.set(id, (l = { s: 'home', by: null, at: 0 })); return l; }
+  /** A BBQ treat with no party on: there's no grill for it to go back to. */
+  homeless(id) { return id.startsWith('bq') && !this.party; }
 
   /** First dog there gets it (anyone else is told "nope", with where it really is). */
   grab(pid, id, now) {
-    if (!lootKind(id)) return [];
+    if (!lootKind(id) || (id.startsWith('bq') && !this.party)) return [];
     const l = this.get(id);
     if (l.s !== 'home' && l.s !== 'ground') return [{ to: pid, msg: { a: 'nope', id, s: l.s, by: l.by, x: l.x ?? 0, z: l.z ?? 0 } }];
     // Snatched while a friend had the grown-up distracted? That's a team heist.
@@ -146,8 +169,9 @@ export class HeistRoom {
     const l = lootKind(id) && this.loot.get(id);
     if (!l || l.s !== from || l.by !== pid) return [];
     const { why, ...state } = to;
+    if (state.s === 'home' && this.homeless(id)) state.s = 'gone';
     const msg = { a: 'loot', id, ...state, by: pid, why };
-    if (to.s === 'gone') { msg.helper = l.helper; this.restockAt ||= now + RESTOCK_MS; }
+    if (to.s === 'gone') { msg.helper = l.helper; const g = id.slice(0, 2); this.restock[g] ||= now + RESTOCK_MS[g]; }
     if (to.s === 'home') msg.npc = lookoutFor(id);
     Object.assign(l, state, { by: null, at: now, helper: to.s === 'ground' ? l.helper : null });
     return [all(msg)];
@@ -156,7 +180,7 @@ export class HeistRoom {
   /** A bark at the door: the grown-up turns to see who it is (unless they've only just been fooled). */
   distract(pid, id, now) {
     const n = this.npcs[id];
-    if (!n || n.s === 'door') return [];
+    if (!n || n.s === 'door' || (LOOKOUTS[id].party && !this.party)) return [];
     if (now < n.cool) {
       if (now < n.wiseAt) return [];
       n.wiseAt = now + 3000;
@@ -167,6 +191,28 @@ export class HeistRoom {
     n.doorEnd = n.until;
     n.cool = n.until + L.cool * 1000;
     return [all(this.npcMsg(id, now))];
+  }
+
+  // ---------- BBQ parties ----------
+
+  /** Start the next party when it's time (somewhere new), or wind this one up. */
+  partyTick(now) {
+    if (!this.party && now >= this.nextParty) {
+      this.party = { n: Math.floor(Math.random() * 1e6), until: now + PARTY.ms };
+      for (const id of PARTY_IDS) { const l = this.get(id); if (l.s !== 'held') Object.assign(l, { s: 'home', by: null, at: now }); }
+      const cook = this.npcs.cook;
+      this.set(cook, 'look', rand(LOOKOUTS.cook.look), now);
+      cook.cool = 0;
+      return [all({ a: 'party', n: this.party.n, ms: PARTY.ms }), all(this.npcMsg('cook', now))];
+    }
+    if (this.party && now >= this.party.until) {
+      this.party = null;
+      this.nextParty = now + rand(PARTY.gap);
+      this.restock.bq = 0;
+      for (const id of PARTY_IDS) { const l = this.get(id); if (l.s !== 'held') Object.assign(l, { s: 'gone', by: null, at: now }); } // (anything in a mouth can still go home)
+      return [all({ a: 'party', n: null, ms: 0 })];
+    }
+    return [];
   }
 
   // ---------- the butcher's sausages ----------

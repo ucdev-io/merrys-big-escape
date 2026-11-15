@@ -102,4 +102,6 @@ export const CARRYABLES = {
   croissant: { name: 'croissant', emoji: '🥐', build: () => treatMesh('croissant'), hold: { pos: [0, -0.03, 0.035], rot: [0, 0, 0] } },
   bun: { name: 'iced bun', emoji: '🧁', build: () => treatMesh('bun'), hold: { pos: [0, -0.06, 0.045], rot: [0.3, 0, 0] } },
   links: { name: 'string of sausages', emoji: '🌭', build: () => treatMesh('links'), hold: { pos: [0, -0.02, 0.03], rot: [0, 0, 0] } }, // (the end of one: the rest trails behind)
+  sausage: { name: 'sausage', emoji: '🌭', build: () => treatMesh('sausage'), hold: { pos: [0, -0.025, 0.03], rot: [0, 0, 0] } },
+  burger: { name: 'burger', emoji: '🍔', build: () => treatMesh('burger'), hold: { pos: [0, -0.07, 0.05], rot: [0.3, 0, 0] } },
 };

@@ -56,3 +56,25 @@ export function butcher() {
   cheeks(p);
   return bakePerson(p);
 }
+
+/** The BBQ cook: a stripy apron, a little chef's hat and a spatula. */
+export function cook() {
+  const p = new Person({ shirt: 0x6f9a52, trousers: 0x5b6f8a });
+  apron(p, 0xd9534f, [[0xfbf6ee, -0.08], [0xfbf6ee, 0.0], [0xfbf6ee, 0.08]]);
+  mesh(new THREE.CylinderGeometry(0.12, 0.125, 0.08, 18), 0xfbf8f2, p.head, [0, 0.11, -0.005]);
+  for (const [x, z] of [[0, 0], [-0.05, 0.03], [0.05, 0.03], [0, -0.05]]) mesh(SPHERE, 0xfbf8f2, p.head, [x, 0.18, z], [0, 0, 0], [0.07, 0.055, 0.07]);
+  mesh(new THREE.BoxGeometry(0.02, 0.22, 0.02), 0x7a5a42, p.arms[0], [0, -0.62, 0.05], [0.6, 0, 0]);   // spatula handle
+  mesh(new THREE.BoxGeometry(0.09, 0.012, 0.11), 0x9aa0a8, p.arms[0], [0, -0.7, 0.14], [0.6, 0, 0]);  // and its flipper
+  cheeks(p);
+  return bakePerson(p);
+}
+
+const GUEST_SHIRTS = [0xf2a0b4, 0x5b86c4, 0xe39a52, 0x8e6fb0, 0x4aa3a0];
+/** A party guest with a drink (and, sometimes, a paper party hat). */
+export function guest(i) {
+  const p = new Person({ shirt: GUEST_SHIRTS[i % GUEST_SHIRTS.length], trousers: [0x4a4a52, 0x7a6248, 0x5b6f8a][i % 3] });
+  mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.1, 12), [0xf6d06a, 0xd9534f, 0x9fc6e8][i % 3], p.arms[1], [0, -0.6, 0.05]); // a drink
+  if (i % 2 === 0) mesh(new THREE.ConeGeometry(0.07, 0.2, 14), 0xf6d06a, p.head, [0.02, 0.2, 0], [0, 0, -0.15]);
+  cheeks(p);
+  return bakePerson(p);
+}

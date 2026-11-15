@@ -347,9 +347,10 @@ export class TownChapter {
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
 
-    // Compass: toward a game's next target, whatever the current job needs, or the next place to discover.
-    const race = this.games.update(dt), loot = this.heists.target(); // (loot: carrying something home to the stash)
-    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : loot ? { x: loot.pos.x, z: loot.pos.z, label: loot.label } : job ? { x: job.pos.x, z: job.pos.z, label: job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
+    // Compass: toward a game's next target, home with loot, whatever the current job needs, a BBQ party, or the next place to discover.
+    const race = this.games.update(dt), loot = this.heists.target(), bbq = this.heists.partyTarget(); // (loot: carrying something home to the stash)
+    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : loot ? { x: loot.pos.x, z: loot.pos.z, label: loot.label } : job ? { x: job.pos.x, z: job.pos.z, label: job.emoji }
+      : bbq ? { x: bbq.pos.x, z: bbq.pos.z, label: bbq.label } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
     if (aim && canAct) {
       const yaw = this.follow.yaw;
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;

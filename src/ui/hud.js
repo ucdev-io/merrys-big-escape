@@ -226,6 +226,7 @@ export class HUD {
         <li>Flowerbeds, holes and bins are great fun\u2026 but the neighbours will shout.</li>
         <li><b>🥐 Heists!</b> The baker on the bakery street keeps glancing round: grab a treat off her stall while her back's turned (watch for 👀 over her head) and run it home to your garden. Caught? "Oi! Shoo!" Woof at her door to distract her while a friend sneaks in!</li>
         <li><b>🌭 The butcher's sausages:</b> grab the dangling end and run! A friend can grab the other end for a <b>tug of war</b>: run away or mash 🐾 to pull. Pull too hard and SNAP: half each.</li>
+        <li><b>🍔 BBQ parties!</b> Now and then someone has a barbecue in their garden (follow the smoke). The cook keeps turning round to chat… that's your chance.</li>
         <li>Water is for paddling. Expect a wet-dog shake.</li>
         <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);

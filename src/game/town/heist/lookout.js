@@ -5,6 +5,14 @@ const SHOW = 30;     // how near you need to be to see what they're up to (metre
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const _v = new THREE.Vector3();
 
+/** Arms at work, w seconds in: [right x, right z, left x, left z]. */
+function workPose(work, w) {
+  if (work === 'knead') return [-1.15 + Math.sin(w * 7) * 0.3, 0.3, -1.15 - Math.sin(w * 7) * 0.3, -0.3];
+  if (work === 'crank') return [-1.0 + Math.sin(w * 6) * 0.45, -0.25 + Math.cos(w * 6) * 0.3, -0.5, -0.25];
+  if (work === 'flip') return [-1.1 - Math.max(0, Math.sin(w * 4)) * 0.9, 0.2, -0.3, 0.2];
+  return [-0.4 + Math.sin(w * 2.5) * 0.25, 0.1, -1.2, 0.12]; // chatting, waving the other hand about
+}
+
 /**
  * A grown-up keeping an eye on the goodies (the baker on her stall…). The HeistRoom decides what
  * they're doing; this shows it, so kids can read it at a glance:
@@ -12,11 +20,12 @@ const _v = new THREE.Vector3();
  * They turn to face whatever they're looking at, and each job has its own busy pose.
  *
  * faces: { busy, look } headings (radians). zone: { x, z, r }, where they can see you from.
- * work: 'knead' | 'crank' | 'flip' | 'chat' (what their arms do while busy).
+ * work: 'knead' | 'crank' | 'flip' | 'chat' (what their arms do while busy); lookWork: the same while
+ * watching (the BBQ cook flips burgers while he watches the grill), or hands on hips.
  */
 export class Lookout {
-  constructor({ hud, person, pos, faces, zone, work = 'knead', marks = {}, head = 2.2 }) {
-    Object.assign(this, { hud, person, faces, zone, work, headY: head });
+  constructor({ hud, person, pos, faces, zone, work = 'knead', lookWork = null, marks = {}, head = 2.2 }) {
+    Object.assign(this, { hud, person, faces, zone, work, lookWork, headY: head });
     this.pos = person.root.position.copy(pos);
     person.root.rotation.y = faces.busy;
     this.marks = { busy: '🎵', warn: '❗', look: '👀', door: '❓', ...marks };
@@ -87,13 +96,9 @@ export class Lookout {
 
   armsFor(t) {
     if (this.shoutT > 0) { const w = Math.sin(t * 22) * 0.25; return [-0.3, -2.5 + w, -0.3, 2.5 - w]; } // "Oi!" — both arms up
-    if (this.s === 'look') return [0.25, -0.65, 0.25, 0.65];                                             // hands on hips, watching
-    if (this.s === 'door') return [-2.3 + Math.sin(t * 9) * 0.3, -0.3, 0.2, 0.6];                         // "Who's that?!"
-    const w = this.s === 'warn' ? 0 : t; // (they freeze for the warning beat)
-    if (this.work === 'knead') return [-1.15 + Math.sin(w * 7) * 0.3, 0.3, -1.15 - Math.sin(w * 7) * 0.3, -0.3];
-    if (this.work === 'crank') return [-1.0 + Math.sin(w * 6) * 0.45, -0.25 + Math.cos(w * 6) * 0.3, -0.5, -0.25];
-    if (this.work === 'flip') return [-1.1 - Math.max(0, Math.sin(w * 4)) * 0.9, 0.2, -0.3, 0.2];
-    return [-0.4 + Math.sin(w * 2.5) * 0.25, 0.1, 0.05, 0.12]; // chatting, waving a drink about
+    if (this.s === 'look') return this.lookWork ? workPose(this.lookWork, t) : [0.25, -0.65, 0.25, 0.65]; // (hands on hips, watching)
+    if (this.s === 'door') return [-2.3 + Math.sin(t * 9) * 0.3, -0.3, 0.2, 0.6];                          // "Who's that?!"
+    return workPose(this.work, this.s === 'warn' ? 0 : t); // (they freeze for the warning beat)
   }
 
   dispose() { this.mark.remove(); this.person.root.removeFromParent(); }
