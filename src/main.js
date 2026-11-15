@@ -130,7 +130,7 @@ pipeline.onTooSlow = () => {
 if (location.search.includes('styles') || getSettings().styles) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
 else applyStyle(pipeline, 'storybook');
 // Small screens: the paper texture and border read heavier, so go lighter.
-if (isMobile) Object.assign(pipeline.params, { paper: 0.45, vignette: 0.4, granulation: 0.4 });
+if (isMobile) Object.assign(pipeline.params, { paper: 0.4, vignette: 0.25, granulation: 0.4 });
 
 // ?debug shows the live quality settings.
 if (location.search.includes('debug') || getSettings().debug) {

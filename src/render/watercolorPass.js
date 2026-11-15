@@ -144,7 +144,9 @@ export class WatercolorPipeline {
     this.renderer = renderer;
     this.params = {
       enabled: true,
-      renderScale: quality === 'high' ? 0.67 : 0.6, // paint passes run below output res; it's watercolor, nobody minds
+      // Paint at full resolution — MSAA is off (the paint filter smooths edges anyway), which makes
+      // full resolution about as cheap as the old blurry 67%-with-MSAA. Phones start a little lower.
+      renderScale: quality === 'high' ? 1.0 : 0.85,
       autoQuality: true,
       radius: quality === 'high' ? 3 : 2,
       wobble: 4.5,
@@ -169,7 +171,8 @@ export class WatercolorPipeline {
     this.qualityCooldown = 2;
 
     const rtOpts = { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace };
-    this.sceneRT = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, samples: 4 });
+    this.sceneRT = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, samples: 0 });
+    this.minScale = quality === 'high' ? 0.75 : 0.65;
     this.sceneRT.depthTexture = new THREE.DepthTexture(1, 1);
     this.sceneRT.depthTexture.type = THREE.UnsignedIntType;
     this.paintRT = new THREE.WebGLRenderTarget(1, 1, rtOpts);
@@ -240,10 +243,10 @@ export class WatercolorPipeline {
     if (this.frameTimes.length > 60) this.frameTimes.shift();
     if (this.qualityCooldown > 0 || this.frameTimes.length < 60) return;
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
-    if (avg > 1 / 45) {
+    if (avg > 1 / 40) {
       // Cheapest-looking losses first; keep the image sharp as long as possible.
       if (p.radius > 1) p.radius--;
-      else if (p.renderScale > 0.5) { p.renderScale = Math.max(0.5, p.renderScale - 0.05); this.setSize(this.outW, this.outH); }
+      else if (p.renderScale > this.minScale) { p.renderScale = Math.max(this.minScale, p.renderScale - 0.05); this.setSize(this.outW, this.outH); }
       else this.onTooSlow?.();
       this.frameTimes.length = 0;
       this.qualityCooldown = 2;

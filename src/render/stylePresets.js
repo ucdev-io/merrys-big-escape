@@ -3,8 +3,8 @@ import { paintUniforms } from './watercolorMaterial.js';
 // Each preset sets post-process params (pipeline.params) and surface shading (paintUniforms).
 const BASE_POST = {
   wobble: 4.5, wobbleFreq: 1.6, wetEdge: 2.2, wetRadius: 2.5, density: 0.8, densityScale: 2.5,
-  granulation: 0.55, ink: 0.6, inkWidth: 1.0, inkWobble: 2.0, paper: 0.6, paperScale: 1.0,
-  vignette: 0.6, saturation: 1.0, paperColor: '#f6efe0', inkColor: '#4a3a33', radius: 3,
+  granulation: 0.55, ink: 0.6, inkWidth: 1.0, inkWobble: 2.0, paper: 0.5, paperScale: 1.0,
+  vignette: 0.4, saturation: 1.0, paperColor: '#f6efe0', inkColor: '#4a3a33', radius: 3,
 };
 const BASE_SHADE = { banding: 0.65, bandSoft: 0.22, skyFill: 0.18, pigmentVar: 0.16, shadowTint: [0.62, 0.6, 0.86], lightTint: [1.06, 1.0, 0.9] };
 
