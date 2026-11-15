@@ -7,6 +7,7 @@ import { loadSave, writeSave } from '../core/save.js';
 import { showLobby } from '../ui/lobby.js';
 import { packPath } from '../net/links.js';
 import { DogActions } from '../systems/dogActions.js';
+import { YARD } from '../world/yard.js';
 import { DigSpots } from './yard/digSpots.js';
 import { Sprinkler } from './yard/sprinkler.js';
 import { Pickles } from './yard/pickles.js';
@@ -48,6 +49,11 @@ export class YardChapter {
     });
     this.actions.onMischief = () => this.pickles.say('mischief', { cooldown: 25 });
     this.actions.onScatter = () => this.pickles.say('pigeons', { cooldown: 20 });
+    this.actions.onSnack = () => this.pickles.say('snack', { cooldown: 15 });
+    this.actions.onHugeJump = () => {
+      const p = this.player.pos, edge = Math.min(p.x - YARD.x0, YARD.x1 - p.x, p.z - YARD.z0, YARD.z1 - p.z);
+      this.pickles.say(edge < 1.6 ? 'fenceJump' : 'bigJump', { cooldown: 12 });
+    };
     this.spots = new DigSpots(scene, [...TREASURES, TUNNEL], this.found, this.actions);
     this.pickles = new Pickles(scene, hud, () => ({ name: this.dogName, breed: BREEDS[this.player.breedKey].breed, breedKey: this.player.breedKey }));
     this.sprinkler = new Sprinkler(scene, world, V(3.2, 0, -4.6));

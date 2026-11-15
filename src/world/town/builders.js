@@ -18,7 +18,7 @@ const EDGE = H - 0.4;              // where garden fences sit
 
 /** Colliders in block-local coordinates (blocks are never rotated, only offset). */
 /** A wheelie bin that can be knocked over: pivot (spins to face the fall) → tilt (hinged at the front edge) → bin. */
-function tippableBin(x, z, ry, color) {
+export function tippableBin(x, z, ry, color) {
   const pivot = new THREE.Group();
   pivot.position.set(x, 0, z);
   pivot.userData.noMerge = true;
@@ -45,7 +45,7 @@ function localColliders(col, bx, bz, bones, extra) {
     },
     water: (rx, rz, surface) => extra?.water.push({ kind: 'pond', x: bx, z: bz, rx, rz, surface }),
     circle: (x, z, r, top, stand) => col.circle(x + bx, z + bz, r, top, stand),
-    box: (x0, z0, x1, z1, top) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz, top),
+    box: (x0, z0, x1, z1, top, stand) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz, top, stand),
     // A golden bone resting on something `top` high. `friend`: too high to reach alone.
     bone: (x, z, top, friend = false) => bones?.push({ x: x + bx, y: top + 0.18, z: z + bz, need: top - 0.15, friend }),
     // A place pigeons like to land.

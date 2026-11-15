@@ -1,10 +1,13 @@
 // Tiny "2.5D" collision world on the XZ plane: circles and axis-aligned boxes, each with a top
-// height. Below the top it's a wall; at or above the top it's something to stand on.
+// height. Below the top it's a wall; at or above the top it's something to stand on — unless
+// stand is false (fences and hedges: jump over them, but there's no standing on top).
 export class Colliders {
   constructor() { this.circles = []; this.boxes = []; }
   circle(x, z, r, top = Infinity, stand = true) { const c = { x, z, r, top, stand }; this.circles.push(c); return c; }
-  box(x0, z0, x1, z1, top = Infinity) {
-    this.boxes.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top });
+  box(x0, z0, x1, z1, top = Infinity, stand = true) {
+    const b = { x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top, stand };
+    this.boxes.push(b);
+    return b;
   }
 
   /**
@@ -47,7 +50,7 @@ export class Colliders {
       if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) best = c.top;
     }
     for (const b of this.boxes) {
-      if (b.top === Infinity || b.top > lim || b.top <= best) continue;
+      if (b.top === Infinity || b.stand === false || b.top > lim || b.top <= best) continue;
       if (x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m) best = b.top;
     }
     if (extra) for (const c of extra) {

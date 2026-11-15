@@ -85,8 +85,11 @@ export function bush(x, z, s = 1, rng, col, color, detail = 3) {
   return g;
 }
 
-/** Picket fence from (x0,z0) to (x1,z1). Returns a group. */
-export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, height = 1.0, gap = 0.22, simple = false } = {}) {
+/**
+ * Picket fence from (x0,z0) to (x1,z1). Returns a group. A big enough jump clears it (top), unless
+ * top is Infinity (the garden you have to dig your way out of).
+ */
+export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, height = 1.0, gap = 0.22, simple = false, top = height + 0.15 } = {}) {
   const g = new THREE.Group();
   const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
   const ang = Math.atan2(dx, dz);
@@ -118,7 +121,7 @@ export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, h
   for (const y of [0.3, height * 0.75]) {
     mesh(simple ? new THREE.BoxGeometry(0.05, 0.08, len) : new RoundedBoxGeometry(0.05, 0.08, len, 1, 0.02), PALETTE.wood, g, [-0.05, y, len / 2]);
   }
-  col?.box(Math.min(x0, x1) - 0.12, Math.min(z0, z1) - 0.12, Math.max(x0, x1) + 0.12, Math.max(z0, z1) + 0.12);
+  col?.box(Math.min(x0, x1) - 0.12, Math.min(z0, z1) - 0.12, Math.max(x0, x1) + 0.12, Math.max(z0, z1) + 0.12, top, false);
   return g;
 }
 

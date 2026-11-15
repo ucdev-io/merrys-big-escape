@@ -6,6 +6,7 @@ import { WaterFx } from './waterFx.js';
 import { sfx } from '../core/audio.js';
 import { Pigeons } from './pigeons.js';
 import { progress } from '../game/progress.js';
+import { Snacks, SNACKS } from './snacks.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -38,6 +39,10 @@ export class DogActions {
       progress.award(2, 'Naughty!');
       this.onMischief?.(n);
     };
+    // Snacks from knocked-over bins: gobble one for a power-up.
+    this.snacks = new Snacks(scene, world.layout?.seed ?? 'garden', world.bounds);
+    this.mischief.onSpill = (bin, dir) => this.snacks.spill(bin, dir);
+    this.sparkleT = 0;
     // Pigeon flocks to scatter (if this world has any).
     this.pigeons = world.pigeonSpots?.length ? new Pigeons(scene, world.pigeonSpots, world.pigeonFlocks ?? []) : null;
     this.splashCD = 0;
@@ -108,6 +113,16 @@ export class DogActions {
     }
 
     if (canAct) this.mischief.update(dt, P);
+    this.updateSnacks(dt, canAct);
+    // Double-tap jump: a huge jump (or not, if the zoomies bar is too low).
+    if (P.hugeJumped) {
+      sfx.boing?.();
+      this.hud.float('BOING!', this.anchor());
+      this.dirtBurst(P.pos.clone().setY(Math.max(0.02, P.jumpY ?? 0)), 6, Math.max(0.02, P.jumpY ?? 0));
+      this.sparkle(P.pos.clone().add(V(0, 0.2, 0)), 10);
+      this.onHugeJump?.();
+    }
+    if (P.tooTired) { this.hud.float('Too puffed! 💤', this.anchor()); this.hud.flashStamina?.(); }
     if (this.pigeons) this.scared(this.pigeons.update(dt, canAct ? P : { pos: P.pos, speed: 0 }));
     // A star for a good splash now and then.
     this.splashCD -= dt;
@@ -120,6 +135,36 @@ export class DogActions {
     this.glow.update(dt);
     this.hud.setStamina(P.stamina, P.speed > 3);
     return { sniffing, dug, barked, nose };
+  }
+
+  /** Snacks bob about with a twinkle; walk over one to eat it. */
+  updateSnacks(dt, canAct) {
+    const P = this.player;
+    const ate = this.snacks.update(dt, P, canAct);
+    this.sparkleT -= dt;
+    if (this.sparkleT <= 0) {
+      this.sparkleT = 0.35;
+      this.snacks.forEachSparkle((p) => this.glow.burst(1, () => ({
+        pos: p.clone().add(V(rand(-0.15, 0.15), 0.12, rand(-0.15, 0.15))), vel: V(0, rand(0.3, 0.6), 0),
+        life: rand(0.6, 1), size: 0.035, gravity: -0.2, drag: 1, color: pick([0xfff2a8, 0xffffff, 0xffd27a]),
+      })));
+    }
+    if (ate) {
+      const s = SNACKS[ate.kind];
+      for (const p of s.power) P.power(p, s.secs);
+      sfx.chomp?.();
+      this.sparkle(ate.at, 18);
+      this.hud.float(`${s.emoji} ${s.power.length > 1 ? 'SUPER DOG!' : { speed: 'Super speed!', jump: 'Super jumps!', zoomies: 'Endless zoomies!' }[s.power[0]]}`, this.anchor(), 'xp');
+      this.hud.showToastRaw(s.emoji, `Yum! ${s.name}!`, s.blurb);
+      progress.stat('snacks');
+      progress.award(2, 'Yum!');
+      this.onSnack?.(ate.kind);
+    }
+    // Power-ups ticking down (and a little fizzle when one runs out).
+    const left = P.boost;
+    if (this.lastBoost) for (const k in left) if (this.lastBoost[k] > 0 && left[k] === 0) sfx.fizzle?.();
+    this.lastBoost = { ...left };
+    this.hud.setBoosts?.(left);
   }
 
   /** Pigeons the dog just sent flying: stars, stats, and tell the pack (so they see them fly too). */

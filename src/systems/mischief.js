@@ -166,8 +166,9 @@ export class Mischief {
     if (bin.collider) { bin.collider.top = 0.62; bin.collider.r = 0.45; } // now it's something to stand on!
     sfx.clang?.();
     if (mine) buzz(40);
-    // Rubbish everywhere.
+    // Rubbish everywhere (and something tasty: snacks.js).
     const dir = V(Math.sin(ang), 0, Math.cos(ang));
+    this.onSpill?.(bin, dir);
     for (let i = 0; i < 6; i++) {
       const piece = new THREE.Mesh(i % 3 === 0 ? new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8) : new THREE.IcosahedronGeometry(0.06, 0),
         paint(pick([0xf1e8d8, 0xd9534f, 0xf6d06a, 0x9ab8cf, 0x8a9a6e])));

@@ -1,15 +1,23 @@
 import * as THREE from 'three';
 import { Dog } from './dog.js';
 import { BREEDS } from './breeds.js';
-
-const known = (key) => (Object.hasOwn(BREEDS, key) ? key : 'merry');
 import { buzz } from '../core/haptics.js';
 import { waterAt } from '../world/water.js';
+import { speedMult, zoomiesMult } from '../game/stats.js';
 
-const WALK = 2.2, TROT = 3.0, RUN = 6.2;
+const known = (key) => (Object.hasOwn(BREEDS, key) ? key : 'merry');
+
+const WALK = 2.6, TROT = 3.4, RUN = 6.8;
 const RAMP_TIME = 0.9; // seconds of zoomies to go from trot to full gallop
-const GRAVITY = 12, JUMP_V = 4.4;   // ≈0.8 m jump — the same for every dog, so nobody is left out
+const DRAIN = 0.13, REFILL = 0.2; // zoomies bar per second: ~7.7 s of zoomies from full (more with 💨 points)
+const GRAVITY = 12;
+// Jump heights (metres) — the same for every dog, so nobody is left out:
+const HOP = 0.8, HUGE = 1.5;         // a jump; double-tap for a huge one (over fences and hedges)
+const SUPER_HOP = 1.35, SUPER_HUGE = 2.4; // …with a 🧀 super-jump snack inside you
+const HUGE_COST = 0.3;               // a huge jump uses up this much of the zoomies bar
+const SNACK_SPEED = 1.45;            // 🍕 speed snack
 const COYOTE = 0.12, BUFFER = 0.14; // forgiving: jump just after leaving a ledge / just before landing
+const launch = (h) => Math.sqrt(2 * GRAVITY * h); // take-off speed for a jump this high
 
 // Turns input into motion for Merry, relative to the camera's view.
 export class Player {
@@ -23,6 +31,11 @@ export class Player {
     this.heading = 0;
     this.turnRate = 0;
     this.stamina = 1;
+    this.speedK = 1;   // from ⚡ speed points (level & clothes)
+    this.zoomK = 1;    // from 💨 zoomies points
+    this.boost = { speed: 0, jump: 0, zoomies: 0 }; // seconds left on snack power-ups
+    this.airJump = false; // a huge jump is still available in this jump
+    this.jumpY = 0;       // where this jump started
     this.radius = 0.28;
     this.zoom = 0; // 0..1 how wound-up the zoomies are
     this.speed = 0;
@@ -66,16 +79,28 @@ export class Player {
   /** Wear these: { collar, neck, hat } cosmetic ids. Kept when changing breed. */
   setLook(look) { this.look = look; this.dog.setLook(look); }
 
+  /** ⚡ speed and 💨 zoomies points (stats.js). */
+  setStats(s) { this.speedK = speedMult(s); this.zoomK = zoomiesMult(s); }
+
+  /** A snack power-up: 'speed' | 'jump' | 'zoomies' for `secs` seconds. */
+  power(kind, secs) {
+    this.boost[kind] = Math.max(this.boost[kind], secs);
+    if (kind === 'zoomies') this.stamina = 1;
+  }
+
   update(dt, input, cameraYaw, world) {
     let mv = this.frozen ? { x: 0, y: 0 } : input.move();
     const sniffing = !this.frozen && input.sniff;
-    let wantRun = !this.frozen && input.sprint && this.stamina > 0.05;
+    for (const k in this.boost) this.boost[k] = Math.max(0, this.boost[k] - dt);
+    const endless = this.boost.zoomies > 0 || this.boost.speed > 0; // snacks: zoomies that never run out
+    let wantRun = !this.frozen && input.sprint && (this.stamina > 0.05 || endless);
     // Zoomies build up: trot first, then stretch out into a full gallop.
     this.zoom = wantRun && Math.hypot(mv.x, mv.y) > 0.1 ? Math.min(1, this.zoom + dt / RAMP_TIME) : Math.max(0, this.zoom - dt * 2.5);
-    const runSpeed = (TROT + (RUN - TROT) * this.zoom * this.zoom) * this.mult;
-    let max = sniffing ? WALK * 0.4 * this.mult : wantRun ? runSpeed : WALK * this.mult;
+    const k = this.mult * this.speedK * (this.boost.speed > 0 ? SNACK_SPEED : 1);
+    const runSpeed = (TROT + (RUN - TROT) * this.zoom * this.zoom) * k;
+    let max = sniffing ? WALK * 0.4 * k : wantRun ? runSpeed : WALK * k;
     // Doggy paddle is slow, and there are no zoomies in the pond.
-    if (this.swim > 0.4) { wantRun = false; this.zoom = 0; max = WALK * 0.62 * this.mult; }
+    if (this.swim > 0.4) { wantRun = false; this.zoom = 0; max = WALK * 0.62 * this.mult * this.speedK; }
     else if (this.wading) max *= 0.8;
 
     // Camera-relative direction (camera looks toward -forward).
@@ -97,8 +122,8 @@ export class Player {
     const speed = this.vel.length();
     this.speed = speed;
 
-    if (wantRun && speed > 2) this.stamina = Math.max(0, this.stamina - dt * 0.22);
-    else this.stamina = Math.min(1, this.stamina + dt * 0.18);
+    if (wantRun && speed > 2 && !endless) this.stamina = Math.max(0, this.stamina - (dt * DRAIN) / this.zoomK);
+    else this.stamina = Math.min(1, this.stamina + dt * REFILL * (endless ? 4 : 1 + (this.zoomK - 1) * 0.5));
 
     if (speed > 0.08) {
       const want = Math.atan2(this.vel.x, this.vel.y);
@@ -110,17 +135,35 @@ export class Player {
     } else this.turnRate *= 0.8;
     this.object.rotation.y = this.heading;
 
-    // Jumping. Air control is a little softer than on the ground.
-    if (!this.frozen && input.jump) this.jumpBuffer = BUFFER;
+    // Jumping. Tap again in the air for a huge jump (it uses some of the zoomies bar).
+    const press = !this.frozen && input.jump;
+    if (press) this.jumpBuffer = BUFFER;
     this.jumpBuffer = Math.max(0, this.jumpBuffer - dt);
     this.coyote = this.grounded ? COYOTE : Math.max(0, this.coyote - dt);
-    this.jumped = false;
+    if (this.grounded) { this.jumpY = this.pos.y; this.airJump = true; }
+    this.jumped = this.hugeJumped = this.tooTired = false;
+    const superJump = this.boost.jump > 0;
     if (this.jumpBuffer > 0 && this.coyote > 0 && !this.lockY) {
-      this.vy = JUMP_V * (this.swim > 0.4 ? 0.9 : 1); // leap out of the water
+      this.vy = launch(superJump ? SUPER_HOP : HOP) * (this.swim > 0.4 ? 0.9 : 1); // leap out of the water
       this.grounded = false;
       this.coyote = this.jumpBuffer = 0;
+      this.jumpY = this.pos.y;
+      this.airJump = true;
       this.jumped = true;
       this.dog.jump?.();
+    } else if (press && !this.grounded && this.coyote <= 0 && this.airJump && !this.lockY && this.swim < 0.4) {
+      this.airJump = false;
+      const free = this.boost.zoomies > 0 || this.boost.speed > 0;
+      if (free || this.stamina >= HUGE_COST) {
+        // Up to the same height whenever you tap: from the ground, the top of the jump, or on the way down.
+        const climbed = this.pos.y - this.jumpY;
+        this.vy = Math.max(this.vy, launch(Math.max(0.35, (superJump ? SUPER_HUGE : HUGE) - climbed)));
+        if (!free) this.stamina -= HUGE_COST;
+        this.jumpBuffer = 0;
+        this.hugeJumped = true;
+        this.dog.jump?.();
+        buzz([15, 30, 25]);
+      } else this.tooTired = true;
     }
 
     this.pos.x += this.vel.x * dt;

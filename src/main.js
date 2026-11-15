@@ -19,6 +19,7 @@ import { showTitle } from './ui/title.js';
 import { packCodeFromUrl, packPath } from './net/links.js';
 import { getSettings, TEXTURE_LEVELS } from './core/settings.js';
 import { progress } from './game/progress.js';
+import { statsFor } from './game/stats.js';
 import { autoFullscreen } from './ui/fullscreen.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
@@ -157,6 +158,10 @@ hud.onTexture = (level) => (pipeline.texture = TEXTURE_LEVELS[level]);
 hud.dogAnchor = () => player.pos.clone().add(new THREE.Vector3(0, 1.15, 0));
 hud.onLook = (look) => player.setLook(look);
 player.setLook(progress.look);
+// ⚡ speed and 💨 zoomies grow with your level and what you're wearing.
+const applyStats = () => player.setStats(statsFor(progress.level, progress.look));
+applyStats();
+progress.on((e) => { if (e.look || e.levelUp || e.synced || e.amount) applyStats(); });
 createTouchControls(input, follow);
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
@@ -228,4 +233,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress };
+window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress, world };

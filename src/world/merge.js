@@ -16,12 +16,18 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
   const buckets = new Map();
   const keep = [];
 
-  const skip = (o) => { for (let p = o; p; p = p.parent) if (p.userData.noMerge) return true; return false; };
+  // A noMerge object is kept whole, children and all, so it can still move as one (a bin tipping
+  // over, a gnome falling flat on his face) — not broken up into loose meshes.
+  // (Meshes that can't be baked are kept the same way.)
+  const walk = (o, bake) => {
+    if (o !== root && o.userData.noMerge) { keep.push(o); return; }
+    if (o.isMesh && o.visible && (!o.material.isMeshLambertMaterial || (o.isInstancedMesh && o.count > maxInstances))) { keep.push(o); return; }
+    if (o.isMesh && o.visible) bake(o);
+    for (const c of [...o.children]) walk(c, bake);
+  };
 
-  root.traverse((o) => {
-    if (!o.isMesh || !o.visible) return;
+  walk(root, (o) => {
     const mat = o.material;
-    if (skip(o) || !mat.isMeshLambertMaterial || (o.isInstancedMesh && o.count > maxInstances)) { keep.push(o); return; }
 
     const flags = `${mat.transparent ? 't' + mat.opacity : 'o'}|${mat.side}|${o.castShadow ? 'c' : 'n'}|${mat.emissive?.getHex() ?? 0}`;
     const n = o.isInstancedMesh ? o.count : 1;

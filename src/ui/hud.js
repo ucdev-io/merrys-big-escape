@@ -5,6 +5,7 @@ import { toggleFullscreen, isFullscreen, fullscreenButtonUseful, isTouchDevice }
 import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { progress } from '../game/progress.js';
 import { COSMETICS, SLOTS } from '../game/cosmetics.js';
+import { STATS, levelStats, outfitStats, boostText } from '../game/stats.js';
 import { loadSave } from '../core/save.js';
 import { sfx } from '../core/audio.js';
 import { buzz } from '../core/haptics.js';
@@ -29,6 +30,8 @@ export class HUD {
 
     this.stamina = el('div', 'stamina', '<div class="fill"></div><span>Zoomies!</span>');
     this.root.appendChild(this.stamina);
+    this.boosts = el('div', 'boosts'); // snack power-ups ticking down
+    this.root.appendChild(this.boosts);
 
     this.toast = el('div', 'toast');
     this.root.appendChild(this.toast);
@@ -106,7 +109,8 @@ export class HUD {
     sfx.hooray();
     buzz([40, 60, 40, 60, 80]);
     const items = unlocked.map((c) => `${c.emoji} ${c.name}`).join(' · ');
-    this.levelBanner.innerHTML = `<div class="big">⭐ Level ${level}! ⭐</div><div class="ttl">${progress.title}</div>`
+    const gain = boostText({ speed: levelStats(level).speed - levelStats(level - 1).speed, zoomies: levelStats(level).zoomies - levelStats(level - 1).zoomies });
+    this.levelBanner.innerHTML = `<div class="big">⭐ Level ${level}! ⭐</div><div class="ttl">${progress.title}${gain ? ` · ${gain}` : ''}</div>`
       + (items ? `<div class="new">New: ${items}<br><small>Tap to dress up!</small></div>` : '');
     this.levelBanner.classList.remove('show'); void this.levelBanner.offsetWidth; this.levelBanner.classList.add('show');
     clearTimeout(this._lvT);
@@ -121,8 +125,13 @@ export class HUD {
       <p class="lvl">Level ${progress.level} · <b>${progress.title}</b></p>
       <div class="xpbar"><i style="width:${Math.round(progress.levelProgress * 100)}%"></i></div>
       <p class="small">${progress.toNext} ⭐ to level ${progress.level + 1} · ${progress.xp} ⭐ altogether</p>
+      <div class="powers">${Object.entries(STATS).map(([k, st]) => {
+        const lv = levelStats(progress.level)[k], wear = outfitStats(progress.look)[k];
+        return `<div class="power"><b>${st.emoji} ${st.name} +${lv + wear}</b><span>level +${lv} · clothes +${wear}</span></div>`;
+      }).join('')}</div>
       <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
-        ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}</div>`,
+        ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
+        ${stat('🍕', 'bin snacks', 'snacks')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -135,15 +144,15 @@ export class HUD {
       for (const [slot, label] of Object.entries(SLOTS)) {
         const row = el('div', 'wrow', `<h3>${label}</h3>`);
         const items = el('div', 'witems');
-        const opt = (text, id, ok, lockLevel) => {
+        const opt = (text, id, ok, lockLevel, boost) => {
           const b = el('button', `witem${progress.look[slot] === id ? ' on' : ''}`);
-          b.innerHTML = ok ? text : `🔒<small>Lv ${lockLevel}</small>`;
+          b.innerHTML = ok ? text : `🔒<small>Lv ${lockLevel}</small><small class="wb">${boostText(boost)}</small>`;
           b.disabled = !ok;
           b.onclick = () => { progress.equip(slot, id); render(); };
           items.appendChild(b);
         };
         opt('🚫<small>None</small>', null, true);
-        for (const c of COSMETICS.filter((q) => q.slot === slot)) opt(`${c.emoji}<small>${c.name}</small>`, c.id, progress.isUnlocked(c.id), c.level);
+        for (const c of COSMETICS.filter((q) => q.slot === slot)) opt(`${c.emoji}<small>${c.name}</small><small class="wb">${boostText(c.boost)}</small>`, c.id, progress.isUnlocked(c.id), c.level, c.boost);
         row.appendChild(items);
         w.appendChild(row);
       }
@@ -188,6 +197,9 @@ export class HUD {
       <h3>🐾 Tips</h3><ul class="help-tips">
         <li><b>Sniff</b> to see a golden trail to where you're going.</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones need a <b>friend's back</b>!</li>
+        <li><b>Double-tap jump</b> for a huge jump over fences and hedges. It uses some of your zoomies.</li>
+        <li>Knock a <b>bin</b> over and gobble what falls out: 🍕 super speed · 🧀 super jumps · 🍩 endless zoomies · 🌭 everything!</li>
+        <li>Every level (and every piece of clothing) makes you a bit faster ⚡ with longer zoomies 💨.</li>
         <li>Flowerbeds, holes and bins are great fun\u2026 but the neighbours will shout.</li>
         <li>Water is for paddling. Expect a wet-dog shake.</li>
         <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
@@ -204,6 +216,23 @@ export class HUD {
     if (this.prompt.textContent === (text || '')) return;
     this.prompt.textContent = text || '';
     this.prompt.classList.toggle('show', !!text);
+  }
+
+  /** Snack power-ups ticking down: { speed, jump, zoomies } seconds left. */
+  setBoosts(b) {
+    const key = Object.entries(b).map(([k, v]) => `${k}${Math.ceil(v)}`).join();
+    if (key === this._boostKey) return;
+    this._boostKey = key;
+    const icon = { speed: '⚡', jump: '🦘', zoomies: '💨' };
+    this.boosts.innerHTML = Object.entries(b).filter(([, v]) => v > 0)
+      .map(([k, v]) => `<span class="boost${v < 3.5 ? ' ending' : ''}">${icon[k]} ${Math.ceil(v)}</span>`).join('');
+  }
+
+  /** Not enough zoomies for a huge jump. */
+  flashStamina() {
+    this.stamina.classList.add('show', 'flash');
+    clearTimeout(this._flashT);
+    this._flashT = setTimeout(() => this.stamina.classList.remove('flash'), 700);
   }
 
   setStamina(v, active) {

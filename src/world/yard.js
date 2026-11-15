@@ -5,6 +5,7 @@ import { RNG, fbm3 } from '../core/rng.js';
 import { Colliders } from './collision.js';
 import { mergeStatic, collectOccluders } from './merge.js';
 import { crate, bench } from './town/townProps.js';
+import { tippableBin } from './town/builders.js';
 import {
   tree, bush, picketFence, house, shed, gnome, paddlingPool, washingLine,
   flowerBed, steppingStones, grassTufts, skyDome,
@@ -61,11 +62,13 @@ export function buildYard(seed = 'biscuit-yard') {
 
   // Fences: front + sides, and along the back from each side of the house to the corners
   // (the house is narrower than the garden, so it only closes the middle of the back).
-  group.add(picketFence(YARD.x0, YARD.z1, YARD.x1, YARD.z1, col));
-  group.add(picketFence(YARD.x0, YARD.z0, YARD.x0, YARD.z1, col));
-  group.add(picketFence(YARD.x1, YARD.z0, YARD.x1, YARD.z1, col));
-  group.add(picketFence(YARD.x0, YARD.z0, -5.95, YARD.z0, col));
-  group.add(picketFence(5.95, YARD.z0, YARD.x1, YARD.z0, col));
+  // No jumping over these, however huge the jump: this garden is escaped by digging.
+  const wall = { top: Infinity };
+  group.add(picketFence(YARD.x0, YARD.z1, YARD.x1, YARD.z1, col, wall));
+  group.add(picketFence(YARD.x0, YARD.z0, YARD.x0, YARD.z1, col, wall));
+  group.add(picketFence(YARD.x1, YARD.z0, YARD.x1, YARD.z1, col, wall));
+  group.add(picketFence(YARD.x0, YARD.z0, -5.95, YARD.z0, col, wall));
+  group.add(picketFence(5.95, YARD.z0, YARD.x1, YARD.z0, col, wall));
 
   // Garden features.
   group.add(tree(-6.5, 4.6, 1.35, rng, col));
@@ -115,6 +118,12 @@ export function buildYard(seed = 'biscuit-yard') {
   }));
   group.add(grassTufts(4000, [-40, -40, 40, 40], rng, (x, z) => !inYard(x, z, 0.5) && z > -9));
 
+  // The family's wheelie bin by the side fence: knock it over for a snack (and a telling-off).
+  const garden = { rect: { x0: YARD.x0, z0: YARD.z0, x1: YARD.x1, z1: YARD.z1 }, door: new THREE.Vector3(0, 1.6, -8.5), own: true };
+  const binPivot = tippableBin(-8.6, -5.3, Math.PI / 2, 0x5d8c55);
+  group.add(binPivot);
+  const bins = [{ id: 'yardbin', pivot: binPivot, x: -8.6, z: -5.3, collider: col.circle(-8.6, -5.3, 0.4, 1.05), garden }];
+
   const occluders = collectOccluders(group);
   return {
     group: mergeStatic(group),
@@ -127,7 +136,8 @@ export function buildYard(seed = 'biscuit-yard') {
       new THREE.Vector3(1.2, 0, 4.8), new THREE.Vector3(0, 5.3, -12.6), new THREE.Vector3(0, 5.3, -10.6)],
     pigeonFlocks: [{ id: 'g0', spot: 0, size: 5 }],
     beds: beds.map(([x, z, w, d]) => ({ x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2 })),
-    gardens: [{ rect: { x0: YARD.x0, z0: YARD.z0, x1: YARD.x1, z1: YARD.z1 }, door: new THREE.Vector3(0, 1.6, -8.5), own: true }],
+    gardens: [garden],
+    bins,
     spawn: new THREE.Vector3(0.5, 0, -1),
     bounds: { x0: YARD.x0 + 0.3, x1: YARD.x1 - 0.3, z0: YARD.z0 + 0.3, z1: YARD.z1 - 0.3 },
     update(t) { for (const f of animated) f(t); },

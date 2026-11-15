@@ -49,6 +49,21 @@ button { font: inherit; color: var(--ink); }
 .stamina.show { opacity: 1; }
 .stamina .fill { height: 100%; width: 100%; background: #e39a52; border-radius: 8px; transition: width 0.1s; }
 .stamina span { position: absolute; inset: 0; text-align: center; font-size: 14px; line-height: 15px; }
+.stamina.flash { animation: shake 0.35s; }
+.stamina.flash .fill { background: #d9534f; }
+@keyframes shake { 25% { transform: translateX(calc(-50% - 6px)); } 75% { transform: translateX(calc(-50% + 6px)); } }
+/* Snack power-ups, to the right of the zoomies bar */
+.boosts { position: absolute; left: calc(50% + 98px); bottom: 81px; display: flex; gap: 5px; pointer-events: none; }
+.boost { background: var(--wash); border: 2px solid rgba(59, 43, 37, 0.3); border-radius: 12px; padding: 0 8px; font-size: 16px; line-height: 20px; white-space: nowrap; }
+.boost.ending { animation: blinky 0.4s infinite alternate; }
+@keyframes blinky { to { opacity: 0.35; } }
+body.touch-mode .boosts { bottom: 177px; }
+/* My dog: speed and zoomies */
+.big-card .powers { display: flex; gap: 10px; justify-content: center; margin: 6px 0; flex-wrap: wrap; }
+.big-card .power { background: #fbf3e2; border-radius: 12px; padding: 4px 12px; display: flex; flex-direction: column; }
+.big-card .power b { font-weight: normal; font-size: 19px; }
+.big-card .power span { font-size: 13px; opacity: 0.7; }
+.witem .wb { font-size: 12px; opacity: 0.8; }
 
 /* Found toast */
 .toast {
@@ -269,6 +284,8 @@ button { touch-action: manipulation; }
 .stick:not(.active) { left: calc(90px + var(--sa-l)); top: calc(100% - 110px - var(--sa-b)); }
 .prompt { bottom: calc(120px + var(--sa-b)); }
 .stamina { bottom: calc(84px + var(--sa-b)); }
+.boosts { bottom: calc(81px + var(--sa-b)); }
+body.touch-mode .boosts { bottom: calc(177px + var(--sa-b)); }
 body.touch-mode .prompt { bottom: calc(200px + var(--sa-b)); }
 body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .sniff-book, .big-card, .lobby, .title-screen {

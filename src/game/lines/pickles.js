@@ -384,6 +384,28 @@ export const PICKLES_LINES = {
     'Pick on someone your own size. Not Gerald.',
     'Gerald will remember this.',
   ],
+  snack: [
+    'Ew! You ate THAT? Out of the BIN?',
+    'Bin snacks. Classy.',
+    'I can smell your breath from up here.',
+    'Did you save any for me? …No? Typical.',
+    'That cheese was older than me.',
+    'You’ll be sick. Then you’ll eat that too.',
+  ],
+  bigJump: [
+    'Whoa! Are you part kangaroo?',
+    'Show-off.',
+    'Higher! …I mean, whatever. Not impressed.',
+    'Boing boing. Very dignified.',
+    'Cats jump higher. But that wasn’t bad.',
+    'Mind you don’t land on my tail!',
+  ],
+  fenceJump: [
+    'Nice try! That fence is far too high. Sniff out another way!',
+    'Ha! You’ll never jump THAT fence. Use your nose, dog.',
+    'Boing… bonk. The fence wins.',
+    'Even I can’t jump that one. Well. I could. I just don’t want to.',
+  ],
   pigeons: [
     'PIGEONS! …I mean. How childish. Do it again.',
     'Ooh, flappy snacks! …I said nothing.',

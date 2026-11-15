@@ -206,13 +206,14 @@ export function hedge(x0, z0, x1, z1, rng, col, { height = 0.9, skipFrom = -1, s
       [x0 + (x1 - x0) * t, height * 0.55, z0 + (z1 - z0) * t], [rng.float(0, 3), rng.float(0, 3), 0], [s, height * 0.65, s]);
   }
   if (col) {
-    const pad = 0.45;
-    if (skipFrom < 0) col.box(Math.min(x0, x1) - pad, Math.min(z0, z1) - pad, Math.max(x0, x1) + pad, Math.max(z0, z1) + pad);
+    // A huge jump clears a hedge (but it's too bushy to stand on).
+    const pad = 0.45, top = height * 1.3;
+    if (skipFrom < 0) col.box(Math.min(x0, x1) - pad, Math.min(z0, z1) - pad, Math.max(x0, x1) + pad, Math.max(z0, z1) + pad, top, false);
     else {
       const lerp = (t) => [x0 + (x1 - x0) * t, z0 + (z1 - z0) * t];
       const [ax, az] = lerp(skipFrom), [bx, bz] = lerp(skipTo);
-      col.box(Math.min(x0, ax) - pad, Math.min(z0, az) - pad, Math.max(x0, ax) + pad, Math.max(z0, az) + pad);
-      col.box(Math.min(bx, x1) - pad, Math.min(bz, z1) - pad, Math.max(bx, x1) + pad, Math.max(bz, z1) + pad);
+      col.box(Math.min(x0, ax) - pad, Math.min(z0, az) - pad, Math.max(x0, ax) + pad, Math.max(z0, az) + pad, top, false);
+      col.box(Math.min(bx, x1) - pad, Math.min(bz, z1) - pad, Math.max(bx, x1) + pad, Math.max(bz, z1) + pad, top, false);
     }
   }
   return g;

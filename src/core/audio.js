@@ -110,6 +110,12 @@ export const sfx = {
   // Pigeons taking off: a clatter of wings and an indignant coo.
   flutter() { for (let i = 0; i < 9; i++) noise(0.05, 0.13, 'bandpass', 1200 + Math.random() * 900, 1.4, i * 0.035); tone('sine', 520, 380, 0.2, 0.06, 0.05); },
   plip() { tone('sine', 950 + Math.random() * 300, 450, 0.07, 0.07); }, // paddling
+  // Gobbling a snack from the bin: three quick chomps and a happy gulp.
+  chomp() { for (let i = 0; i < 3; i++) noise(0.06, 0.22, 'bandpass', 700 + i * 150, 2, i * 0.11); tone('sine', 300, 600, 0.15, 0.15, 0.36); },
+  // A huge jump: a big springy boing.
+  boing() { tone('sine', 180, 720, 0.28, 0.28); tone('triangle', 360, 1440, 0.2, 0.08, 0.02); },
+  // Power-up running out.
+  fizzle() { tone('sine', 600, 200, 0.3, 0.12); },
   hooray() {
     const notes = [523, 587, 659, 784, 659, 784, 1047];
     notes.forEach((f, i) => tone('triangle', f, f, 0.2, 0.18, i * 0.13));
