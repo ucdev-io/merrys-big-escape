@@ -160,6 +160,7 @@ hud.onTexture = (level) => (pipeline.texture = TEXTURE_LEVELS[level]);
 // Stars float up from your dog; outfits you pick go straight on.
 hud.dogAnchor = () => player.pos.clone().add(new THREE.Vector3(0, 1.15, 0));
 hud.onLook = (look) => player.setLook(look);
+hud.onEmote = (id) => input.touchButtons.add(`emote:${id}!`); // the 😀 menu
 player.setLook(progress.look);
 // ⚡ speed and 💨 zoomies grow with your level and what you're wearing.
 const applyStats = () => player.setStats(statsFor(progress.level, progress.look));

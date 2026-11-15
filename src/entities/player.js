@@ -138,6 +138,12 @@ export class Player {
     } else this.turnRate *= 0.8;
     this.object.rotation.y = this.heading;
 
+    // Emotes (number keys / the 😀 menu); walking or jumping stops them.
+    this.emoted = null;
+    const em = !this.frozen && input.emote;
+    if (em && this.grounded && this.swim < 0.4) { this.dog.emote(em); this.emoted = em; }
+    else if ((this.dog.emoteT ?? 0) > 0.25 && (Math.hypot(mv.x, mv.y) > 0.2 || input.jump)) this.dog.stopEmote();
+
     // Jumping. Tap again in the air for a huge jump (it uses some of the zoomies bar).
     const press = !this.frozen && input.jump;
     if (press) this.jumpBuffer = BUFFER;

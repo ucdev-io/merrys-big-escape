@@ -70,9 +70,10 @@ export class Pack {
     });
     net.on('leave', (m) => { this.remotes.remove(m.id); this.updateBadge(); });
     net.on('ss', (m) => this.remotes.onStates(m.p, net.id));
-    net.on('act', (m) => (WORLD_ACTS.includes(m.a) ? this.onMischief(m) : this.remotes.onAct(m.id, m.a)));
+    net.on('act', (m) => (WORLD_ACTS.includes(m.a) ? this.onMischief(m) : this.remotes.onAct(m.id, m.a, m)));
     net.on('look', (m) => this.remotes.setLook(m.id, m.look, m.level));
     net.on('carry', (m) => this.remotes.setCarry(m.id, m.item));
+    net.on('game', (m) => this.onGame?.(m));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
@@ -86,6 +87,9 @@ export class Pack {
   }
 
   act(a, extra) { this.net?.act(a, extra); }
+
+  /** A move in a pack game (start a race or tag, finish a race, tag someone). */
+  sendGame(msg) { if (this.net) this.net.send({ t: 'game', ...msg }); }
 
   /** Tell the pack what my dog is carrying (or null). */
   sendCarry(item) { if (this.net) this.net.send({ t: 'carry', item: item ?? null }); }
@@ -133,6 +137,8 @@ export class Pack {
     this.hud.showCard(`
       <h1>👥 Your pack</h1>
       <p class="pack-list"></p>
+      <h3>🎮 Play a game</h3>
+      <div class="game-btns"><button class="pill big g-race">🏁 Race</button><button class="pill big g-tag">🐾 Tag</button></div>
       <h3>Other neighbourhoods</h3>
       <div class="list others"><p class="none">No one else is playing right now.</p></div>
       <details class="newphone"><summary>📱 Get the game on another phone or tablet</summary>
@@ -140,6 +146,13 @@ export class Pack {
         <div class="invite"></div></details>`, [['OK', () => this.hud.hideCard()]]);
     const card = this.hud.card;
     card.querySelector('.pack-list').textContent = ['You', ...names].join(' · ') + (code ? `  (pack ${code})` : '');
+    const solo = this.remotes.dogs.size === 0;
+    card.querySelector('.g-race').innerHTML = solo ? '🏁 Race <small>beat your best time</small>' : '🏁 Race <small>first one there wins</small>';
+    card.querySelector('.g-tag').innerHTML = solo ? '🐾 Tag <small>needs a friend</small>' : '🐾 Tag <small>you’re it!</small>';
+    card.querySelector('.g-tag').disabled = solo || !this.net;
+    card.querySelector('.g-race').disabled = !this.net;
+    card.querySelector('.g-race').onclick = () => { this.hud.hideCard(); this.onStartGame?.('race'); };
+    card.querySelector('.g-tag').onclick = () => { this.hud.hideCard(); this.onStartGame?.('tag'); };
     const others = card.querySelector('.others');
     const stop = watchPacks((list) => {
       if (card.classList.contains('hidden') || !card.contains(others)) { stop(); return; }

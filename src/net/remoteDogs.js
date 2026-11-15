@@ -58,9 +58,15 @@ export class RemoteDogs {
     }
   }
 
-  onAct(id, a) {
+  onAct(id, a, m = {}) {
     const r = this.dogs.get(id);
     if (!r) return;
+    if (a === 'emote') {
+      r.dog.emote(m.e);
+      const d = this.getListener().distanceTo(r.dog.root.position);
+      if (m.e === 'howl' && d < 40) sfx.howl?.(r.dog.breed.bark, Math.max(0.15, 1 - d / 40));
+      return;
+    }
     const anchor = r.dog.root.position.clone().add(new THREE.Vector3(0, 1.0, 0));
     if (a === 'bark') {
       r.dog.bark();
@@ -108,6 +114,7 @@ export class RemoteDogs {
       r.heading = h;
       root.rotation.y = h;
       r.digT = Math.max(0, r.digT - dt);
+      if (c.v > 0.6 && (r.dog.emoteT ?? 0) > 0.25) r.dog.stopEmote(); // they've walked off
       r.dog.update(dt, { speed: a.v + (c.v - a.v) * k, turnRate: turn, sniff: !!(c.f & 1), dig: r.digT > 0 || !!(c.f & 2), happy: c.v > 2.8 ? 1 : 0.6, air: c.f & 4 ? 1 : 0, vy: (c.y - a.y) * 8, swim: c.f & 16 ? 1 : 0 });
       // Splash when they hit the water; little rings while they paddle about.
       const inW = !!(c.f & 8);

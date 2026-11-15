@@ -121,6 +121,8 @@ export const sfx = {
   // Duchess: a posh little quack. Ducklings: peep!
   quack() { tone('sawtooth', 620, 380, 0.14, 0.06, 0, { type: 'bandpass', freq: 900, q: 3 }); tone('sawtooth', 560, 360, 0.12, 0.05, 0.16, { type: 'bandpass', freq: 900, q: 3 }); },
   peep() { tone('sine', 2300, 2900, 0.07, 0.06); },
+  // A happy howl: up, hold, and down again (pitch: the breed's voice).
+  howl(pitch = 1, vol = 1) { const o = 330 * pitch; tone('sine', o, o * 1.5, 0.6, 0.12 * vol); tone('sine', o * 1.5, o * 1.42, 0.9, 0.1 * vol, 0.55); tone('sine', o * 1.42, o * 0.9, 0.6, 0.08 * vol, 1.4); },
   // Power-up running out.
   fizzle() { tone('sine', 600, 200, 0.3, 0.12); },
   hooray() {

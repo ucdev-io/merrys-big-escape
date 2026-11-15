@@ -7,6 +7,7 @@ import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { progress } from '../game/progress.js';
 import { COSMETICS, SLOTS, FRIEND_NAMES } from '../game/cosmetics.js';
 import { STATS, levelStats, outfitStats, boostText } from '../game/stats.js';
+import { EMOTES } from '../entities/dog.js';
 import { loadSave } from '../core/save.js';
 import { sfx } from '../core/audio.js';
 import { buzz } from '../core/haptics.js';
@@ -48,7 +49,14 @@ export class HUD {
     // Level & stars: tap for "My dog" (stats, dress up).
     this.xpPill = el('button', 'pill xp-pill', '<span class="lv"></span><span class="bar"><i></i></span>');
     this.xpPill.onclick = () => this.showMyDog();
-    tr.append(this.xpPill, this.mischiefPill, this.bookBtn, this.menuBtn);
+    // 😀 Emotes: play bow, spin, sit, roll over, howl, dance (also keys 1–6).
+    this.emoteBtn = el('button', 'pill emote-btn', '😀');
+    this.emoteBtn.title = 'Emotes (keys 1–6)';
+    this.emoteBar = el('div', 'emote-bar hidden', EMOTES.map((e, i) => `<button data-e="${e.id}" title="${e.name} (${i + 1})">${e.emoji}<small>${e.name}</small></button>`).join(''));
+    this.emoteBtn.onclick = () => this.emoteBar.classList.toggle('hidden');
+    this.emoteBar.onclick = (ev) => { const b = ev.target.closest('[data-e]'); if (b) { this.onEmote?.(b.dataset.e); this.emoteBar.classList.add('hidden'); } };
+    tr.append(this.xpPill, this.mischiefPill, this.emoteBtn, this.bookBtn, this.menuBtn);
+    this.root.appendChild(this.emoteBar);
     this.levelBanner = el('div', 'levelup');
     this.root.appendChild(this.levelBanner);
     this.levelBanner.onclick = () => { this.levelBanner.classList.remove('show'); this.showWardrobe(); };
@@ -199,13 +207,15 @@ export class HUD {
 
   showHelp() {
     const keys = `<h3>⌨️ Keyboard</h3><p class="help-keys"><b>WASD</b> or arrows: walk · <b>Shift</b>: zoomies · <b>Space</b>: jump<br>
-      hold <b>F</b>: sniff · <b>E</b>: dig / grab / drop · <b>Q</b>: woof · drag the mouse to look · scroll to zoom</p>`;
+      hold <b>F</b>: sniff · <b>E</b>: dig / grab / drop · <b>Q</b>: woof · <b>1–6</b>: emotes · drag the mouse to look · scroll to zoom</p>`;
     const touch = `<h3>📱 Touch</h3><p class="help-keys">Drag on the <b>left</b> to walk (push far for zoomies) · drag on the <b>right</b> to look · pinch to zoom<br>
       🦘 Jump · hold 👃 Sniff · 🐾 Dig · 🗣️ Woof · hold 💨 Zoom</p>`;
     this.showCard(`<h1>How to play</h1>${isTouchDevice() ? touch + keys : keys + touch}
       <h3>🐾 Tips</h3><ul class="help-tips">
         <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, <b>Duchess</b> at the pond keeps losing her ducklings, and the <b>Lost &amp; Found board</b> by your gate has neighbours' lost things to take home. The compass points the way.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
+        <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
+        <li><b>🎮 Games</b> (tap 👥 at the top): race to a place, or play tag with friends. On your own, try to beat your best race time.</li>
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>

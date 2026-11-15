@@ -64,6 +64,17 @@ body.touch-mode .boosts { bottom: 177px; }
 .big-card .power b { font-weight: normal; font-size: 19px; }
 .big-card .power span { font-size: 13px; opacity: 0.7; }
 .witem .wb { font-size: 12px; opacity: 0.8; }
+/* 😀 Emote menu */
+.emote-bar { position: absolute; right: calc(16px + var(--sa-r, 0px)); top: calc(62px + var(--sa-t, 0px)); display: grid; grid-template-columns: repeat(3, 64px); gap: 6px; pointer-events: auto; z-index: 5; }
+.emote-bar button { background: var(--wash); border: 2px solid rgba(59, 43, 37, 0.3); border-radius: var(--wobbly); font-size: 24px; padding: 4px 2px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+.emote-bar button small { font-size: 11px; line-height: 1.1; }
+.emote-btn { font-size: 18px; }
+/* Games with friends */
+.game-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+.game-btns .pill small { display: block; font-size: 13px; opacity: 0.75; }
+.game-banner { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--wash); border-radius: var(--wobbly); padding: 4px 16px; font-size: 20px; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); white-space: nowrap; }
+.game-banner.big { top: 30%; font-size: 64px; padding: 8px 28px; }
+.big-card .results { text-align: left; display: inline-block; font-size: 19px; line-height: 1.6; }
 
 /* Found toast */
 .toast {

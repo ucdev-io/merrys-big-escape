@@ -158,6 +158,12 @@ const FLUFF = (() => {
 })();
 
 const UP_TAILS = new Set(['up', 'curl', 'plume']);
+// How long each emote lasts (seconds).
+const EMOTE_TIME = { bow: 1.8, spin: 1.3, sit: 3, roll: 2.6, howl: 2.4, dance: 2.2 };
+export const EMOTES = [
+  { id: 'bow', emoji: '🙇', name: 'Play bow' }, { id: 'spin', emoji: '🌀', name: 'Chase tail' }, { id: 'sit', emoji: '🪑', name: 'Sit' },
+  { id: 'roll', emoji: '🙃', name: 'Roll over' }, { id: 'howl', emoji: '🐺', name: 'Howl' }, { id: 'dance', emoji: '💃', name: 'Happy dance' },
+];
 const TAIL_FLUFF = { plume: 1.7, feather: 1.6, sabre: 1.3, otter: 0.6, curl: 0.8 };
 const DARK_EYE = 0x241a17;
 // Finished (fluffed and painted) coat shapes per breed: every dog of a breed is identical, so build it once.
@@ -463,9 +469,54 @@ export class Dog {
   }
 
   bark() { this.barkT = 0.45; }
+  /** Show off: 'bow' | 'spin' | 'sit' | 'roll' | 'howl' | 'dance' (see EMOTES in dog.js). */
+  emote(kind) { if (EMOTE_TIME[kind]) { this.emoteKind = kind; this.emoteT = EMOTE_TIME[kind]; } }
+  stopEmote() { this.emoteT = Math.min(this.emoteT ?? 0, 0.25); }
   jump() { this.squash = -0.25; }
   land(k = 1) { this.squash = 0.28 * k; }
   shake() { this.shakeT = 1.3; }
+
+  /** Pose for the current emote, blended in by k (0..1). */
+  poseEmote(t, k) {
+    const B = this.body, lerpTo = (o, key, v) => (o[key] += (v - o[key]) * k);
+    const hk = 0.4 + 0.6 * this.legScale;
+    switch (this.emoteKind) {
+      case 'bow': // elbows down, bottom up, tail going mad
+        lerpTo(B.rotation, 'x', 0.42);
+        B.position.y -= 0.05 * hk * k;
+        this.legs.forEach((L) => { if (L.front) { lerpTo(L.hip.rotation, 'x', -0.9); lerpTo(L.knee.rotation, 'x', 1.6); } });
+        this.tail.rotation.y = Math.sin(t * 22) * 0.7;
+        lerpTo(this.neck.rotation, 'x', 0.4);
+        break;
+      case 'sit':
+      case 'howl': { // bottom down, front legs straight (howl: nose to the sky)
+        lerpTo(B.rotation, 'x', -0.55);
+        B.position.y -= 0.07 * hk * k;
+        this.legs.forEach((L) => {
+          if (L.front) { lerpTo(L.hip.rotation, 'x', 0.55); lerpTo(L.knee.rotation, 'x', -0.1); }
+          else { lerpTo(L.hip.rotation, 'x', -1.4); lerpTo(L.knee.rotation, 'x', 1.9); lerpTo(L.ankle.rotation, 'x', -1.1); }
+        });
+        if (this.emoteKind === 'howl') { lerpTo(this.neck.rotation, 'x', -0.2); lerpTo(this.head.rotation, 'x', -1.3); }
+        break;
+      }
+      case 'spin': // round and round after that tail
+        B.rotation.y += ((EMOTE_TIME.spin - this.emoteT) / EMOTE_TIME.spin) * Math.PI * 4 * k;
+        B.rotation.z += Math.sin(t * 30) * 0.08 * k;
+        break;
+      case 'roll': // belly up for a tummy rub, paws waving
+        lerpTo(B.rotation, 'z', Math.PI);
+        B.position.y -= (this.bodyY - 0.11) * k;
+        this.legs.forEach((L, i) => { L.hip.rotation.x += Math.sin(t * 9 + i) * 0.35 * k; L.knee.rotation.x += 0.6 * k; });
+        this.tail.rotation.y = Math.sin(t * 16) * 0.8;
+        break;
+      case 'dance': // happy hops and wiggles
+        B.position.y += Math.abs(Math.sin(t * 11)) * 0.07 * hk * k;
+        B.rotation.z += Math.sin(t * 11) * 0.18 * k;
+        this.tail.rotation.y = Math.sin(t * 24) * 0.8;
+        this.legs.forEach((L) => { if (L.front) L.hip.rotation.x += Math.sin(t * 11) * 0.5 * k; });
+        break;
+    }
+  }
 
   /**
    * @param {number} dt
@@ -612,6 +663,10 @@ export class Dog {
     this.neck.rotation.z = Math.sin(t * 48 + 0.6) * 0.5 * sk;
     if (sk > 0) this.ears.forEach((e, i) => (e.rotation.y = Math.sin(t * 48 + i) * 1.2 * sk));
     this.tail.rotation.y += Math.sin(t * 40) * 0.6 * sk;
+
+    // Emotes: blend into the pose, hold it, blend back out.
+    this.emoteT = Math.max(0, (this.emoteT ?? 0) - dt);
+    if (this.emoteT > 0) this.poseEmote(t, Math.min(1, this.emoteT / 0.25, (EMOTE_TIME[this.emoteKind] - this.emoteT) / 0.25 + 0.0001));
 
     // Eyes blink; brows lift when happy (grumpy dogs just scowl harder); tongue out when galloping.
     this.blinkT -= dt;

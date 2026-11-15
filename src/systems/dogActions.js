@@ -122,6 +122,12 @@ export class DogActions {
       onBark?.();
     }
 
+    // Emotes: friends see them too; a howl is heard.
+    if (P.emoted) {
+      this.onAct?.('emote', { id: P.emoted });
+      if (P.emoted === 'howl') sfx.howl?.(P.dog.breed.bark);
+      if (this.carry.held) this.carry.drop(nose); // can't roll over with a sock in your mouth
+    }
     if (canAct) this.mischief.update(dt, P);
     this.carry.update(dt);
     this.updateSnacks(dt, canAct);

@@ -16,6 +16,7 @@ import { Smells } from './town/smells.js';
 import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
 import { TownLife } from './town/life.js';
+import { TownGames } from './town/games.js';
 import { music } from '../core/music.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -83,6 +84,10 @@ export class TownChapter {
       onMischief: (m) => (m.a === 'scatter' ? this.actions.remoteScatter(m.id, m.x) : this.actions.mischief.remote(m)),
     });
 
+    // Games with friends (from the 👥 card): races and tag.
+    this.games = new TownGames({ scene, world, hud, player, pack: this.pack, remotes: this.remotes, layout: this.layout });
+    this.pack.onGame = (m) => this.games.handle(m);
+    this.pack.onStartGame = (kind) => this.games.start(kind);
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
     hud.setPlaces?.(this.placeList());
@@ -317,8 +322,9 @@ export class TownChapter {
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
 
-    // Compass: toward whatever the current job needs (or else the next place to discover).
-    const aim = job ? { x: job.pos.x, z: job.pos.z, label: job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
+    // Compass: toward a race's finish, whatever the current job needs, or the next place to discover.
+    const race = this.games.update(dt);
+    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.emoji } : job ? { x: job.pos.x, z: job.pos.z, label: job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
     if (aim && canAct) {
       const yaw = this.follow.yaw;
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;

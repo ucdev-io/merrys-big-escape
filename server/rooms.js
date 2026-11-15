@@ -77,11 +77,69 @@ function enter(p, room, msg) {
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
 }
 
+// ---- games with friends: 🏁 races and 🐾 tag ----
+// Times go out as "in so many ms" (everyone's clock is a bit different).
+const publicGame = (g) => ({
+  id: g.id, kind: g.kind, by: g.by, byName: g.byName, target: g.target, it: g.it, tags: g.tags, over: g.over,
+  startsIn: g.startAt - Date.now(), endsIn: g.endsAt - Date.now(), finishers: g.finishers,
+});
+
+function startGame(room, p, msg) {
+  if (room.game && !room.game.over) return;
+  const kind = msg.kind === 'tag' ? 'tag' : 'race';
+  if (kind === 'tag' && room.players.size < 2) return send(p.ws, { t: 'game', a: 'nope', msg: 'Tag needs at least two dogs!' });
+  const now = Date.now();
+  const g = (room.game = {
+    id: (room.gameN = (room.gameN ?? 0) + 1), kind, by: p.id, byName: p.name, target: cleanId(msg.target), over: false,
+    startAt: now + 4000, endsAt: now + 4000 + (kind === 'race' ? 120000 : 90000), finishers: [], tags: {}, it: null, lastTag: 0,
+  });
+  if (kind === 'tag') { const ids = [...room.players.keys()]; g.it = ids[Math.floor(Math.random() * ids.length)]; }
+  clearTimeout(room.gameTimer);
+  room.gameTimer = setTimeout(() => endGame(room), g.endsAt - now);
+  broadcast(room, { t: 'game', a: 'start', game: publicGame(g) });
+}
+
+function endGame(room) {
+  const g = room.game;
+  if (!g || g.over) return;
+  g.over = true;
+  clearTimeout(room.gameTimer);
+  broadcast(room, { t: 'game', a: 'end', game: publicGame(g) });
+}
+
+function gameMove(room, p, msg) {
+  const g = room.game;
+  if (!g || g.over || Date.now() < g.startAt - 200) return;
+  if (msg.a === 'done' && g.kind === 'race' && !g.finishers.some((f) => f.id === p.id)) {
+    g.finishers.push({ id: p.id, name: p.name, ms: Date.now() - g.startAt });
+    broadcast(room, { t: 'game', a: 'finish', id: p.id, name: p.name, place: g.finishers.length, ms: Date.now() - g.startAt });
+    if (g.finishers.length >= room.players.size) endGame(room);
+  } else if (msg.a === 'tag' && g.kind === 'tag') {
+    const target = Number(msg.target);
+    if (g.it !== p.id || target === p.id || !room.players.has(target) || Date.now() - g.lastTag < 1500) return;
+    g.tags[p.id] = (g.tags[p.id] ?? 0) + 1;
+    g.it = target;
+    g.lastTag = Date.now();
+    broadcast(room, { t: 'game', a: 'it', it: target, by: p.id, byName: p.name, name: room.players.get(target).name, tags: g.tags });
+  }
+}
+
 function leave(p) {
   const room = p.room;
   if (!room) return;
   room.players.delete(p.id);
   broadcast(room, { t: 'leave', id: p.id });
+  const g = room.game;
+  if (g && !g.over && room.players.size) {
+    if (g.kind === 'tag' && g.it === p.id) { // "it" went home: someone else is it now
+      const ids = [...room.players.keys()];
+      g.it = ids[Math.floor(Math.random() * ids.length)];
+      broadcast(room, { t: 'game', a: 'it', it: g.it, by: null, byName: null, name: room.players.get(g.it).name, tags: g.tags });
+    }
+    if (g.kind === 'tag' && room.players.size < 2) endGame(room);
+    if (g.kind === 'race' && g.finishers.length >= room.players.size) endGame(room);
+  }
+  if (!room.players.size) clearTimeout(room.gameTimer);
   touchWorld(room.world);
   if (room.players.size === 0) rooms.delete(room.code);
   p.room = null;
@@ -132,10 +190,15 @@ function onMessage(p, msg) {
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
-      if (!room || !['bark', 'dig', 'shake', 'tip', 'hole', 'trample', 'scatter'].includes(msg.a)) return;
+      if (!room || !['bark', 'dig', 'shake', 'tip', 'hole', 'trample', 'scatter', 'emote'].includes(msg.a)) return;
+      if (msg.a === 'emote') return broadcast(room, { t: 'act', id: p.id, a: 'emote', e: cleanId(msg.id) }, p);
       // World changes carry what/where (a bin or flock id, a spot); barks etc. just say who.
       if (['tip', 'hole', 'trample', 'scatter'].includes(msg.a)) return broadcast(room, { t: 'act', by: p.id, a: msg.a, id: cleanId(msg.id), x: num(msg.x), z: num(msg.z) }, p);
       return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
+    case 'game': // 🏁 races and 🐾 tag
+      if (!room) return;
+      if (msg.a === 'start') return startGame(room, p, msg);
+      return gameMove(room, p, msg);
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;
       p.carry = msg.item ? cleanId(msg.item) : null;

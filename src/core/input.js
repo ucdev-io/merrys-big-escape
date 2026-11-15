@@ -32,6 +32,14 @@ export class Input {
   get sprint() { return this.down('ShiftLeft', 'ShiftRight') || this.touchButtons.has('zoom') || this.touchButtons.has('zoom-stick'); }
   get dig() { return this.hit('KeyE') || this.touchButtons.has('dig!'); }
   get bark() { return this.hit('KeyQ') || this.touchButtons.has('bark!'); }
+  /** An emote this frame: number keys 1–6, or the 😀 menu (touch button 'emote:<id>!'). */
+  get emote() {
+    const keys = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6'], ids = ['bow', 'spin', 'sit', 'roll', 'howl', 'dance'];
+    const i = keys.findIndex((k) => this.pressed.has(k));
+    if (i >= 0) return ids[i];
+    for (const b of this.touchButtons) if (b.startsWith('emote:')) return b.slice(6, -1);
+    return null;
+  }
   endFrame() {
     this.pressed.clear();
     for (const b of [...this.touchButtons]) if (b.endsWith('!')) this.touchButtons.delete(b);
