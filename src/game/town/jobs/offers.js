@@ -76,7 +76,7 @@ function pickPerch(jw, rng, T, giver, item) {
       const park = jw.places.park?.name ?? 'the park';
       p = strings
         ? { kind, tree: t.i, top: { x: t.x + (t.bend ?? 0) + c * 0.8 * t.s, y: 2.15 * t.s, z: t.z + (t.bend ?? 0) * 0.4 + s * 0.8 * t.s }, reach: { x: t.x + c * 1.05 * t.s, z: t.z + s * 1.05 * t.s }, face: Math.atan2(c, s), name: `up a tree in ${park}` }
-        : { kind, tree: t.i, top: { x: t.x + c * 0.5, y: reachY, z: t.z + s * 0.5 }, reach: { x: t.x + c * 0.5, z: t.z + s * 0.5 }, face: Math.atan2(c, s), twig: { x: t.x + (t.bend ?? 0) * 0.3 * Math.min(1, reachY / t.s), z: t.z }, name: `in a tree in ${park}` };
+        : { kind, tree: t.i, top: { x: t.x + c * (0.3 * t.s + 0.45), y: reachY, z: t.z + s * (0.3 * t.s + 0.45) }, reach: { x: t.x + c * (0.3 * t.s + 0.45), z: t.z + s * (0.3 * t.s + 0.45) }, face: Math.atan2(c, s), twig: { x: t.x + (t.bend ?? 0) * 0.3 * Math.min(1, reachY / t.s), z: t.z }, name: `in a tree in ${park}` }; // (on the end of a branch, clear of the trunk)
     }
     if (jw.clear(p.reach.x, p.reach.z, 0.3) && flat(p.reach, jw.board) > 8) return { ...p, need, reachY };
   }

@@ -524,6 +524,12 @@ export class Dog {
         mesh(new THREE.SphereGeometry(0.047, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.55, 1.08]);
         mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.0, 0.024], [0.12, Math.PI, 0], [1, 1, 1.15]);
         mesh(SPHERE, 0x6a5a48, g, [0, 0.022, 0], [0, 0, 0], [0.006, 0.004, 0.006]);
+      } else if (hat.id === 'hat-acorn') {
+        // An acorn cup, worn at a jaunty angle (Nut & Meg's present), with its little stalk.
+        mesh(new THREE.SphereGeometry(0.047, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.006, -0.004], [0, 0, 0.12], [1, 0.62, 1]);
+        mesh(new THREE.TorusGeometry(0.045, 0.008, 8, 28), 0x6e4626, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0.12]);
+        for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; mesh(SPHERE, 0x7a4e2c, g, [Math.cos(a) * 0.03, 0.016, Math.sin(a) * 0.03 - 0.004], [0, 0, 0], [0.007, 0.004, 0.007]); } // knobbly
+        mesh(new THREE.CylinderGeometry(0.004, 0.006, 0.026, 8), 0x5a3a20, g, [0.004, 0.036, -0.004], [0, 0, -0.35]);
       } else if (hat.id === 'hat-postie') {
         // The postman's peaked cap: navy, with a red band.
         mesh(new THREE.CylinderGeometry(0.042, 0.045, 0.034, 20), hat.color, g, [0, 0.014, -0.004]);

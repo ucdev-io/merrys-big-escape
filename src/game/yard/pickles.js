@@ -39,7 +39,7 @@ export class Pickles {
   say(situation, { cooldown = 0, force = false, dur = 3.5 } = {}) {
     const line = this.voice.say(situation, this.vars(), { cooldown, force });
     if (!line) return false;
-    this.hud.say(line, this.anchor, dur);
+    this.hud.say(line, this.anchor, dur, 'cat'); // ('cat': off screen, it says who's talking)
     return true;
   }
 

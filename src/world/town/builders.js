@@ -242,12 +242,13 @@ function parkBlock(g, lc, rng) {
   for (const [x, z] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) g.add(pathRibbon([[x * 7, z * 7], [x * 11, z * 11], [x * 15, z * 15], [x * 11.1, z * 11.1]], 1.6, 0xe2d3b8));
 
   const free = (x, z) => { const r = Math.hypot(x, z); return Math.abs(r - 8.5) > 2.6 && Math.abs(x) > 1.5 && Math.abs(z) > 1.5; };
-  let n = 0;
-  for (let t = 0; t < 40 && n < 8; t++) {
+  const trees = []; // (where they are, for the squirrels who live in them)
+  for (let t = 0; t < 40 && trees.length < 8; t++) {
     const x = rng.float(-12.5, 12.5), z = rng.float(-12.5, 12.5);
     if (!free(x, z) || (Math.abs(x) < 5 && Math.abs(z) < 5)) continue;
-    g.add(tree(x, z, rng.float(1.1, 1.6), rng, lc, { detail: 2, blobs: 5 }));
-    n++;
+    const s = rng.float(1.1, 1.6), tr = tree(x, z, s, rng, lc, { detail: 2, blobs: 5 });
+    g.add(tr);
+    trees.push({ x, z, s, bend: tr.userData.bend });
   }
   g.add(birdbath(0, 0)); lc.circle(0, 0, 0.35, 0.92);
   lc.birdSpot(4.5, -3.5); lc.birdSpot(-4.8, 3.2); lc.birdSpot(-3.5, -11.5);
@@ -272,6 +273,7 @@ function parkBlock(g, lc, rng) {
   }
   const mower = lawnmower(6, 4, -0.6);
   g.add(mower); lc.circle(6, 4, 0.5);
+  return { trees };
 }
 
 function pondBlock(g, lc, rng) {
@@ -397,7 +399,7 @@ export function buildTown(layout) {
   root.add(ground());
   streets(root, layout, rng, col, bones);
 
-  let spawn = new THREE.Vector3(0, 0, 0), spawnFace = 0;
+  let spawn = new THREE.Vector3(0, 0, 0), spawnFace = 0, park = null;
   const otherHomes = []; // every other garden in town: one per dog in a pack
   for (const b of layout.blocks) {
     const g = new THREE.Group();
@@ -416,7 +418,7 @@ export function buildTown(layout) {
         const hole = mesh(new THREE.CircleGeometry(0.4, 18), 0x4a3426, root, [spawn.x - home.front[0] * 0.6, 0.06, spawn.z - home.front[1] * 0.6], [-Math.PI / 2, 0, 0]);
         hole.castShadow = false;
       }
-    } else if (b.type === 'park') parkBlock(g, lc, br);
+    } else if (b.type === 'park') park = { block: b, ...parkBlock(g, lc, br) };
     else if (b.type === 'pond') pondBlock(g, lc, br);
     else if (b.type === 'bakery') bakeryBlock(g, lc, br);
     else if (b.type === 'alley') alleyBlock(g, lc, br);
@@ -470,6 +472,8 @@ export function buildTown(layout) {
     pigeonFlocks,
     gardens: extra.gardens,
     bins: extra.bins,
+    // The park's trees, in world coordinates (Nut & Meg hide up them).
+    parkTrees: (park?.trees ?? []).map((t) => ({ ...t, x: t.x + park.block.x, z: t.z + park.block.z })),
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.
     homes: [{ pos: spawn.clone(), face: spawnFace, garden: extra.gardens.find((gd) => gd.home) }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: { x0: -half, x1: half, z0: -half, z1: half },

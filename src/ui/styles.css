@@ -175,7 +175,7 @@ body.touch-mode .stamina { bottom: 180px; }
 .style-picker kbd { font-family: inherit; font-size: 13px; opacity: 0.6; }
 .style-blurb { width: 100%; text-align: center; font-size: 15px; opacity: 0.75; }
 .bubble.offscreen::after { display: none; }
-.bubble.offscreen::before { content: "🐱  "; }
+.bubble.offscreen.cat::before { content: "🐱  "; } /* (Pickles; everyone in town says their own emoji) */
 
 /* Compass toward the next place */
 .compass {

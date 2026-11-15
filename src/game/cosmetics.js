@@ -24,6 +24,10 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-postie', slot: 'hat', name: 'Postie’s cap', emoji: '📮', color: 0x2f3a52, level: 1, friend: 'helped', jobs: 12, boost: { speed: 2, zoomies: 1 } },
 );
+// Thank-you presents from the park friends (hint: how to earn one, for the wardrobe).
+COSMETICS.push(
+  { id: 'hat-acorn', slot: 'hat', name: 'Acorn cap', emoji: '🌰', color: 0x8a5a32, level: 1, friend: 'squirrels', jobs: 3, hint: 'Find Nut & Meg 3 times', boost: { speed: 1, zoomies: 2 } },
+);
 // Prizes from games and challenges (hint: how to win one, for the wardrobe).
 COSMETICS.push(
   { id: 'collar-champion', slot: 'collar', name: 'Champion collar', emoji: '🏅', color: 0x7a4fb0, level: 1, friend: 'wins', jobs: 5, hint: 'Win 5 games', boost: { speed: 2, zoomies: 1 } },

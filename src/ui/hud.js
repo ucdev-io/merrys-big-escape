@@ -214,6 +214,7 @@ export class HUD {
     this.showCard(`<h1>How to play</h1>${isTouchDevice() ? touch + keys : keys + touch}
       <h3>🐾 Tips</h3><ul class="help-tips">
         <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, and <b>Duchess</b> at the pond keeps losing her ducklings. The compass points the way.</li>
+        <li><b>Nut &amp; Meg</b>, the squirrel twins in the park, love hide-and-seek. They hide up the trees: sniff out the right one, then woof at it!</li>
         <li>Walk up to the <b>📋 Lost &amp; Found board</b> by your gate to pick a job: lost things, deliveries, kites stuck up high, runaway hens, things Pickles has pinched… Trickier jobs (🐾🐾🐾) earn more stars, and a twist (🤫 no barking, ⏱️ be quick…) earns a bonus. Walk back to the board to swap a job.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>

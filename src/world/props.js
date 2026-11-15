@@ -68,6 +68,7 @@ export function tree(x, z, s = 1, rng, col, { detail = 3, blobs } = {}) {
     leaf.userData.foliage = true;
   }
   col?.circle(x, z, 0.3 * s);
+  g.userData.bend = bend; // (how far the trunk leans: things that climb it need to know)
   return g;
 }
 
