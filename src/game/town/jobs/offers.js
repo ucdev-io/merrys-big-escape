@@ -1,4 +1,4 @@
-import { JOB_TYPES } from './types.js';
+import { JOB_TYPES, SEASONAL_ITEMS } from './types.js';
 import { SAY, ITEM_NOTES, TWISTS, HENS } from '../../lines/jobs.js';
 import { CARRYABLES } from '../../../entities/carryables.js';
 import '../../../entities/jobItems.js'; // (the job things — parcels, kites… — join the carryables)
@@ -83,12 +83,29 @@ function pickPerch(jw, rng, T, giver, item) {
   return null;
 }
 
+/** Does a job kind suit the season right now? (when: { season, weather, festive }, from the board) */
+function suits(T, when) {
+  const w = T.when;
+  if (!w || !when) return !w;
+  return (!w.seasons || w.seasons.includes(when.season)) && (!w.weather || w.weather.includes(when.weather)) && (!w.festive || w.festive === when.festive);
+}
+
+/** What's lost: now and then something that suits the season (a bobble hat in winter), never one that doesn't (a sun hat in the snow). */
+function pickItem(type, kind, rng, when) {
+  const T = JOB_TYPES[type], list = T.items[kind] ?? T.items.house, extra = when && SEASONAL_ITEMS[type]?.[when.season]?.[kind];
+  for (let i = 0; i < 6; i++) {
+    const item = extra?.length && rng.chance(0.5) ? rng.pick(extra) : rng.pick(list), only = CARRYABLES[item]?.seasons;
+    if (!when || !only || only.includes(when.season)) return item;
+  }
+  return rng.pick(list);
+}
+
 /** Plan one job of a kind. null if this town can't do it right now (e.g. no bins left standing). */
 export function makeOffer(type, jw, rng, opts = {}) {
   const T = JOB_TYPES[type];
   const s = { id: nextId++, type, twist: null };
   let dest;
-  if (T.step === 'herd') {
+  if (T.step === 'herd' || T.herd) {
     const owner = pickPerson(jw, rng, T.givers, opts);
     if (!owner) return null;
     const w = pickWhere(jw, rng, T.wheres, owner, { from: owner.gate, min: 14, max: 55 });
@@ -99,9 +116,13 @@ export function makeOffer(type, jw, rng, opts = {}) {
     const to = pickPerson(jw, rng, T.givers, opts);
     if (!to) return null;
     s.who = to.id;
-    s.item = rng.pick(T.items[to.kind]);
+    s.item = pickItem(type, to.kind, rng, opts.when);
     dest = jw.dest(to);
-    if (s.item === 'newspaper') { s.from = 'paperboy'; s.spot = { x: jw.board.x, z: jw.board.z }; }
+    if (T.from === 'tree') { // (presents: from under the big Christmas tree in the park)
+      const t = jw.world.seasonal?.tree;
+      if (!t) return null;
+      s.from = 'tree'; s.spot = { x: t.x, z: t.z };
+    } else if (s.item === 'newspaper') { s.from = 'paperboy'; s.spot = { x: jw.board.x, z: jw.board.z }; }
     else if (s.item === 'cake' && jw.people.baker && rng.chance(0.8)) { s.from = 'baker'; s.spot = { x: jw.people.baker.step.x, z: jw.people.baker.step.z }; }
     else if (s.item !== 'cake' && rng.chance(0.45)) { s.from = 'postman'; s.spot = null; } // (he's on his round: it'll be wherever he is)
     else {
@@ -114,7 +135,7 @@ export function makeOffer(type, jw, rng, opts = {}) {
     const giver = pickPerson(jw, rng, T.givers, opts);
     if (!giver) return null;
     s.who = giver.id;
-    s.item = rng.pick(T.items[giver.kind] ?? T.items.house);
+    s.item = pickItem(type, giver.kind, rng, opts.when);
     dest = jw.dest(giver);
     if (T.step === 'stuck') {
       const perch = pickPerch(jw, rng, T, giver, s.item);
@@ -173,13 +194,13 @@ function sentence(s, jw, rng) {
  * A few jobs to choose from. keep: offers still up on the board (topped up to n). team: a friend is in
  * the pack (so team jobs can come up, and there's always one). busy: friends with jobs of their own.
  */
-export function makeOffers(jw, rng, { n = 3, team = false, friend = team, keep = [], busy = new Set() } = {}) {
-  const out = keep.filter((o) => team || !JOB_TYPES[o.type].team);
+export function makeOffers(jw, rng, { n = 3, team = false, friend = team, keep = [], busy = new Set(), when = null } = {}) {
+  const out = keep.filter((o) => (team || !JOB_TYPES[o.type].team) && suits(JOB_TYPES[o.type], when));
   const used = new Set(out.map((o) => o.type)), avoid = new Set(out.map((o) => o.who));
-  const opts = { team, friend, avoid, busy };
+  const opts = { team, friend, avoid, busy, when };
   for (let tries = 0; out.length < n && tries < 40; tries++) {
     const wantTeam = team && !out.some((o) => JOB_TYPES[o.type].team);
-    const table = Object.fromEntries(Object.entries(JOB_TYPES).filter(([k, T]) => (wantTeam ? T.team : !T.team) && (!used.has(k) || tries > 20)).map(([k, T]) => [k, T.weight]));
+    const table = Object.fromEntries(Object.entries(JOB_TYPES).filter(([k, T]) => (wantTeam ? T.team : !T.team) && (!used.has(k) || tries > 20) && suits(T, when)).map(([k, T]) => [k, T.weight]));
     const type = weighted(rng, table);
     if (!type) break;
     const spec = makeOffer(type, jw, rng, opts);

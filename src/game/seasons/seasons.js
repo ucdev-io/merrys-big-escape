@@ -12,6 +12,7 @@ import { showSeasonCard } from '../../ui/seasonCard.js';
 import { groundY, pick } from './common.js';
 import { Puddles } from './puddles.js';
 import { PARTS } from './parts.js';
+import './jobs.js'; // (the seasons' jobs for the 📋 board: presents, runaway umbrellas…)
 
 const LOCAL = 0; // our own id in a SeasonRoom of our own (no pack server)
 

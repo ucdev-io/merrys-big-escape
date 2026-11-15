@@ -42,3 +42,50 @@ export const SMELL_WEIGHTS = {
   chips: 3, icecream: 2, crust: 3, apple: 2, crumbs: 2, biscuit: 2, cat: 3, hedgehog: 2, fox: 1, squirrel: 3,
   snail: 2, ladybird: 2, ball: 2, sock: 2, shoe: 1, teddy: 1, frisbee: 1, bone: 1, keys: 1, flowers: 3, mushroom: 1, mint: 1, leaves: 2,
 };
+// 🍂❄️🌸☀️ Smells that come with the seasons and the weather (they join SMELLS), and how often things turn up then.
+Object.assign(SMELLS, {
+  mincepie: { emoji: '🥧', name: 'Mince pie crumbs', xp: 4, lines: ['Mince pie crumbs! Somebody’s been at the Christmas treats.', 'Spicy, fruity, crumbly. Christmassy!'] },
+  hotchoc: { emoji: '☕', name: 'Hot chocolate', xp: 3, lines: ['Hot chocolate! With marshmallows, if this nose is right.', 'Somebody spilt their hot chocolate. Warm and chocolatey!'] },
+  carrot: { emoji: '🥕', name: 'Carrot', xp: 3, lines: ['A carrot! A snowman must have dropped his nose.', 'Carrot! Crunchy… and a bit snowy.'] },
+  chestnuts: { emoji: '🌰', name: 'Roast chestnuts', xp: 4, lines: ['Roast chestnuts! Toasty and nutty.', 'Chestnuts roasting… somewhere near here!'] },
+  pine: { emoji: '🎄', name: 'Christmas tree', xp: 3, lines: ['Pine needles! Smells like Christmas.', 'A Christmas tree was carried past here. Prickly!'] },
+  ice: { emoji: '🧊', name: 'Frosty pond', where: 'pond', xp: 3, lines: ['Brrr! The pond smells frozen.', 'Icy! Ducks have been skating here.'] },
+  bonfire: { emoji: '🔥', name: 'Bonfire smoke', xp: 3, lines: ['Smoky! Somebody’s had a bonfire.', 'Bonfire smell. Toasty!'] },
+  toffee: { emoji: '🍎', name: 'Toffee apple', xp: 4, lines: ['A toffee apple! Sticky and sweet.', 'Toffee! Somebody dropped a bit of toffee apple.'] },
+  pumpkin: { emoji: '🎃', name: 'Pumpkin', xp: 3, lines: ['Pumpkin! Someone’s been carving.', 'Pumpkin seeds everywhere. Squishy!'] },
+  conker: { emoji: '🌰', name: 'Conker', xp: 3, lines: ['A conker! Shiny and smooth.', 'Conkers! Somebody’s been playing conkers.'] },
+  blossom: { emoji: '🌸', name: 'Blossom', xp: 3, lines: ['Blossom! Pink and sneezy. A-CHOO!', 'Petals everywhere. Pretty!'] },
+  chocegg: { emoji: '🥚', name: 'Chocolate egg', xp: 4, lines: ['Chocolate! Somebody had an Easter egg here.', 'A foil wrapper. The chocolate’s gone. Rats.'] },
+  grass: { emoji: '🌱', name: 'Cut grass', xp: 3, lines: ['Fresh cut grass! Mowbot’s been busy.', 'Grassy! Roll in it? Roll in it.'] },
+  suncream: { emoji: '🧴', name: 'Suncream', xp: 3, lines: ['Suncream! Coconutty.', 'Somebody’s ready for the beach!'] },
+  strawberry: { emoji: '🍓', name: 'Strawberries', xp: 4, lines: ['Strawberries! Summery and sweet.', 'A squashed strawberry. Still smells lovely!'] },
+  lolly: { emoji: '🍭', name: 'Ice lolly', xp: 3, lines: ['An ice lolly drip! Orange flavour.', 'A sticky lolly stick. Lick lick.'] },
+  worm: { emoji: '🪱', name: 'Worm', xp: 4, lines: ['A worm! They come up when it rains.', 'Wiggly worm. Hello, worm!'] },
+  puddle: { emoji: '💧', name: 'Puddle', xp: 2, lines: ['A puddle! Splashy smell.', 'Rainy, muddy, puddly. Lovely.'] },
+  wetleaves: { emoji: '🍂', name: 'Wet leaves', xp: 3, lines: ['Soggy leaves. Squelch!', 'Wet leaves smell earthy and brilliant.'] },
+});
+
+/** Per season (and Christmas, and the weather): smells added (how often) and ones that are rarer then (× this). */
+export const SEASON_SMELLS = {
+  spring: { add: { blossom: 4, chocegg: 2, grass: 2, ladybird: 2 }, less: { leaves: 0.2 } },
+  summer: { add: { suncream: 2, strawberry: 2, lolly: 2, grass: 3, icecream: 2 }, less: { leaves: 0.2 } },
+  autumn: { add: { bonfire: 2, toffee: 2, pumpkin: 2, conker: 2, leaves: 3, mushroom: 2 }, less: { icecream: 0.4 } },
+  winter: { add: { hotchoc: 2, carrot: 2, chestnuts: 2, mincepie: 1 }, less: { icecream: 0.15, flowers: 0.2, ladybird: 0.1, snail: 0.3, leaves: 0.5, frisbee: 0.5 } },
+  christmas: { add: { mincepie: 3, pine: 3 } },
+  showers: { add: { worm: 3, puddle: 2, wetleaves: 2 }, less: { chips: 0.6 } },
+};
+
+/** How often each smell turns up right now (this season, maybe Christmas, this weather). */
+export function smellWeights(season, weather, festive) {
+  const w = { ...SMELL_WEIGHTS };
+  for (const key of [season, festive, weather]) {
+    const s = SEASON_SMELLS[key];
+    if (!s) continue;
+    for (const [k, v] of Object.entries(s.add ?? {})) w[k] = (w[k] ?? 0) + v;
+    for (const [k, v] of Object.entries(s.less ?? {})) if (w[k]) w[k] *= v;
+  }
+  return w;
+}
+
+/** What the pond smells of (frozen over: no frogs or flowers). */
+export const POND_SMELLS = { winter: ['duck', 'ice', 'duck', 'snail', 'ice'], other: ['duck', 'frog', 'duck', 'snail', 'flowers'] };

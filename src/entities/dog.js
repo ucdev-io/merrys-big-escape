@@ -533,6 +533,24 @@ export class Dog {
         mesh(new THREE.TorusGeometry(0.045, 0.008, 8, 28), 0x6e4626, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0.12]);
         for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; mesh(SPHERE, 0x7a4e2c, g, [Math.cos(a) * 0.03, 0.016, Math.sin(a) * 0.03 - 0.004], [0, 0, 0], [0.007, 0.004, 0.007]); } // knobbly
         mesh(new THREE.CylinderGeometry(0.004, 0.006, 0.026, 8), 0x5a3a20, g, [0.004, 0.036, -0.004], [0, 0, -0.35]);
+      } else if (hat.id === 'hat-bobble') {
+        // A woolly bobble hat (for building snowmen): stripy, with a big pom-pom.
+        mesh(new THREE.SphereGeometry(0.047, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 1.2, 1]);
+        mesh(new THREE.CylinderGeometry(0.0478, 0.0465, 0.012, 18, 1, true), 0xf7f3ea, g, [0, 0.017, -0.004]);
+        mesh(new THREE.TorusGeometry(0.046, 0.009, 8, 24), 0xf7f3ea, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0]);
+        mesh(SPHERE, 0xf7f3ea, g, [0, 0.062, -0.004], [0, 0, 0], [0.019, 0.019, 0.019]);
+      } else if (hat.id === 'hat-leaves') {
+        // A crown of autumn leaves on a twig.
+        mesh(new THREE.TorusGeometry(0.04, 0.005, 6, 24), 0x7a5232, g, [0, 0.006, 0], [Math.PI / 2, 0, 0]);
+        const cols = [0xd9893c, 0xc0632d, 0xe0b04a, 0xb5482a];
+        for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2; mesh(SPHERE, cols[i % 4], g, [Math.cos(a) * 0.041, 0.016, Math.sin(a) * 0.041], [0.35, -a, 0.55], [0.017, 0.006, 0.011]); }
+      } else if (hat.id === 'hat-bunny') {
+        // Bunny ears (for sniffing out eggs), a bit floppy.
+        for (const s of [-1, 1]) {
+          mesh(SPHERE, hat.color, g, [s * 0.022, 0.066, -0.006], [0.12, 0, s * -0.22], [0.014, 0.05, 0.008]);
+          mesh(SPHERE, 0xf2a0b4, g, [s * 0.022, 0.066, 0.0], [0.12, 0, s * -0.22], [0.008, 0.038, 0.004]);
+          mesh(SPHERE, hat.color, g, [s * 0.022, 0.018, -0.006], [0, 0, 0], [0.016, 0.012, 0.012]);
+        }
       } else if (hat.id === 'hat-postie') {
         // The postman's peaked cap: navy, with a red band.
         mesh(new THREE.CylinderGeometry(0.042, 0.045, 0.034, 20), hat.color, g, [0, 0.014, -0.004]);

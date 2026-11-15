@@ -38,6 +38,13 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-mask', slot: 'hat', name: 'Robber’s mask', emoji: '🦝', color: 0x2b2b38, level: 1, friend: 'heists', jobs: 5, hint: 'Pull off 5 heists', style: 'mask', boost: { speed: 2, zoomies: 1 } },
 );
+// 🍂❄️🌸 Seasonal prizes (stats: snowmen built, leaf piles leapt into, conkers found, eggs sniffed out).
+COSMETICS.push(
+  { id: 'hat-bobble', slot: 'hat', name: 'Bobble hat', emoji: '❄️', color: 0xd9534f, level: 1, friend: 'snowmen', jobs: 3, hint: 'Build 3 snowmen (winter)', boost: { speed: 1, zoomies: 2 } },
+  { id: 'hat-leaves', slot: 'hat', name: 'Autumn leaf crown', emoji: '🍂', color: 0xd9893c, level: 1, friend: 'leaves', jobs: 10, hint: 'Leap into 10 leaf piles (autumn)', boost: { speed: 2, zoomies: 1 } },
+  { id: 'collar-conker', slot: 'collar', name: 'Conker collar', emoji: '🌰', color: 0x6b3417, level: 1, friend: 'conkers', jobs: 20, hint: 'Find 20 conkers (autumn)', boost: { speed: 2 } },
+  { id: 'hat-bunny', slot: 'hat', name: 'Bunny ears', emoji: '🐰', color: 0xf7f3ea, level: 1, friend: 'eggs', jobs: 6, hint: 'Sniff out 6 eggs (spring)', boost: { zoomies: 3 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };
