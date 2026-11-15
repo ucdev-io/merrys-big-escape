@@ -37,9 +37,10 @@ export class Colliders {
    * Height of the highest surface under (x, z) that a dog with feet at `feet` can stand on
    * (anything no higher than feet + stepUp). `extra` adds moving platforms, e.g. other dogs' backs.
    */
-  surfaceAt(x, z, feet, stepUp = 0.3, extra = null, margin = 0.16) {
+  surfaceAt(x, z, feet, stepUp = 0.3, extra = null, margin = 0.16, base = 0) {
     // margin: paws reach a little past the dog's centre, so landing on an edge counts.
-    let best = 0;
+    // base: the ground itself (below 0 in deep water, where a dog floats instead of standing).
+    let best = base;
     const lim = feet + stepUp + 0.01, m = margin;
     for (const c of this.circles) {
       if (c.top === Infinity || c.stand === false || c.top > lim || c.top <= best) continue;

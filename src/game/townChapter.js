@@ -11,6 +11,8 @@ import { NetClient } from '../net/client.js';
 import { showLobby } from '../ui/lobby.js';
 import { paint } from '../render/watercolorMaterial.js';
 import { Mischief } from '../systems/mischief.js';
+import { WaterFx } from '../systems/waterFx.js';
+import { waterAt } from '../world/water.js';
 import { packLink, packPath, fillShareBox } from '../net/links.js';
 import { watchPacks, renderPackRows } from '../net/packs.js';
 import { townName } from '../world/town/generator.js';
@@ -56,6 +58,11 @@ export class TownChapter {
     hud.root.appendChild(this.compass);
 
     this.remotes = new RemoteDogs(scene, hud, () => this.player.pos);
+    this.waterFx = new WaterFx(scene, hud);
+    const surfaceAt = (p) => waterAt(world.water, p.x, p.z)?.surface ?? 0.075;
+    this.remotes.onSplash = (p, power) => this.waterFx.splash(p, surfaceAt(p), power, false);
+    this.remotes.onRipple = (p) => this.waterFx.ring(p, surfaceAt(p), 0.6);
+    this.remotes.onShake = (dog, p) => this.waterFx.shake(dog, p, false);
     this.buildBones();
     this.mischief = new Mischief({
       scene, hud, gardens: world.gardens, beds: world.beds, bins: world.bins, dirt: this.dirt, glow: this.glow,
@@ -426,13 +433,14 @@ export class TownChapter {
     const canAct = !P.frozen;
 
     if (this.net) {
-      const flags = (input.sniff && canAct ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4);
+      const flags = (input.sniff && canAct ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0);
       this.net.sendState(dt, pos, P.heading, P.speed, flags);
     }
     this.remotes.update(dt);
     // Other dogs' backs are something to stand on — the co-op boost!
     P.platforms = this.remotes.platforms();
     this.updateBones(dt);
+    this.waterFx.update(dt, P.dog, { pos: P.pos, heading: P.heading, speed: P.speed, inWater: P.inWater, swim: P.swim, surface: P.waterSurface, enteredSpeed: P.enteredSpeed, leftWater: P.leftWater });
     if (canAct) this.mischief.update(dt, P);
 
     // Discover places by walking into them.

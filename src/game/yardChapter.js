@@ -11,6 +11,7 @@ import { BREEDS } from '../entities/breeds.js';
 import { showLobby } from '../ui/lobby.js';
 import { packPath } from '../net/links.js';
 import { Mischief } from '../systems/mischief.js';
+import { WaterFx } from '../systems/waterFx.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const hd = (a, b) => Math.hypot(a.x - b.x, a.z - b.z); // distance on the ground, ignoring jumps
@@ -53,6 +54,7 @@ const LINES = {
   duck: 'A squeaky duck? How… babyish.',
   sock: 'EW! That sock smells worse than you!',
   sockHint: 'Can\u2019t reach? Try jumping off that crate, genius.',
+  pool: 'EW! Wet dog! Shake over THERE, please!',
   biscuit: 'An ancient biscuit. Lovely. Can I go back to sleep now?',
   hint: '…psst. The soil by the fence near that silly gnome smells VERY soft.',
   barkAt: ['HISSSS! Rude!', 'MY EARS!', 'Bark at the gnome, not at me!'],
@@ -109,6 +111,7 @@ export class YardChapter {
       dogName: () => this.dogName, breedName: () => BREEDS[this.player.breedKey].breed,
     });
     this.mischief.onChange = (n) => { hud.setMischief(n); this.hud.float('😈 +1', this.merryAnchor(), 'dig'); };
+    this.waterFx = new WaterFx(scene, hud);
     this.buildSprinkler(V(3.2, 0, -4.6));
     this.gnome = world.props.gnome;
     this.gnomeTip = 0;
@@ -355,6 +358,8 @@ export class YardChapter {
     }
 
     if (canAct) this.mischief.update(dt, P);
+    this.waterFx.update(dt, P.dog, { pos: P.pos, heading: P.heading, speed: P.speed, inWater: P.inWater, swim: P.swim, surface: P.waterSurface, enteredSpeed: P.enteredSpeed, leftWater: P.leftWater });
+    if (P.leftWater && !this.saidPool) { this.saidPool = true; this.later(0.6, () => { this.hud.say(LINES.pool, this.catAnchor, 3); this.cat.laugh = 1; }); }
     this.updateSprinkler(dt);
     this.updateGnome(dt);
 

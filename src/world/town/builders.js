@@ -43,6 +43,7 @@ function localColliders(col, bx, bz, bones, extra) {
       const collider = col.circle(x + bx, z + bz, 0.4, 1.05);
       extra?.bins.push({ id: `bin${extra.bins.length}`, pivot, x: x + bx, z: z + bz, collider, garden });
     },
+    water: (rx, rz, surface) => extra?.water.push({ kind: 'pond', x: bx, z: bz, rx, rz, surface }),
     circle: (x, z, r, top, stand) => col.circle(x + bx, z + bz, r, top, stand),
     box: (x0, z0, x1, z1, top) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz, top),
     // A golden bone resting on something `top` high. `friend`: too high to reach alone.
@@ -277,7 +278,7 @@ function pondBlock(g, lc, rng) {
   water.castShadow = false;
   const deep = mesh(new THREE.CircleGeometry(1, 40), 0x78afc8, g, [0.8, 0.08, -0.4], [-Math.PI / 2, 0, 0], [rx * 0.6, rz * 0.55, 1]);
   deep.castShadow = false;
-  for (const [x, r] of [[-6, 4.6], [-2, 6], [2, 6], [6, 4.6]]) lc.circle(x, 0, r, 0.31, false);
+  lc.water(rx, rz, 0.075); // swimmable! (shelving beach, then doggy paddle)
   // Lily pads.
   for (let i = 0; i < 14; i++) {
     const a = rng.float(0, Math.PI * 2), k = rng.float(0.3, 0.85);
@@ -384,7 +385,7 @@ export function buildTown(layout) {
   const root = new THREE.Group();
   const col = new Colliders();
   const bones = [];
-  const extra = { root, beds: [], gardens: [], bins: [] };
+  const extra = { root, beds: [], gardens: [], bins: [], water: [] };
 
   root.add(ground());
   streets(root, layout, rng, col, bones);
@@ -448,6 +449,7 @@ export function buildTown(layout) {
     spawnFace,
     bones: bones.map((b, i) => ({ ...b, id: `bone${i}` })),
     beds: extra.beds,
+    water: extra.water,
     gardens: extra.gardens,
     bins: extra.bins,
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.

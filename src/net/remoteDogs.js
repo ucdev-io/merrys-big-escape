@@ -90,7 +90,14 @@ export class RemoteDogs {
       r.heading = h;
       root.rotation.y = h;
       r.digT = Math.max(0, r.digT - dt);
-      r.dog.update(dt, { speed: a.v + (c.v - a.v) * k, turnRate: turn, sniff: !!(c.f & 1), dig: r.digT > 0 || !!(c.f & 2), happy: c.v > 2.8 ? 1 : 0.6, air: c.f & 4 ? 1 : 0, vy: (c.y - a.y) * 8 });
+      r.dog.update(dt, { speed: a.v + (c.v - a.v) * k, turnRate: turn, sniff: !!(c.f & 1), dig: r.digT > 0 || !!(c.f & 2), happy: c.v > 2.8 ? 1 : 0.6, air: c.f & 4 ? 1 : 0, vy: (c.y - a.y) * 8, swim: c.f & 16 ? 1 : 0 });
+      // Splash when they hit the water; little rings while they paddle about.
+      const inW = !!(c.f & 8);
+      if (inW && !r.inW) this.onSplash?.(root.position, Math.min(1.2, (c.v + 1) / 3));
+      if (inW) { r.ringT = (r.ringT ?? 0) - dt; if (r.ringT <= 0) { r.ringT = c.v > 0.3 ? 0.4 : 0.9; this.onRipple?.(root.position); } }
+      if (!inW && r.inW) r.shakeIn = 0.5;
+      if (r.shakeIn > 0 && !inW) { r.shakeIn -= dt; if (r.shakeIn <= 0) this.onShake?.(r.dog, root.position); }
+      r.inW = inW;
 
       // Name tag floats above the dog.
       const s = this.hud.project(root.position.clone().add(new THREE.Vector3(0, 0.9 * r.dog.breed.size, 0)));

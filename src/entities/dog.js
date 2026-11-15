@@ -388,6 +388,31 @@ export class Dog {
     this.tail.rotation.y = Math.sin(t * lerp(6, 16, this.wag)) * lerp(0.2, 0.6, this.wag) * (1 - g * 0.7);
     this.tail.rotation.x = br.tail === 'up' ? 0.2 - g * 0.6 : -g * 1.0 - this.wag * 0.25;
 
+    // Swimming: doggy paddle — legs churn under the water, body level, head held high,
+    // tail floating out behind. Blends in/out smoothly as she wades deeper or climbs out.
+    this.swimK = lerp(this.swimK ?? 0, s.swim ?? 0, 1 - Math.exp(-dt * 6));
+    if (this.swimK > 0.01) {
+      const k = this.swimK, sp = t * (8 + Math.min(4, v * 2));
+      this.legs.forEach((Lg) => {
+        const o = (Lg.side > 0 ? Math.PI : 0) + (Lg.front ? 0 : Math.PI / 2);
+        if (Lg.front) {
+          Lg.hip.rotation.x = lerp(Lg.hip.rotation.x, -0.55 + Math.sin(sp + o) * 0.75, k);
+          Lg.knee.rotation.x = lerp(Lg.knee.rotation.x, 0.9 + Math.cos(sp + o) * 0.7, k);
+        } else {
+          Lg.hip.rotation.x = lerp(Lg.hip.rotation.x, 0.25 + Math.sin(sp + o) * 0.55, k);
+          Lg.knee.rotation.x = lerp(Lg.knee.rotation.x, 0.7 + Math.cos(sp + o) * 0.4, k);
+          Lg.ankle.rotation.x = lerp(Lg.ankle.rotation.x, -0.3, k);
+        }
+      });
+      B.rotation.x = lerp(B.rotation.x, -0.1, k);
+      B.rotation.z = lerp(B.rotation.z, Math.sin(t * 2.2) * 0.05, k);
+      B.position.y = lerp(B.position.y, this.bodyY + Math.sin(t * 3.1) * 0.012, k);
+      B.scale.z = lerp(B.scale.z, 1, k);
+      this.neck.rotation.x = lerp(this.neck.rotation.x, 0.45, k);
+      this.head.rotation.x = lerp(this.head.rotation.x, -0.25, k);
+      this.tail.rotation.x = lerp(this.tail.rotation.x, -1.25, k);
+    }
+
     // Bark: head flicks up, little hop. Shake: full-body wet-dog wiggle.
     this.barkT = Math.max(0, this.barkT - dt);
     const bk = Math.sin((this.barkT / 0.45) * Math.PI);

@@ -72,7 +72,9 @@ export function buildYard(seed = 'biscuit-yard') {
   const beds = [[-5, -7.4, 5, 1.3], [4.6, -7.4, 4.2, 1.3], [-9.2, -0.5, 1.2, 4.5]];
   for (const [x, z, w, d] of beds) group.add(flowerBed(x, z, w, d, rng, null));
   group.add(paddlingPool(3, 2.2, null));
-  col.circle(3, 2.2, 1.15, 0.42);           // stand on the pool's rim
+  // Paddling pool: a rim to hop over (or stand on), and shallow water inside to splash about in.
+  for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; col.circle(3 + Math.cos(a) * 1.0, 2.2 + Math.sin(a) * 1.0, 0.17, 0.42); }
+  col.circle(3, 2.2, 0.86, 0.1);
   // Things to jump up on.
   group.add(crate(-3.55, -2.85, 0.3, 1.1));  // under the washing line — the way up to the sock
   col.box(-3.9, -3.2, -3.2, -2.5, 0.55);
@@ -116,6 +118,7 @@ export function buildYard(seed = 'biscuit-yard') {
     colliders: col,
     props: { gnome: g },
     occluders,
+    water: [{ kind: 'pool', x: 3, z: 2.2, r: 0.84, surface: 0.26 }],
     beds: beds.map(([x, z, w, d]) => ({ x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2 })),
     gardens: [{ rect: { x0: YARD.x0, z0: YARD.z0, x1: YARD.x1, z1: YARD.z1 }, door: new THREE.Vector3(0, 1.6, -8.5), own: true }],
     spawn: new THREE.Vector3(0.5, 0, -1),

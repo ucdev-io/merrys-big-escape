@@ -38,7 +38,7 @@ export class Particles {
       drag: o.drag ?? 0,
       grow: o.grow ?? 0,
       floor: o.floor ?? -Infinity,
-      rot: new THREE.Euler(Math.random() * 3, Math.random() * 3, 0),
+      rot: o.flat ? new THREE.Euler(0, Math.random() * 6.28, 0) : new THREE.Euler(Math.random() * 3, Math.random() * 3, 0), // flat: lies on the ground/water
       squash: o.squash ?? 1,
       attract: o.attract ?? null,
     });
