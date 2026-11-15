@@ -12,6 +12,8 @@ import { showLobby } from '../ui/lobby.js';
 import { paint } from '../render/watercolorMaterial.js';
 import { Mischief } from '../systems/mischief.js';
 import { packLink, packPath, fillShareBox } from '../net/links.js';
+import { watchPacks, renderPackRows } from '../net/packs.js';
+import { townName } from '../world/town/generator.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -88,19 +90,7 @@ export class TownChapter {
       profile: this.profile(),
       townName: this.layout.name,
       onBreed: (k) => { if (k !== this.player.breedKey) this.player.setBreed(k); },
-      onSolo: (c) => { remember(c); lobby.close(); this.begin(); },
-      onHost: async (c) => {
-        remember(c);
-        lobby.setBusy(true);
-        try {
-          const net = this.net ?? new NetClient();
-          const w = await net.enter('create', { seed: this.layout.seed, name: c.name, breed: c.breed, discovered: this.state.discovered, bones: this.state.bones });
-          this.net = net;
-          lobby.close();
-          this.joinPack(w);
-          this.showInvite(w.code, [['Let\u2019s go! 🐾', () => { this.hud.hideCard(); this.begin(); }]]);
-        } catch (e) { lobby.setBusy(false); lobby.setError(e.message); }
-      },
+      onSolo: (c) => { remember(c); lobby.close(); this.begin(); this.openNeighbourhood(c); },
       onJoin: async (c, code) => {
         remember(c);
         lobby.setBusy(true);
@@ -126,12 +116,47 @@ export class TownChapter {
     this.lobby = lobby;
   }
 
+  /**
+   * Everyone's neighbourhood is open to friends on the same Wi-Fi automatically — they see it in
+   * their "Friends playing now" list. If there's no game server, you simply play on your own.
+   */
+  async openNeighbourhood(c) {
+    if (this.net) return;
+    try {
+      const net = new NetClient();
+      const w = await net.enter('create', { seed: this.layout.seed, name: c.name, breed: c.breed, discovered: this.state.discovered, bones: this.state.bones });
+      this.net = net;
+      this.joinPack(w, { rejoin: true }); // you're already at your gate; don't teleport
+      this.hud.showToastRaw('🏘️', 'Your neighbourhood is open!', 'Friends on this Wi-Fi can join you from their menu.');
+    } catch { /* no server: solo play */ }
+  }
+
+  /** While playing, mention when a friend starts playing somewhere else. */
+  watchOtherPacks() {
+    if (this.stopWatch) return;
+    let seen = null;
+    this.stopWatch = watchPacks((list) => {
+      if (!list) return;
+      const others = list.filter((p) => p.code !== this.net?.code);
+      if (seen) {
+        for (const p of others) {
+          if (seen.has(p.code)) continue;
+          this.hud.showToastRaw('🐾', '', '');
+          this.hud.toast.querySelector('.t-head').textContent = `${p.host} is playing in ${townName(p.seed)}!`;
+          this.hud.toast.querySelector('.t-blurb').textContent = 'Tap 👥 at the top to go and join them.';
+        }
+      }
+      seen = new Set(others.map((p) => p.code));
+    }, 5000);
+  }
+
   begin() {
     this.follow.manualHold = 0;
     this.follow.distance = 7;
     this.follow.yaw = this.player.heading + Math.PI;
     this.player.frozen = false;
     this.lobby = null;
+    this.watchOtherPacks();
   }
 
   /** Wire up a pack from the server's welcome message. */
@@ -160,15 +185,35 @@ export class TownChapter {
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.applyEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onNetClosed());
     this.updateBadge();
-    this.packBadge.onclick = () => this.showInvite(this.net?.code ?? '', [['OK', () => this.hud.hideCard()]]);
+    this.packBadge.onclick = () => this.showPackCard();
   }
 
-  /** Card with a QR code + link so friends can join with one tap. */
-  async showInvite(code, buttons) {
+  /** Who's here, other neighbourhoods to hop over to, and (tucked away) a link for new phones. */
+  async showPackCard() {
+    const code = this.net?.code ?? '';
     const names = [...this.remotes.dogs.values()].map((r) => `${BREEDS[r.breed]?.emoji ?? '🐕'} ${r.name}`);
-    this.hud.showCard(`<h1>Pack ${code}</h1><p>Friends on the same Wi-Fi can scan this to join:</p><div class="invite"></div><p class="pack-list"></p>`, buttons);
-    this.hud.card.querySelector('.pack-list').textContent = `In the pack: ${['You', ...names].join(' · ')}`;
-    await fillShareBox(this.hud.card.querySelector('.invite'), await packLink(code), { text: `Join my dog pack ${code}!` });
+    this.hud.showCard(`
+      <h1>👥 Your pack</h1>
+      <p class="pack-list"></p>
+      <h3>Other neighbourhoods</h3>
+      <div class="list others"><p class="none">No one else is playing right now.</p></div>
+      <details class="newphone"><summary>📱 Get the game on another phone or tablet</summary>
+        <p>Friends on this Wi-Fi just open the game and tap you in <b>Friends playing now</b>. New phones can scan this:</p>
+        <div class="invite"></div></details>`, [['OK', () => this.hud.hideCard()]]);
+    const card = this.hud.card;
+    card.querySelector('.pack-list').textContent = ['You', ...names].join(' · ') + (code ? `  (pack ${code})` : '');
+    const others = card.querySelector('.others');
+    const stop = watchPacks((list) => {
+      if (card.classList.contains('hidden') || !card.contains(others)) { stop(); return; }
+      const n = renderPackRows(others, list, { exclude: code, onJoin: (p) => { location.href = packPath(p.code); } });
+      if (!n) others.innerHTML = '<p class="none">No one else is playing right now.</p>';
+    });
+    card.querySelector('details').addEventListener('toggle', async (e) => {
+      if (e.target.open && !e.target.dataset.ready) {
+        e.target.dataset.ready = '1';
+        await fillShareBox(card.querySelector('.invite'), code ? await packLink(code) : location.origin, { text: 'Come and play Merry\u2019s Big Escape!' });
+      }
+    });
   }
 
   // ---------- golden bones ----------
@@ -287,7 +332,8 @@ export class TownChapter {
     if (!this.net) { this.packBadge.classList.add('hidden'); return; }
     this.packBadge.classList.remove('hidden');
     const n = this.remotes.dogs.size + 1;
-    this.packBadge.textContent = `🐾 ${this.net.code} · ${n} ${n === 1 ? 'dog' : 'dogs'}`;
+    this.packBadge.textContent = n === 1 ? '👥 Just you' : `👥 ${n} dogs`;
+    this.packBadge.title = `Pack ${this.net.code}`;
   }
 
   // ---------- state & events (multiplayer-friendly) ----------

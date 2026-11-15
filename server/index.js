@@ -3,7 +3,7 @@
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
-import { attachDogPark } from './rooms.js';
+import { attachDogPark, packsHandler } from './rooms.js';
 import { lanAddresses, lanInfoHandler } from './lan.js';
 
 const PORT = Number(process.env.PORT) || 8080;
@@ -14,6 +14,7 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/lan') return lanInfoHandler(req, res);
+    if (url.pathname === '/api/packs') return packsHandler(req, res);
     let file = normalize(join(ROOT, decodeURIComponent(url.pathname)));
     if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; } // no escaping dist/
     if ((await stat(file).catch(() => null))?.isDirectory()) file = join(file, 'index.html');

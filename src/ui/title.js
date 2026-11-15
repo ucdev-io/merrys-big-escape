@@ -2,6 +2,7 @@ import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
 import { lanBase, fillShareBox } from '../net/links.js';
 import { getSettings, setSetting } from '../core/settings.js';
 import { autoFullscreen, toggleFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
+import { watchPacks, renderPackRows } from '../net/packs.js';
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
 
@@ -40,6 +41,7 @@ export function showTitle(save) {
         <h1>Merry's Big Escape</h1>
         <p class="tag">A muddy-pawed adventure for dogs who follow their noses.</p>
         <div class="pack">${BREED_KEYS.map((k) => `<span title="${BREEDS[k].breed}">${BREEDS[k].swatch.map((c) => `<i style="background:${c}"></i>`).join('')}<b>${BREEDS[k].dogName}</b></span>`).join('')}</div>
+        <div class="friends hidden"><h3>👥 Friends playing now</h3><div class="list"></div></div>
         <div class="choices">
           ${where ? `<button class="pill big" data-c="continue">▶ Continue in ${where}</button>` : ''}
           <button class="pill big" data-c="garden">🐾 New adventure <small>pick your dog · escape your garden</small></button>
@@ -62,7 +64,18 @@ export function showTitle(save) {
         </div>
       </div>`;
     document.getElementById('hud').appendChild(el);
-    el.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { autoFullscreen(); el.remove(); resolve(b.dataset.c); }));
+    let stop = () => {};
+    const finish = (v) => { stop(); autoFullscreen(); el.remove(); resolve(v); };
+    el.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => finish(b.dataset.c)));
+    // Live list of open neighbourhoods on this Wi-Fi: one tap to join.
+    const friends = el.querySelector('.friends');
+    stop = watchPacks((list) => {
+      const n = renderPackRows(friends.querySelector('.list'), list, {
+        onJoin: (p) => finish({ pack: p.code }),
+        joinLabel: (p) => (done ? `Join ${p.host}` : `Join ${p.host} (escape your garden first!)`),
+      });
+      friends.classList.toggle('hidden', !n);
+    });
     el.querySelector('.fs-link')?.addEventListener('click', () => toggleFullscreen(titleCards));
 
     const phone = el.querySelector('.phone'), settings = el.querySelector('.settings');

@@ -77,7 +77,7 @@ function onMessage(p, msg) {
     }
     case 's': // my dog's state
       if (!room) return;
-      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 15, num(msg.y, 50)];
+      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 31, num(msg.y, 50)];
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
@@ -94,6 +94,26 @@ function onMessage(p, msg) {
       return broadcast(room, { t: 'ev', by: p.id, name: p.name, ev: { type: msg.ev.type, id } });
     }
   }
+}
+
+/** Every open neighbourhood on this server, for the "Friends playing now" lists. */
+export function listPacks() {
+  return [...rooms.values()].map((r) => {
+    const dogs = [...r.players.values()];
+    const host = dogs.find((q) => q.slot === 0) ?? dogs[0];
+    return {
+      code: r.code, seed: r.seed, host: host?.name ?? 'A dog',
+      dogs: dogs.map((q) => ({ name: q.name, breed: q.breed })),
+      full: dogs.length >= MAX_PLAYERS,
+    };
+  });
+}
+
+/** GET /api/packs */
+export function packsHandler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Cache-Control', 'no-store');
+  res.end(JSON.stringify({ packs: listPacks() }));
 }
 
 /** Attach the Dog Park to an HTTP server, answering WebSocket upgrades on /ws. */

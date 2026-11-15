@@ -1,4 +1,5 @@
 import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
+import { watchPacks, renderPackRows } from '../net/packs.js';
 
 /**
  * "Who's playing?" — pick a dog, name it, then play alone, start a pack or join one.
@@ -6,7 +7,7 @@ import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
  *
  * @returns {{ el, setError(msg), setBusy(b), close() }}
  */
-export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onHost, onJoin, onNewTown, onGarden, garden = false, title, subtitle }) {
+export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onJoin, onNewTown, onGarden, garden = false, title, subtitle }) {
   const wrap = document.createElement('div');
   wrap.className = 'lobby';
   wrap.innerHTML = `
@@ -22,10 +23,11 @@ export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onHost
       <p class="blurb"></p>
       <label class="name">Name <input maxlength="14" autocomplete="off" spellcheck="false"></label>
       <div class="btns">
-        <button class="pill big solo">🐾 Play on my own</button>
-        <button class="pill big host">🏠 Start a pack</button>
+        <button class="pill big solo">🏘️ Explore <span class="town2"></span></button>
       </div>
-      <div class="join-row">
+      <div class="friends hidden"><h3>👥 Or join a friend</h3><div class="list"></div></div>
+      <button class="link code-link">Have a pack code?</button>
+      <div class="join-row hidden">
         <input class="code" maxlength="8" placeholder="Pack code e.g. BONE-42" autocomplete="off" spellcheck="false">
         <button class="pill join">Join a pack</button>
       </div>
@@ -36,14 +38,16 @@ export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onHost
     </div>`;
   hud.root.appendChild(wrap);
   wrap.querySelector('.town').textContent = townName;
+  const t2 = wrap.querySelector('.town2'); if (t2) t2.textContent = townName;
   if (title) wrap.querySelector('h1').textContent = title;
   if (subtitle) wrap.querySelector('.sub').innerHTML = subtitle;
   if (garden) {
     // Garden mode: just choose a dog and go — packs come after the escape.
-    wrap.querySelectorAll('.host, .join-row, .small').forEach((e) => e.remove());
+    wrap.querySelectorAll('.join-row, .small, .friends, .code-link').forEach((e) => e.remove());
     wrap.querySelector('.solo').textContent = 'Let\u2019s go! 🐾';
   }
 
+  let stopWatching = null;
   const nameIn = wrap.querySelector('.name input');
   const codeIn = wrap.querySelector('.code');
   const err = wrap.querySelector('.err');
@@ -69,7 +73,13 @@ export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onHost
   const choice = () => ({ breed, name: nameIn.value.trim().slice(0, 14) || BREEDS[breed].dogName });
   wrap.querySelector('.solo').onclick = () => onSolo(choice());
   if (garden) return api();
-  wrap.querySelector('.host').onclick = () => onHost(choice());
+  // Friends playing now — tap to join.
+  const friends = wrap.querySelector('.friends');
+  stopWatching = watchPacks((list) => {
+    const n = renderPackRows(friends.querySelector('.list'), list, { onJoin: (p) => onJoin(choice(), p.code) });
+    friends.classList.toggle('hidden', !n);
+  });
+  wrap.querySelector('.code-link').onclick = () => { wrap.querySelector('.join-row').classList.toggle('hidden'); codeIn.focus(); };
   wrap.querySelector('.join').onclick = () => {
     const code = codeIn.value.trim().toUpperCase();
     if (!/^[A-Z]{4}-?\d{2}$/.test(code)) { err.textContent = 'Pack codes look like BONE-42.'; return; }
@@ -83,9 +93,10 @@ export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onHost
     el: wrap,
     setError(msg) { err.textContent = msg || ''; },
     setBusy(b) { wrap.querySelectorAll('button').forEach((x) => (x.disabled = b)); wrap.classList.toggle('busy', b); },
-    close() { wrap.remove(); },
+    close() { stopWatching?.(); wrap.remove(); },
     /** Arrived from a pack link: code ready, just pick a dog and press Join. */
     prefill(code) {
+      wrap.querySelector('.join-row').classList.remove('hidden');
       codeIn.value = code;
       wrap.querySelector('.join').classList.add('big');
       wrap.querySelector('.join').textContent = `Join pack ${code} 🐾`;

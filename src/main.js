@@ -16,7 +16,7 @@ import { buildTown } from './world/town/builders.js';
 import { loadSave, writeSave } from './core/save.js';
 import { NetClient } from './net/client.js';
 import { showTitle } from './ui/title.js';
-import { packCodeFromUrl } from './net/links.js';
+import { packCodeFromUrl, packPath } from './net/links.js';
 import { getSettings } from './core/settings.js';
 import { autoFullscreen } from './ui/fullscreen.js';
 
@@ -55,18 +55,22 @@ paintUniforms.uSunIntensity.value = sun.intensity;
 const params = new URLSearchParams(location.search);
 const save = loadSave();
 // A pack link (/pack/BONE-42) goes straight into that pack.
-const packCode = packCodeFromUrl();
+let packCode = packCodeFromUrl();
+const yardDone = save.yardDone || save.escaped;
 
 // Landing page, unless a link already says where to go.
-// Pack link on a device that hasn't escaped a garden yet: escape first, then join automatically.
-const yardDone = save.yardDone || save.escaped;
-if (packCode && !yardDone) writeSave({ chapter: 'yard', found: [], escaped: false, pendingPack: packCode });
 if (!packCode && !params.has('town') && !params.has('seed')) {
   const choice = await showTitle(save);
-  if (choice === 'garden') writeSave({ chapter: 'yard', found: [], escaped: false, pendingPack: null });
+  if (choice?.pack) {
+    // Tapped a friend in "Friends playing now": join them (no page reload, so fullscreen stays).
+    packCode = choice.pack;
+    history.replaceState(null, '', packPath(packCode));
+  } else if (choice === 'garden') writeSave({ chapter: 'yard', found: [], escaped: false, pendingPack: null });
   else if (choice === 'town') writeSave({ chapter: 'town' });
   Object.assign(save, loadSave());
 }
+// Joining on a device that hasn't escaped a garden yet: escape first, then join automatically.
+if (packCode && !yardDone) writeSave({ chapter: 'yard', found: [], escaped: false, pendingPack: packCode });
 Object.assign(save, loadSave());
 const inTown = params.has('town') || params.has('seed') || (!!packCode && yardDone) || save.chapter === 'town';
 
