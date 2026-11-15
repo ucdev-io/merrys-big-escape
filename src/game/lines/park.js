@@ -35,3 +35,41 @@ export const SQUIRRELS = {
   ],
   bored: ['Nut: Where did {name} go? …Boring!', 'Meg: Fine, we’ll play hide and seek with Gus. (He’s asleep.)'],
 };
+
+/** 🦔 Pepper: a shy, polite little hedgehog, very fond of flowers (and slugs), very scared of the mower. */
+export const PEPPER = {
+  idle: [
+    'Snuffle snuffle.', 'Oh! A big dog! …A nice big dog?', 'I’m not prickly. Well, I am. But I’m nice.', 'Mmm. Worms.',
+    'Have you seen any slugs? Asking for a friend. The friend is me.', 'Is it night yet? I’m a night-time sort of hedgehog.',
+    'Hello, {name}! Lovely leaves today.', 'I’ve got 5,000 prickles. I counted. Twice.', 'Shh. I think I heard the mower.',
+  ],
+  ask: [
+    'Excuse me, big dog… would you walk me to the flowerbeds? That roaring grass monster frightens my prickles off!',
+    'Oh, {name}! Could you take me to the flowers? Slowly, please. I have very little legs.',
+    'Will you be my bodyguard? Just to the flowerbeds. The mower’s about.',
+    'Flowerbeds, please! I’ll follow you. Don’t go too fast — I’m a hedgehog, not a hare.',
+  ],
+  walk: [
+    'Pitter patter, pitter patter…', 'Are we nearly there?', 'This is the furthest I’ve ever walked! (It isn’t.)',
+    'Ooh, a beetle! No — focus, Pepper.', 'You’re a very good bodyguard.', 'Is that the mower? It’s a leaf. Phew.',
+  ],
+  wait: ['Wait for me!', 'Not so fast! Little legs!', 'Hello? Big dog? Where did you go?', 'Slow down, {name}!'],
+  scared: ['EEK! The grass monster!', 'Eep! Ball mode!', 'I’m a pinecone! I’m just a pinecone!', 'Nobody here but us prickles!', '*curls up and trembles*'],
+  phew: ['Is it gone? …It’s gone.', 'Phew!', 'Right. Where was I?', 'I wasn’t scared. I was… resting. In a ball.'],
+  thanks: [
+    'Flowers! And slugs! I mean… lovely flowers!', 'You’re the bravest dog I know, {name}.', 'Thank you! Have a prickle. No? Fair enough.',
+    'Home sweet flowerbed! Thank you, big dog.', 'I’m going to tell all the other hedgehogs about you.',
+  ],
+  giveUp: ['I’ll wait at home, then…', 'Oh. I’ll just… go home. Come back soon!'],
+};
+
+/** 🤖 Mowbot, the park's robot lawnmower: SPEAKS IN CAPITALS. Loves grass. Means well. */
+export const MOWER = {
+  patrol: [
+    'BEEP. MOWING. MOWING.', 'GRASS: FOUR CENTIMETRES. UNACCEPTABLE.', 'HELLO, DOG. I AM MOWBOT. I AM YOUR FRIEND.',
+    'WHIRR. CHOMP. NEAT.', 'STRIPES. I LOVE STRIPES.', 'BEEP BOOP. NICE DAY FOR MOWING.', 'DAISY DETECTED. SPARING DAISY.',
+  ],
+  curious: ['BEEP? SMALL CACTUS DETECTED.', 'HELLO, SMALL SPIKY FRIEND!', 'IS THAT A PINECONE? I MUST INSPECT.', 'NEW FRIEND? BEEP BEEP!'],
+  shooed: ['BEEP! SORRY! REVERSING!', 'OKAY, OKAY! MOWING ELSEWHERE!', 'WOOF RECEIVED. RETREATING.', 'BOOP. MESSAGE UNDERSTOOD.'],
+  blocked: ['EXCUSE ME. YOU ARE NOT GRASS.', 'BEEP BEEP. PLEASE MOVE, FLUFFY OBSTACLE.', 'OBSTACLE: WAGGY. WAITING.'],
+};

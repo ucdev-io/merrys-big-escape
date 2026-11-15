@@ -16,6 +16,7 @@ import { Smells } from './town/smells.js';
 import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
 import { NutAndMeg } from './town/squirrels.js';
+import { Pepper } from './town/pepper.js';
 import { TownLife } from './town/life.js';
 import { TownGames } from './town/games.js';
 import { showRecords } from '../ui/records.js';
@@ -68,9 +69,11 @@ export class TownChapter {
     });
     this.friends.onChange = () => this.refreshObjective();
     this.actions.onMischief = () => this.friends.onMischief();
-    // More friends in the park: Nut & Meg, squirrel twins who love hide-and-seek.
+    // More friends in the park: Nut & Meg, squirrel twins who love hide-and-seek, and Pepper the
+    // hedgehog, who'd love a walk to the flowerbeds if it weren't for the robot lawnmower.
     const friendly = { scene, world, hud, player, actions: this.actions, friends: this.friends, seed: this.layout.seed, dogName: () => this.profile().name };
     this.friends.add(new NutAndMeg(friendly));
+    this.friends.add(new Pepper(friendly));
     this.actions.onCarry = (kind) => { this.pack.sendCarry(kind); this.refreshObjective(); };
     // People out and about (the postman, dog walkers), and ice creams from the van.
     this.life = new TownLife({ scene, world, hud, player, seed: this.layout.seed, dogName: () => this.profile().name });

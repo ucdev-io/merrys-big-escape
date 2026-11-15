@@ -271,8 +271,7 @@ function parkBlock(g, lc, rng) {
     lc.circle(px, pz, 0.48, 1.2);
     lc.bone(px, pz, 1.2);
   }
-  const mower = lawnmower(6, 4, -0.6);
-  g.add(mower); lc.circle(6, 4, 0.5);
+  // (The lawnmower's alive now: Mowbot trundles round the park — see game/town/pepper.js.)
   return { trees };
 }
 

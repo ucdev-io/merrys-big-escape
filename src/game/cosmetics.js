@@ -27,6 +27,7 @@ COSMETICS.push(
 // Thank-you presents from the park friends (hint: how to earn one, for the wardrobe).
 COSMETICS.push(
   { id: 'hat-acorn', slot: 'hat', name: 'Acorn cap', emoji: '🌰', color: 0x8a5a32, level: 1, friend: 'squirrels', jobs: 3, hint: 'Find Nut & Meg 3 times', boost: { speed: 1, zoomies: 2 } },
+  { id: 'neck-daisies', slot: 'neck', name: 'Pepper’s daisy chain', emoji: '🌼', color: 0xfbf7ee, level: 1, friend: 'pepper', jobs: 3, style: 'daisies', hint: 'Walk Pepper to the flowers 3 times', boost: { speed: 1, zoomies: 2 } },
 );
 // Prizes from games and challenges (hint: how to win one, for the wardrobe).
 COSMETICS.push(

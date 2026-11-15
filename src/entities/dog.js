@@ -6,6 +6,7 @@ import { COSMETIC } from '../game/cosmetics.js';
 import { fbm3 } from '../core/rng.js';
 import { TORSO, HEAD, TAILS } from './dogShape.js';
 import { buildSkin } from './dogSkin.js';
+import { daisyChain } from './friendLooks.js';
 
 const TAU = Math.PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -484,6 +485,8 @@ export class Dog {
       const g = keep(group(this.neck, [0, 0.04 * this.dims.NL, 0.05 * this.dims.nr + F * 1.3], [0.4, 0, 0]));
       for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.022, 0.04, 4), c('neck').color, g, [s * 0.02, 0, 0], [0, 0, (s * Math.PI) / 2], [1, 1, 0.5]);
       mesh(SPHERE, c('neck').color, g, [0, 0, 0.004], [0, 0, 0], [0.009, 0.009, 0.008]);
+    } else if (c('neck')?.style === 'daisies') {
+      keep(daisyChain(this.neck, this.dims)); // Pepper's daisy chain
     } else if (c('neck')) {
       // Bandana: a soft triangle hanging at the front of the chest (smooth dogs: on the skin there).
       const sp = this.spineF, o = sp === this.body ? [0, 0, 0] : sp.position.toArray();
