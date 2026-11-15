@@ -98,3 +98,11 @@ export const CARRYABLES = {
   frisbee: { name: 'frisbee', emoji: '🥏', build: frisbee, hold: { pos: [0, -0.04, 0.08], rot: [1.2, 0, 0] } },
   bone: { name: 'old bone', emoji: '🦴', build: oldBone, hold: { pos: [0, -0.025, 0.0], rot: [0, 0, 0] } },
 };
+
+// Lawns are a few centimetres thick and things are put down at ground level: lift the flattest things a
+// little so they sit on the grass instead of hiding in it (a frisbee vanished completely).
+for (const k of ['ball', 'stick', 'frisbee', 'bone']) {
+  const c = CARRYABLES[k], build = c.build;
+  c.build = () => { const g = build(); for (const m of g.children) m.position.y += 0.04; return g; };
+  c.hold = { pos: [c.hold.pos[0], c.hold.pos[1] - 0.04, c.hold.pos[2]], rot: c.hold.rot };
+}

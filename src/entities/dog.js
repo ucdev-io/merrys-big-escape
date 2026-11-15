@@ -524,6 +524,12 @@ export class Dog {
         mesh(new THREE.SphereGeometry(0.047, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.55, 1.08]);
         mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.0, 0.024], [0.12, Math.PI, 0], [1, 1, 1.15]);
         mesh(SPHERE, 0x6a5a48, g, [0, 0.022, 0], [0, 0, 0], [0.006, 0.004, 0.006]);
+      } else if (hat.id === 'hat-postie') {
+        // The postman's peaked cap: navy, with a red band.
+        mesh(new THREE.CylinderGeometry(0.042, 0.045, 0.034, 20), hat.color, g, [0, 0.014, -0.004]);
+        mesh(new THREE.CylinderGeometry(0.0458, 0.0458, 0.009, 20, 1, true), 0xd9534f, g, [0, 0.005, -0.004]);
+        mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.005, 18, 1, false, -Math.PI / 2, Math.PI), 0x232b3d, g, [0, 0.0, 0.026], [0.12, Math.PI, 0], [1, 1, 1.15]);
+        mesh(SPHERE, 0xe0b04a, g, [0, 0.016, 0.042], [0, 0, 0], [0.006, 0.006, 0.003]); // a little badge
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);

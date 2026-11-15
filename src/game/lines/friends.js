@@ -43,20 +43,3 @@ export const DUCHESS = {
   remind: ['Have you seen my ducklings? Three little fluffballs…', 'Do look behind the hedges, dear. They love hedges.'],
   idle: ['Quack.', 'Lovely day for a paddle.', 'Do mind the reeds, dear.', 'One must always look one’s best.', 'Quack quack. That means hello.'],
 };
-
-export const BOARD = {
-  // Lost & found posters (item key, and how it's described).
-  posters: [
-    { item: 'teddy', text: 'LOST: one teddy bear, much loved. Please bring him home!' },
-    { item: 'sock', text: 'LOST: a pink sock. Very stinky. Still wanted!' },
-    { item: 'newspaper', text: 'WHERE is my newspaper?! The paper boy says he delivered it…' },
-    { item: 'frisbee', text: 'LOST: orange frisbee. Last seen flying over a hedge.' },
-    { item: 'ball', text: 'LOST: tennis ball. Belongs to a very sad little boy.' },
-    { item: 'slipper', text: 'Has anyone seen my purple slipper? I only have the left one now.' },
-  ],
-  read: '📋 Follow the glowing paw prints to take it home!',
-  thanks: [
-    'My {item}! Thank you, good dog!', 'Oh, you clever dog! Thank you so much!', 'Who’s a helpful pup? You are!',
-    'Look, everyone! The dog found my {item}!', 'Thank you! Here, have a pat. Pat pat pat.',
-  ],
-};

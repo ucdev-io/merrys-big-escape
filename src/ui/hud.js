@@ -213,7 +213,8 @@ export class HUD {
       🦘 Jump · hold 👃 Sniff · 🐾 Dig · 🗣️ Woof · hold 💨 Zoom</p>`;
     this.showCard(`<h1>How to play</h1>${isTouchDevice() ? touch + keys : keys + touch}
       <h3>🐾 Tips</h3><ul class="help-tips">
-        <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, <b>Duchess</b> at the pond keeps losing her ducklings, and the <b>Lost &amp; Found board</b> by your gate has neighbours' lost things to take home. The compass points the way.</li>
+        <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, and <b>Duchess</b> at the pond keeps losing her ducklings. The compass points the way.</li>
+        <li>Walk up to the <b>📋 Lost &amp; Found board</b> by your gate to pick a job: lost things, deliveries, kites stuck up high, runaway hens, things Pickles has pinched… Trickier jobs (🐾🐾🐾) earn more stars, and a twist (🤫 no barking, ⏱️ be quick…) earns a bonus. Walk back to the board to swap a job.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
         <li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 family records.</li>

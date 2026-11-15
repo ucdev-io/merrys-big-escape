@@ -420,3 +420,11 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
   body.touch-mode .boosts { bottom: calc(11px + var(--sa-b)); }
   body.touch-mode .prompt { bottom: calc(44px + var(--sa-b)); }
 }
+
+/* 📋 The Lost & Found board: pick a job */
+.job-offers { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 2px; }
+.pill.job-offer { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 8px 14px; background: #fbf3e2; font-size: 18px; line-height: 1.25; }
+.job-offer .je { font-size: 34px; line-height: 1; flex: none; }
+.job-offer .jt small { display: block; font-size: 15px; opacity: 0.75; margin-top: 3px; }
+.big-card .page p.job-now { font-size: 20px; }
+@media (max-height: 520px) { .pill.job-offer { padding: 4px 10px; font-size: 16px; } .job-offer .je { font-size: 26px; } .job-offer .jt small { font-size: 13px; } }

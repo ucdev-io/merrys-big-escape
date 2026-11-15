@@ -8,10 +8,11 @@ import { buzz } from '../../core/haptics.js';
 import { freeSpot, blocked } from '../../world/spots.js';
 import { waterAt } from '../../world/water.js';
 import { LineBag } from '../dialogue.js';
-import { GUS, DUCHESS, BOARD } from '../lines/friends.js';
+import { GUS, DUCHESS } from '../lines/friends.js';
 import { progress } from '../progress.js';
 import { COSMETICS } from '../cosmetics.js';
-import { noticeboard, doorMarker } from './friendModels.js';
+import { noticeboard } from './friendModels.js';
+import { JobBoard } from './jobs/board.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
@@ -21,13 +22,16 @@ const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  * Friends around the neighbourhood, and the jobs they need doing — an endless supply:
  *   👴 Gus, a very old basset hound in the park, keeps losing things (some of them buried).
  *   🦆 Duchess at the pond keeps losing her three ducklings: find them and they follow you home.
- *   📋 The Lost & Found board by your house: take neighbours' lost things back to their door.
+ *   📋 The Lost & Found board by your house: pick a job from it (see ./jobs/) — lost things, deliveries,
+ *      kites stuck up high, runaway hens, things Pickles "borrowed"… a new mix every time.
  * Walk up to a friend and they'll ask. Finished jobs earn stars and friendship (and, after a few,
  * something special to wear). Jobs are your own: each player's game has its own.
+ * Other friends (the squirrels, Pepper…) join in with add(): anything with a `job` and update().
  */
 export class Friends {
-  constructor({ scene, world, hud, actions, player, seed, dogName }) {
+  constructor({ scene, world, hud, actions, player, seed, dogName, others = () => [], postman = null, busy = () => false }) {
     Object.assign(this, { scene, world, hud, actions, player, dogName });
+    this.extras = []; // more friends with jobs (see add())
     this.carry = actions.carry;
     this.rng = new RNG(`jobs:${seed}:${Date.now()}`); // where lost things turn up: different every time
     const home = new RNG(`friends:${seed}`);          // where friends live: the same every time
@@ -62,8 +66,14 @@ export class Friends {
     bp ??= freeSpot(world, home, sp.x, sp.z, 2.5, 6) ?? { x: sp.x + 3, z: sp.z };
     scene.add(noticeboard(bp.x, bp.z, (world.spawnFace ?? 0) + Math.PI));
     world.colliders.circle(bp.x, bp.z, 0.6);
-    this.board = { pos: V(bp.x, 0, bp.z), job: null, cool: 0, lastItem: null };
+    this.board = new JobBoard({
+      scene, world, hud, carry: this.carry, actions, player, seed, pos: V(bp.x, 0, bp.z), friends: this, others, busy,
+      live: { gus: () => this.gus.pos, duchess: () => this.duchess.pos, postman },
+    });
   }
+
+  /** Another friend with jobs: { job (or null), update(dt, player, ctx), onBark?(pos), hint? }. */
+  add(friend) { this.extras.push(friend); return friend; }
 
   line(key, list, vars = {}) {
     this.bags[key] ??= new LineBag(list);
@@ -71,7 +81,7 @@ export class Friends {
   }
   say(text, at, dur = 3.6) { this.hud.say(text, typeof at === 'function' ? at : () => at.clone(), dur); }
 
-  get jobs() { return [this.gus.job, this.duchess.job, this.board.job].filter(Boolean); }
+  get jobs() { return [this.gus.job, this.duchess.job, this.board.job, ...this.extras.map((e) => e.job)].filter(Boolean); }
 
   // ---------- Gus ----------
 
@@ -188,46 +198,6 @@ export class Friends {
     if (d < 4 && D.talkT <= 0 && following < job.ducklings.length) { D.talkT = 14; this.say(`🦆 ${this.line('duchess-remind', DUCHESS.remind)}`, head); }
   }
 
-  // ---------- the Lost & Found board ----------
-
-  updateBoard(dt, P) {
-    const B = this.board, d = flat(P.pos, B.pos);
-    B.cool -= dt;
-    const job = B.job;
-    if (!job && d < 2.8 && B.cool <= 0) {
-      const homes = this.world.gardens.filter((g) => !g.home && g.door && g.front);
-      const far = homes.filter((g) => flat(g.door, B.pos) > 15 && flat(g.door, B.pos) < 75);
-      const garden = (far.length ? far : homes)[Math.floor(this.rng.float(0, (far.length ? far : homes).length))];
-      if (!garden) return;
-      const opts = BOARD.posters.filter((p) => p.item !== B.lastItem);
-      const poster = opts[Math.floor(this.rng.float(0, opts.length))];
-      const at = freeSpot(this.world, this.rng, B.pos.x, B.pos.z, 14, 50);
-      if (!at) return;
-      B.lastItem = poster.item;
-      const step = garden.door.clone().setY(0).addScaledVector(garden.front, 1.1);
-      const marker = doorMarker();
-      marker.position.copy(step);
-      marker.visible = false; // shows once you've got the thing
-      this.scene.add(marker);
-      const item = this.carry.add(poster.item, at.x, at.z, { job: 'board' });
-      B.job = { giver: 'board', icon: '📋', who: 'the board', item, name: CARRYABLES[poster.item].name, door: garden.door, step, marker };
-      this.focus = B.job;
-      sfx.rustle?.();
-      this.hud.showToastRaw('📋', poster.text, BOARD.read);
-      this.onChange?.();
-      return;
-    }
-    if (!job) return;
-    const holding = this.carry.held === job.item;
-    job.marker.visible = holding;
-    if (holding) job.marker.rotation.y += dt * 0.8;
-    if (holding && flat(P.pos, job.step) < 1.6) {
-      job.marker.removeFromParent();
-      const door = job.door.clone();
-      this.finish(job, () => this.hud.say(`😊 ${this.line('board-thanks', BOARD.thanks, { item: job.name })}`, () => door, 3.4), 20);
-    }
-  }
-
   // ---------- shared ----------
 
   /** A job's done: stars, friendship, maybe something new to wear. */
@@ -237,22 +207,24 @@ export class Friends {
     sfx.found?.();
     buzz([25, 40, 25]);
     this.actions.sparkle(this.player.pos.clone().add(V(0, 0.8, 0)), 26);
-    const key = { gus: 'gus', duchess: 'duchess', board: 'helped' }[job.giver];
+    const key = job.stat ?? { gus: 'gus', duchess: 'duchess', board: 'helped' }[job.giver];
     const before = progress.stats[key] ?? 0;
     progress.stat(key);
     progress.award(xp, `Helped ${job.who}!`);
     for (const c of COSMETICS) {
       if (c.friend === key && before < c.jobs && before + 1 >= c.jobs) this.hud.showToastRaw(c.emoji, `New: ${c.name}!`, `A thank-you from ${job.who}. Wear it from ☰ → My dog → Dress up.`);
     }
-    if (clear) { if (job.giver === 'gus') { this.gus.job = null; this.gus.cool = 20; } else if (job.giver === 'board') { this.board.job = null; this.board.cool = 6; } }
+    if (clear && job.giver === 'gus') { this.gus.job = null; this.gus.cool = 20; } // (the board and other friends tidy up their own)
     if (job.giver === 'duchess') this.duchess.cool = 40;
     this.gus.talkT = Math.max(this.gus.talkT, 8); this.duchess.talkT = Math.max(this.duchess.talkT, 8); // let the thank-you be heard
     if (this.focus === job) this.focus = this.jobs.find((j) => j !== job && !j.done) ?? null;
     this.onChange?.();
   }
 
-  update(dt, P, canAct = true) {
+  /** ctx: { sniffing, nose } this frame. */
+  update(dt, P, canAct = true, ctx = {}) {
     this.time += dt;
+    for (const e of this.extras) e.update(dt, P, { ...ctx, canAct });
     if (!canAct) { // still choosing a dog: friends just potter about
       this.gus.dog.update(dt, { speed: 0, turnRate: 0, sniff: false, dig: false, happy: 0.2 });
       this.duchess.duck.update(dt, { swim: true });
@@ -260,22 +232,38 @@ export class Friends {
     }
     this.updateGus(dt, P);
     this.updateDuchess(dt, P);
-    this.updateBoard(dt, P);
+    this.board.update(dt, P, { sniffing: false, nose: P.pos, ...ctx });
     // Carrying something for a job? That's the one to point at.
     if (this.carry.held?.job) this.focus = this.jobs.find((j) => j.item === this.carry.held) ?? this.focus;
   }
 
-  /** Where the compass (and, if it's the closest thing, the sniff trail) should point: { pos, emoji }. */
+  /** The local dog woofed (squirrels peek out, Pickles drops things, a quiet job loses its bonus…). */
+  onBark(pos) {
+    this.board.onBark();
+    for (const e of this.extras) e.onBark?.(pos);
+  }
+
+  /** The local dog did something naughty (a "no mischief" job loses its bonus). */
+  onMischief() { this.board.onMischief(); }
+
+  /** Something to tell the player right now ("Too high! Big jump!"), or null. */
+  get hint() { return this.board.hint ?? this.extras.find((e) => e.hint)?.hint ?? null; }
+
+  /**
+   * Where the compass (and, if it's close, the sniff trail) should point: { pos, emoji, label?, compass? }.
+   * compass: somewhere else for the compass (near, not on, something you have to sniff out), or false (hide it).
+   */
   target() {
     const j = this.focus;
     if (!j || j.done) return null;
+    if (j.target) return j.target();
     if (j.giver === 'duchess') {
       const lost = j.ducklings.filter((k) => k.state === 'lost');
       if (!lost.length) return { pos: this.duchess.pos, emoji: '🦆' };
       const P = this.player.pos;
       return { pos: lost.reduce((a, b) => (flat(a.pos, P) < flat(b.pos, P) ? a : b)).pos, emoji: '🐥' };
     }
-    if (this.carry.held === j.item) return j.giver === 'gus' ? { pos: this.gus.pos, emoji: '👴' } : { pos: j.step, emoji: '🏠' };
+    if (this.carry.held === j.item) return { pos: this.gus.pos, emoji: '👴' };
     return { pos: j.item.pos, emoji: CARRYABLES[j.item.kind].emoji };
   }
 
@@ -285,6 +273,7 @@ export class Friends {
     if (!j || j.done) return null;
     const others = this.jobs.filter((q) => q !== j && !q.done).map((q) => q.icon).join(' ');
     const also = others ? ` · also ${others}` : '';
+    if (j.objective) { const o = j.objective(); return o && { ...o, sub: `${o.sub}${also}` }; }
     if (j.giver === 'duchess') {
       const found = j.ducklings.filter((k) => k.state !== 'lost').length, n = j.ducklings.length;
       return found < n
@@ -297,7 +286,6 @@ export class Friends {
       return holding ? { icon: '👴', title: `Take the ${what} back to Gus!`, sub: `He’s snoozing in the park.${also}` }
         : { icon: '👴', title: `Find Gus’s ${what}`, sub: `${j.item.buried ? 'It’s buried! Sniff it out, then dig 🐾' : 'Sniff it out, then grab it 🐾'}${also}` };
     }
-    return holding ? { icon: '📋', title: `Take the ${what} home!`, sub: `Follow the compass to the glowing paw prints.${also}` }
-      : { icon: '📋', title: `Find the lost ${what}`, sub: `Sniff it out, then grab it 🐾${also}` };
+    return null;
   }
 }
