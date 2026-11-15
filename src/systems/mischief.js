@@ -3,6 +3,7 @@ import { paint } from '../render/watercolorMaterial.js';
 import { blobGeometry } from '../world/props.js';
 import { sfx } from '../core/audio.js';
 import { buzz } from '../core/haptics.js';
+import { LineBag } from '../game/dialogue.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -10,15 +11,30 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const SHOUTS = {
-  flowers: ['OI! Get out of my petunias!', 'Not my PRIZE roses!', 'Is that a {breed} in my flowerbed?!', 'SHOO! Those are for the flower show!'],
-  dig: ['Who’s digging up my lawn?!', 'That’s not a bone, that’s my GRASS!', 'Stop digging, you rascal!', 'I only just mowed that!'],
-  bins: ['MY BINS! Not again!', 'Who knocked my bin over?!', 'Rubbish everywhere! Naughty {breed}!', 'Oh, for goodness’ sake!'],
+  flowers: [
+    'OI! Get out of my petunias!', 'Not my PRIZE roses!', 'Is that a {breed} in my flowerbed?!',
+    'SHOO! Those are for the flower show!', 'My begonias! MY BEAUTIFUL BEGONIAS!', 'Off the tulips, you rascal!',
+    'I planted those this morning!', 'Out! Out of the daffodils!', 'Somebody call the flower police!',
+    'You great hairy hooligan!', 'Not the sweet peas! Anything but the sweet peas!',
+  ],
+  dig: [
+    'Who\u2019s digging up my lawn?!', 'That\u2019s not a bone, that\u2019s my GRASS!', 'Stop digging, you rascal!',
+    'I only just mowed that!', 'My lawn looks like the moon!', 'Are you digging to China?!',
+    'That\u2019s a lawn, not a sandpit!', 'Fill that back in this minute!', 'Oh, my poor grass\u2026',
+    'There\u2019s nothing buried there! \u2026Is there?',
+  ],
+  bins: [
+    'MY BINS! Not again!', 'Who knocked my bin over?!', 'Rubbish everywhere! Naughty {breed}!',
+    'Oh, for goodness\u2019 sake!', 'I\u2019m not picking that up! \u2026Oh, I\u2019ll have to.',
+    'That was recycling day!', 'There goes my banana skin collection!', 'Leave my bins alone, you menace!',
+    'Every week! EVERY WEEK!',
+  ],
 };
 // Your own family is less cross. Mostly.
 const FAMILY = {
-  flowers: ['{name}! Not the flowers!!', '{name}, OUT of the flowerbed!'],
-  dig: ['{name}! Stop digging up the lawn!', 'Who’s been digging? {name}!!'],
-  bins: ['{name}! Leave the bin alone!'],
+  flowers: ['{name}! Not the flowers!!', '{name}, OUT of the flowerbed!', 'Muddy paws on the roses, {name}?!', '{name}! Mum\u2019s going to go spare!'],
+  dig: ['{name}! Stop digging up the lawn!', 'Who\u2019s been digging? {name}!!', '{name}, you\u2019re filling that in!', 'More holes, {name}? Really?'],
+  bins: ['{name}! Leave the bin alone!', 'Not the bin, {name}!'],
 };
 
 /**
@@ -44,6 +60,7 @@ export class Mischief {
     this.holeMat = paint(0x4a3426);
     this.pileMat = paint(0x8a6346);
     this.onChange = null;
+    this.bags = {};
   }
 
   gardenAt(x, z) {
@@ -59,7 +76,10 @@ export class Mischief {
     if ((this.yellCool.get(garden) ?? 0) > now) return;
     this.yellCool.set(garden, now + 5000);
     const fill = (s) => s.replace('{name}', esc(this.dogName())).replace('{breed}', esc(this.breedName().toLowerCase()));
-    const line = fill(pick((garden.own ? FAMILY : SHOUTS)[kind]));
+    // No-repeat bags: every neighbour has plenty to say before saying it twice.
+    const key = `${garden.own ? 'family' : 'shout'}:${kind}`;
+    this.bags[key] ??= new LineBag((garden.own ? FAMILY : SHOUTS)[kind]);
+    const line = fill(this.bags[key].next());
     const door = garden.door.clone();
     this.hud.say(`😠 ${line}`, () => door, 3.2, 'angry');
     sfx.shout?.();
