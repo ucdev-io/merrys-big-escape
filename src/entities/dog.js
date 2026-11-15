@@ -4,6 +4,8 @@ import { paint } from '../render/watercolorMaterial.js';
 import { breedOf } from './breeds.js';
 import { COSMETIC } from '../game/cosmetics.js';
 import { fbm3 } from '../core/rng.js';
+import { TORSO, HEAD, TAILS } from './dogShape.js';
+import { buildSkin } from './dogSkin.js';
 
 const TAU = Math.PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -19,6 +21,19 @@ function mesh(geo, color, parent, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 
   parent.add(m);
   return m;
 }
+
+// Bones: the dog's moving parts (Dogs 2.0 bends one smooth skin with them).
+function bone(parent, pos = [0, 0, 0], rot = [0, 0, 0]) {
+  const b = new THREE.Bone();
+  b.position.set(...pos);
+  b.rotation.set(...rot);
+  parent.add(b);
+  return b;
+}
+
+// Dogs 2.0: every dog is one smooth skin (dogSkin.js) instead of separate parts. A breed key added to
+// PARTS is built the old way instead (handy for comparing the two).
+export const PARTS = new Set();
 
 function group(parent, pos = [0, 0, 0], rot = [0, 0, 0]) {
   const g = new THREE.Group();
@@ -88,30 +103,60 @@ function loft(stations, rings = 56, radial = 40, keel = 0.25) {
   return geo;
 }
 
-// Base (whippet) torso:  z, top, bottom(tucked), halfWidth, bottom(untucked)
-const TORSO = [
-  [-0.39, 0.005, -0.03, 0.02, -0.03],
-  [-0.36, 0.045, -0.045, 0.06, -0.06],
-  [-0.29, 0.075, -0.05, 0.077, -0.09],
-  [-0.2, 0.095, -0.03, 0.066, -0.1],
-  [-0.1, 0.1, 0.005, 0.055, -0.105],
-  [0.0, 0.09, -0.045, 0.063, -0.115],
-  [0.09, 0.08, -0.14, 0.077, -0.145],
-  [0.17, 0.075, -0.175, 0.08, -0.175],
-  [0.25, 0.06, -0.15, 0.07, -0.15],
-  [0.3, 0.02, -0.08, 0.045, -0.08],
-  [0.315, -0.01, -0.04, 0.02, -0.04],
-];
-const HEAD = [
-  [-0.065, 0.02, -0.01, 0.018],
-  [-0.045, 0.05, -0.03, 0.04],
-  [-0.01, 0.06, -0.04, 0.048],
-  [0.03, 0.05, -0.037, 0.042],
-  [0.07, 0.03, -0.032, 0.029],
-  [0.11, 0.021, -0.027, 0.022],
-  [0.145, 0.016, -0.022, 0.017],
-  [0.165, 0.006, -0.012, 0.009],
-];
+/**
+ * Split a lofted head (rings × radial corners, then its two end points) along the mouth line into the
+ * skull with the top of the muzzle, and a lower jaw from the mouth's corner (zc) to the nose (tip; the
+ * line ends at yf there). Closed, the two make the same head. Each gets a 'mouth' attribute marking
+ * the corners that became the inside of the mouth. The jaw comes back measured from its hinge.
+ */
+function splitJaw(geo, zc, tip, yf, rings = 40, radial = 32) {
+  const P = geo.attributes.position, n = P.count;
+  let ic = 0;
+  while (ic < rings - 1 && P.getZ(ic * radial) < zc) ic++;
+  const z0 = P.getZ(ic * radial);
+  let y0 = Infinity;
+  for (let j = 0; j < radial; j++) y0 = Math.min(y0, P.getY(ic * radial + j));
+  y0 += 0.004;
+  const line = (z) => lerp(y0, yf, THREE.MathUtils.clamp((z - z0) / (tip - z0), 0, 1));
+  const upper = geo.clone(), jaw = geo.clone();
+  const U = upper.attributes.position, J = jaw.attributes.position;
+  // 'mouth': 1 inside the mouth, 2 along the lips (the corners next to the outside).
+  const mU = new Float32Array(n), mJ = new Float32Array(n);
+  // How wide each ring is where the mouth line crosses it (the cut edges stay on the surface there).
+  const halfW = (i, m) => {
+    let w = 0;
+    for (let j = 0; j < radial; j++) {
+      const a = i * radial + j, b = i * radial + ((j + 1) % radial), ya = P.getY(a) - m, yb = P.getY(b) - m;
+      if ((ya <= 0) !== (yb <= 0)) w = Math.max(w, Math.abs(lerp(P.getX(a), P.getX(b), ya / (ya - yb))));
+    }
+    return w;
+  };
+  for (let v = 0; v < n; v++) {
+    const z = P.getZ(v), y = P.getY(v);
+    if (z < z0 - 1e-6) continue;
+    const m = line(z), i = Math.floor(v / radial), w = i < rings ? halfW(i, m) : 0;
+    const x = THREE.MathUtils.clamp(P.getX(v), -w, w);
+    if (y < m) { U.setXYZ(v, x, m, z); mU[v] = 1; }
+    if (y > m) { J.setXYZ(v, x, m, z); mJ[v] = 1; }
+  }
+  for (const mk of [mU, mJ]) for (let i = ic; i < rings; i++) for (let j = 0; j < radial; j++) {
+    const v = i * radial + j, at = (d) => mk[i * radial + ((j + d + radial) % radial)];
+    if (mk[v] === 1 && (!at(1) || !at(-1) || !at(2) || !at(-2))) mk[v] = 2;
+  }
+  // The jaw starts at the mouth's corner: the rings behind it fold onto that one.
+  for (let i = 0; i < ic; i++) for (let j = 0; j < radial; j++) { const s = ic * radial + j; J.setXYZ(i * radial + j, J.getX(s), J.getY(s), J.getZ(s)); }
+  let cx = 0, cy = 0;
+  for (let j = 0; j < radial; j++) { cx += J.getX(ic * radial + j); cy += J.getY(ic * radial + j); }
+  J.setXYZ(rings * radial, cx / radial, cy / radial, z0 - 0.002);
+  jaw.translate(0, -y0, -z0);
+  upper.setAttribute('mouth', new THREE.BufferAttribute(mU, 1));
+  jaw.setAttribute('mouth', new THREE.BufferAttribute(mJ, 1));
+  upper.computeVertexNormals();
+  jaw.computeVertexNormals();
+  return { upper, jaw, hinge: [0, y0, z0], line };
+}
+
+const MOUTH = new THREE.Color(0x9a4048), LIPS = new THREE.Color(0x3b2c2c); // inside the mouth; its dark edge
 
 const SPHERE = new THREE.SphereGeometry(1, 32, 22);
 
@@ -128,8 +173,9 @@ function fluffify(geo, amt, curl = 0, scale = [1, 1, 1]) {
   g.computeVertexNormals();
   const p = g.attributes.position, nr = g.attributes.normal;
   const v = new THREE.Vector3(), n = new THREE.Vector3(), w = new THREE.Vector3();
-  const [sx, sy, sz] = scale;
+  const [sx, sy, sz] = scale, mo = g.attributes.mouth;
   for (let i = 0; i < p.count; i++) {
+    if (mo && mo.getX(i) > 0) continue; // (no fur inside the mouth)
     v.fromBufferAttribute(p, i); n.fromBufferAttribute(nr, i);
     w.set(v.x * sx, v.y * sy, v.z * sz); // where this point really is on the dog
     const tuft = fbm3(w.x * 45 + 11, w.y * 45, w.z * 45 - 7, 3);
@@ -181,10 +227,12 @@ export class Dog {
     this.root = new THREE.Group();
     this.root.scale.setScalar(br.size);
     this.bodyY = 0.065 + 0.415 * L;
-    this.body = group(this.root, [0, this.bodyY, 0]);
+    const v2 = (this.skinned = !PARTS.has(breedKey));
+    this.body = bone(this.root, [0, this.bodyY, 0]);
     const B = this.body;
     const coatParts = [];
-    const cached = GEO_CACHE.get(br);
+    const cacheKey = `${breedKey}:${v2 ? 2 : 1}`; // (old and new dogs have different parts)
+    const cached = GEO_CACHE.get(cacheKey);
     let ci = 0;
     // fl: how fluffy this part is (dog units).
     const coat = (geo, kind, parent, ref, pos, rot, scale, fl = 0) => {
@@ -199,26 +247,37 @@ export class Dog {
       return m;
     };
 
-    // Torso.
-    this.chest = coat(loft(TORSO.map(([z, top, bot, w, flat]) => [z * len, top * gy, lerp(flat, bot, tuck) * gy, w * gx])), 'body', B, B, null, null, undefined, F);
-    if (br.fluffyBum) coat(SPHERE, 'extra', B, B, [0, 0.0, -0.37 * len], [0, 0, 0], [0.07 * gx, 0.065 * gy, 0.05], F);
+    // The spine: the middle of the back (the body bone), with the chest and the hips either side of it,
+    // so the back can arch, stretch and curl. (Part-built dogs keep their one stiff body.)
+    this.spineF = v2 ? bone(B, [0, 0, 0.12 * len]) : B;
+    this.spineR = v2 ? bone(B, [0, 0, -0.14 * len]) : B;
+    const on = (sp, [x, y, z]) => (sp === B ? [x, y, z] : [x - sp.position.x, y - sp.position.y, z - sp.position.z]); // body space → that bone's
+
+    // Torso. (Smooth dogs: the chest is a little bone in the ribs that breathes.)
+    this.chest = v2 ? bone(this.spineF, [0, -0.06 * gy, 0.02 * len]) : coat(loft(TORSO.map(([z, top, bot, w, flat]) => [z * len, top * gy, lerp(flat, bot, tuck) * gy, w * gx])), 'body', B, B, null, null, undefined, F);
+    if (br.fluffyBum) coat(SPHERE, 'extra', this.spineR, B, on(this.spineR, [0, 0.0, -0.37 * len]), [0, 0, 0], [0.07 * gx, 0.065 * gy, 0.05], F);
     // A fluffy chest ruff (collies, huskies, poms…).
-    if (br.ruff) coat(FLUFF, 'body', B, B, [0, 0.005 * gy, 0.255 * len], [0.35, 0, 0], [0.074 * gx * br.ruff, 0.088 * gy * br.ruff, 0.062 * br.ruff]);
+    if (br.ruff) coat(FLUFF, 'body', this.spineF, B, on(this.spineF, [0, 0.005 * gy, 0.255 * len]), [0.35, 0, 0], [0.074 * gx * br.ruff, 0.088 * gy * br.ruff, 0.062 * br.ruff]);
 
     // Neck.
-    this.neck = group(B, [0, 0.03 * gy, 0.24 * len], [0.85, 0, 0]);
+    this.neck = bone(this.spineF, on(this.spineF, [0, 0.03 * gy, 0.24 * len]), [0.85, 0, 0]);
     const nr = Math.max(gx, gy);
-    coat(taperedTube([[0, -0.03, -0.01], [0, 0.06 * NL, 0.012], [0, 0.13 * NL, 0.008], [0, 0.18 * NL, -0.005]], 0.06 * nr, 0.036 * nr, 20, 24), 'neck', this.neck, this.neck, null, null, undefined, F * 1.15);
+    if (!v2) coat(taperedTube([[0, -0.03, -0.01], [0, 0.06 * NL, 0.012], [0, 0.13 * NL, 0.008], [0, 0.18 * NL, -0.005]], 0.06 * nr, 0.036 * nr, 20, 24), 'neck', this.neck, this.neck, null, null, undefined, F * 1.15);
     this.dims = { NL, nr, gx, gy, len, F, HF };
     if (br.collar) this.breedCollar = this.makeCollar(br.collar.color, br.collar.tag); // e.g. Pippin's own black collar
-    this.head = group(this.neck, [0, 0.175 * NL, -0.005], [-0.6, 0, 0]);
+    this.head = bone(this.neck, [0, 0.175 * NL, -0.005], [-0.6, 0, 0]);
     this.head.scale.setScalar(HW);
     const H = this.head;
     const muzzle = (z) => (z > 0.03 ? 0.03 + (z - 0.03) * HL : z);
     const MW = br.muzzleW ?? 1; // broader muzzle for terriers
     const mw = (z) => 1 + (MW - 1) * Math.min(1, Math.max(0, (z - 0.02) / 0.06));
-    coat(loft(HEAD.map(([z, t, b, w]) => [muzzle(z), t * mw(z), b * mw(z), w * mw(z)]), 40, 32, 0.15), 'head', H, H, null, null, undefined, HF / HW);
+    // The head (smooth-skinned dogs keep it too: the skin's neck tucks up inside it), in two pieces: the
+    // skull with the top of the muzzle, and a lower jaw hinged at the corner of the mouth.
     const tip = muzzle(0.166);
+    const { upper, jaw, hinge, line: mouthLine } = splitJaw(loft(HEAD.map(([z, t, b, w]) => [muzzle(z), t * mw(z), b * mw(z), w * mw(z)]), 40, 32, 0.15), muzzle(0.045), tip, -0.006 * MW);
+    coat(upper, 'head', H, H, null, null, undefined, HF / HW);
+    this.jaw = group(H, hinge);
+    coat(jaw, 'head', this.jaw, H, null, null, undefined, HF / HW);
     const hf = HF / HW; // fluffy faces: sit the eyes, nose and brows on top of the fur
     mesh(SPHERE, br.nose, H, [0, 0.0, tip + hf * 0.7], [0, 0, 0], [0.016, 0.014, 0.012]);
     if (br.beard) coat(FLUFF, 'extra', H, H, [0, -0.03, tip - 0.03], [0.3, 0, 0], [0.024, 0.02, 0.032]);
@@ -285,51 +344,51 @@ export class Dog {
       g.scale.setScalar(br.earSize ?? 1);
       return g;
     });
-    this.tongue = mesh(SPHERE, 0xe88a8f, H, [0, -0.032, tip - 0.055], [0.3, 0, 0], [0.016, 0.005, 0.028]);
+    const tz = Math.max(tip - 0.035, lerp(hinge[2], tip, 0.55)); // (in the jaw, even on a squashed pug face)
+    this.tongue = mesh(SPHERE, 0xe88a8f, this.jaw, [0, mouthLine(tz + 0.005) + 0.002 - hinge[1], tz - hinge[2]], [0.3, 0, 0], [0.016, 0.005, 0.028]);
     this.tongue.visible = false;
     this.mouth = group(H, [0, -0.025, tip - 0.035]); // where carried things go
 
     // Tail.
-    this.tail = group(B, [0, 0.03 * gy, -0.37 * len]);
-    const tails = {
-      long: [[[0, 0, 0], [0, -0.06, -0.07], [0, -0.16, -0.11], [0, -0.25, -0.1], [0, -0.29, -0.05]], 0.017, 0.005],
-      up: [[[0, 0, 0], [0, 0.05, -0.025], [0, 0.1, -0.03], [0, 0.13, -0.025]], 0.02, 0.012],
-      otter: [[[0, 0, 0], [0, -0.03, -0.1], [0, -0.1, -0.18], [0, -0.18, -0.22]], 0.032, 0.01],
-      straight: [[[0, 0, 0], [0, -0.02, -0.1], [0, -0.08, -0.19], [0, -0.13, -0.25], [0, -0.14, -0.29]], 0.018, 0.005],
-      // A tight curl on the hip (pugs, shibas).
-      curl: [[[0, 0, 0], [0, 0.045, -0.025], [0, 0.085, -0.01], [0, 0.095, 0.025], [0.012, 0.07, 0.045], [0.016, 0.045, 0.03]], 0.022, 0.012],
-      // A big bushy tail carried up over the back (huskies, poms, samoyeds).
-      plume: [[[0, 0, 0], [0, 0.06, -0.05], [0, 0.13, -0.05], [0, 0.17, 0.0], [0.008, 0.16, 0.07], [0.014, 0.12, 0.11]], 0.03, 0.014],
-      // Long and feathery, carried low (goldens, collies).
-      feather: [[[0, 0, 0], [0, -0.05, -0.08], [0, -0.14, -0.13], [0, -0.22, -0.14], [0, -0.28, -0.11]], 0.022, 0.009],
-      // A low, bushy brush (shepherds, kelpies).
-      sabre: [[[0, 0, 0], [0, -0.06, -0.07], [0, -0.16, -0.1], [0, -0.25, -0.09], [0, -0.29, -0.05]], 0.026, 0.012],
-    };
+    this.tail = bone(this.spineR, on(this.spineR, [0, 0.03 * gy, -0.37 * len]));
+    const tails = TAILS;
+    if (v2) {
+      // A chain of five tail bones along its curve, so it can swish and ripple.
+      const curve = new THREE.CatmullRomCurve3((tails[br.tail] ?? tails.long)[0].map((p) => new THREE.Vector3(...p)));
+      this.tailBones = [this.tail];
+      let last = new THREE.Vector3();
+      for (const u of [0.2, 0.4, 0.6, 0.8]) {
+        const p = curve.getPointAt(u);
+        this.tailBones.push(bone(this.tailBones[this.tailBones.length - 1], p.clone().sub(last).toArray()));
+        last = p;
+      }
+    }
     const tf = F * (TAIL_FLUFF[br.tail] ?? 1);
-    if (br.tail === 'stub') coat(SPHERE, 'tail', this.tail, this.tail, [0, 0.005, -0.01], [0, 0, 0], [0.025, 0.022, 0.03], tf);
+    if (v2) { /* the tail is part of the skin */ }
+    else if (br.tail === 'stub') coat(SPHERE, 'tail', this.tail, this.tail, [0, 0.005, -0.01], [0, 0, 0], [0.025, 0.022, 0.03], tf);
     else { const [pts, r0, r1] = tails[br.tail] ?? tails.long; coat(taperedTube(pts, r0 * T, r1 * T), 'tail', this.tail, this.tail, null, null, undefined, tf); }
 
     // Legs.
     const P = 0.4 + 0.6 * L; // how much the haunch shrinks with short legs
     this.legs = [];
     const mkFront = (side) => {
-      const hip = group(B, [side * 0.052 * gx, -0.03 * gy, 0.18 * len]);
-      coat(taperedTube([[0, 0.02, 0.01], [0, -0.1 * L, -0.005], [0, -0.215 * L, 0]], 0.042 * T, 0.022 * T, 16, 16), 'upperLeg', hip, hip, null, null, undefined, F * 0.7);
-      const knee = group(hip, [0, -0.215 * L, 0]);
-      coat(taperedTube([[0, 0.01, 0], [0, -0.1 * L, 0.004], [0, -0.2 * L, 0.008]], 0.021 * T, 0.016 * T, 12, 12), 'lowerLeg', knee, knee, null, null, undefined, F * 0.35);
-      const ankle = group(knee, [0, -0.2 * L, 0.008]);
-      coat(SPHERE, 'paw', ankle, ankle, [0, -0.004, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T], F * 0.2);
+      const hip = bone(this.spineF, on(this.spineF, [side * 0.052 * gx, -0.03 * gy, 0.18 * len]));
+      if (!v2) coat(taperedTube([[0, 0.02, 0.01], [0, -0.1 * L, -0.005], [0, -0.215 * L, 0]], 0.042 * T, 0.022 * T, 16, 16), 'upperLeg', hip, hip, null, null, undefined, F * 0.7);
+      const knee = bone(hip, [0, -0.215 * L, 0]);
+      if (!v2) coat(taperedTube([[0, 0.01, 0], [0, -0.1 * L, 0.004], [0, -0.2 * L, 0.008]], 0.021 * T, 0.016 * T, 12, 12), 'lowerLeg', knee, knee, null, null, undefined, F * 0.35);
+      const ankle = bone(knee, [0, -0.2 * L, 0.008]);
+      if (!v2) coat(SPHERE, 'paw', ankle, ankle, [0, -0.004, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T], F * 0.2);
       return { hip, knee, ankle, front: true, side, rest: [0.08, -0.08, 0] };
     };
     const mkRear = (side) => {
-      const hip = group(B, [side * 0.06 * gx, 0.0, -0.28 * len]);
-      coat(SPHERE, 'upperLeg', hip, hip, [0, -0.06 * P, 0.005], [0.15, 0, 0], [0.048 * gx * T * 0.9, 0.115 * P, 0.072 * T], F * 0.9);
-      const knee = group(hip, [0, -0.17 * L, 0]);
-      coat(taperedTube([[0, 0.03, 0.01], [0, -0.08 * L, 0], [0, -0.17 * L, 0]], 0.034 * T, 0.018 * T, 12, 12), 'lowerLeg', knee, knee, null, null, undefined, F * 0.5);
-      const ankle = group(knee, [0, -0.17 * L, 0]);
-      coat(taperedTube([[0, 0.01, 0], [0, -0.125 * L, 0]], 0.019 * T, 0.015 * T, 8, 12), 'lowerLeg', ankle, ankle, null, null, undefined, F * 0.3);
-      const foot = group(ankle, [0, -0.125 * L, 0]);
-      coat(SPHERE, 'paw', foot, foot, [0, -0.002, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T], F * 0.2);
+      const hip = bone(this.spineR, on(this.spineR, [side * 0.06 * gx, 0.0, -0.28 * len]));
+      if (!v2) coat(SPHERE, 'upperLeg', hip, hip, [0, -0.06 * P, 0.005], [0.15, 0, 0], [0.048 * gx * T * 0.9, 0.115 * P, 0.072 * T], F * 0.9);
+      const knee = bone(hip, [0, -0.17 * L, 0]);
+      if (!v2) coat(taperedTube([[0, 0.03, 0.01], [0, -0.08 * L, 0], [0, -0.17 * L, 0]], 0.034 * T, 0.018 * T, 12, 12), 'lowerLeg', knee, knee, null, null, undefined, F * 0.5);
+      const ankle = bone(knee, [0, -0.17 * L, 0]);
+      if (!v2) coat(taperedTube([[0, 0.01, 0], [0, -0.125 * L, 0]], 0.019 * T, 0.015 * T, 8, 12), 'lowerLeg', ankle, ankle, null, null, undefined, F * 0.3);
+      const foot = bone(ankle, [0, -0.125 * L, 0]);
+      if (!v2) coat(SPHERE, 'paw', foot, foot, [0, -0.002, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T], F * 0.2);
       return { hip, knee, ankle, foot, front: false, side, rest: [-0.32, 0.82, -0.5] };
     };
     this.legs.push(mkFront(-1), mkFront(1), mkRear(-1), mkRear(1));
@@ -351,11 +410,18 @@ export class Dog {
         l.copy(v).applyMatrix4(toRef);
         n.set(d.x / gx, (d.y - this.bodyY) / gy + 0.48, d.z / len);
         br.coat(kind, l, n, i / p.count, c);
+        const mo = m.geometry.attributes.mouth?.getX(i);
+        if (mo) c.copy(mo > 1.5 ? LIPS : MOUTH);
         cols[i * 3] = c.r; cols[i * 3 + 1] = c.g; cols[i * 3 + 2] = c.b;
       }
       m.geometry.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     }
-    if (!cached) GEO_CACHE.set(br, coatParts.map(([m]) => m.geometry));
+    if (!cached) GEO_CACHE.set(cacheKey, coatParts.map(([m]) => m.geometry));
+    if (v2) {
+      // Dogs 2.0: the smooth skin, bound to the bones in this rest pose.
+      this.skinBones = [this.body, this.spineF, this.spineR, this.chest, this.neck, this.head, ...this.tailBones, ...this.legs.flatMap((Lg) => [Lg.hip, Lg.knee, Lg.ankle, Lg.foot].filter(Boolean))];
+      this.skin = buildSkin(this, br);
+    }
     this.root.scale.copy(savedScale);
 
     // Animation state.
@@ -479,7 +545,8 @@ export class Dog {
   /** Pose for the current emote, blended in by k (0..1). */
   poseEmote(t, k) {
     const B = this.body, lerpTo = (o, key, v) => (o[key] += (v - o[key]) * k);
-    const hk = 0.4 + 0.6 * this.legScale;
+    const hk = 0.4 + 0.6 * this.legScale, spine = this.spineF !== B;
+    this.emoteK = k;
     switch (this.emoteKind) {
       case 'bow': // elbows down, bottom up, tail going mad
         lerpTo(B.rotation, 'x', 0.42);
@@ -502,6 +569,7 @@ export class Dog {
       case 'spin': // round and round after that tail
         B.rotation.y += ((EMOTE_TIME.spin - this.emoteT) / EMOTE_TIME.spin) * Math.PI * 4 * k;
         B.rotation.z += Math.sin(t * 30) * 0.08 * k;
+        if (spine) { this.spineF.rotation.y += 0.45 * k; this.spineR.rotation.y -= 0.45 * k; } // curled up after it
         break;
       case 'roll': // belly up for a tummy rub, paws waving
         lerpTo(B.rotation, 'z', Math.PI);
@@ -512,6 +580,7 @@ export class Dog {
       case 'dance': // happy hops and wiggles
         B.position.y += Math.abs(Math.sin(t * 11)) * 0.07 * hk * k;
         B.rotation.z += Math.sin(t * 11) * 0.18 * k;
+        if (spine) { this.spineF.rotation.y += Math.sin(t * 11) * 0.15 * k; this.spineR.rotation.y += Math.sin(t * 11) * 0.15 * k; } // a wiggle
         this.tail.rotation.y = Math.sin(t * 24) * 0.8;
         this.legs.forEach((L) => { if (L.front) L.hip.rotation.x += Math.sin(t * 11) * 0.5 * k; });
         break;
@@ -592,6 +661,14 @@ export class Dog {
     B.position.y -= this.squash * 0.12 * hk;
     this.chest.scale.x = 1 + Math.sin(t * lerp(2.2, 9, g)) * 0.03;
 
+    // The spine (smooth dogs): the back arches and stretches through a gallop and curves into turns.
+    if (this.spineF !== B) {
+      this.curve = lerp(this.curve ?? 0, THREE.MathUtils.clamp((s.turnRate ?? 0) * 0.03 * moving, -0.28, 0.28), 1 - Math.exp(-dt * 6));
+      const flex = -Math.sin(P + 0.5) * 0.12 * g; // + = arched
+      this.spineF.rotation.set(flex + this.sniff * 0.06, this.curve, 0);
+      this.spineR.rotation.set(-flex, -this.curve, 0);
+    }
+
     // Whippet shiver: random little shivers when standing still (they're always cold!).
     this.shiverT -= dt * (1 - moving);
     if (this.shiverT < 0) { this.shiver = br.shivers ? 1.2 : 0; this.shiverT = 7 + Math.random() * 8; }
@@ -625,6 +702,10 @@ export class Dog {
     const wagK = br.tail === 'curl' ? 0.45 : 1; // curly tails just wiggle
     this.tail.rotation.y = Math.sin(t * lerp(6, 16, this.wag)) * lerp(0.2, 0.6, this.wag) * (1 - g * 0.7) * wagK;
     this.tail.rotation.x = UP_TAILS.has(br.tail) ? 0.2 - g * (br.tail === 'up' ? 0.6 : 0.4) : -g * 1.0 - this.wag * 0.25;
+    if (this.tailBones) { // a swish that ripples down the tail
+      const f = lerp(6, 16, this.wag), a = lerp(0.08, 0.2, this.wag) * (1 - g * 0.7) * wagK;
+      for (let i = 1; i < this.tailBones.length; i++) this.tailBones[i].rotation.y = Math.sin(t * f - 0.7 * i) * a * (0.8 + 0.1 * i);
+    }
 
     // Swimming: doggy paddle — legs churn under the water, body level, head held high,
     // tail floating out behind. Blends in/out smoothly as she wades deeper or climbs out.
@@ -676,5 +757,11 @@ export class Dog {
     this.brows.forEach((b) => (b.position.y = this.browY + (br.grumpy ? -0.004 : this.wag * 0.006) + this.sniff * -0.004));
     this.tongue.visible = g > 0.4;
     this.tongue.rotation.x = 0.3 + Math.sin(t * 20) * 0.15;
+
+    // The mouth: snaps open to bark, hangs open panting (tongue out), opens wide to howl, and holds
+    // whatever is being carried.
+    const howl = this.emoteT > 0 && this.emoteKind === 'howl' ? this.emoteK ?? 0 : 0;
+    const open = Math.max(bk * 0.5, g > 0.4 ? 0.2 + Math.sin(t * 20) * 0.04 : 0, howl * 0.45, this.mouth.children.length ? 0.1 : 0);
+    this.jaw.rotation.x = lerp(this.jaw.rotation.x, open, 1 - Math.exp(-dt * 18));
   }
 }
