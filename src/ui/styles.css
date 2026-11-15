@@ -1,0 +1,36 @@
+:root {
+  --paper: #f6efe0;
+  --ink: #3b2b25;
+  --wash: rgba(246, 239, 224, 0.82);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper); color: var(--ink); font-family: 'Patrick Hand', 'Comic Sans MS', cursive; }
+#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
+#hud { position: fixed; inset: 0; pointer-events: none; }
+.title-card {
+  position: absolute; left: 16px; top: 14px; max-width: calc(100vw - 32px);
+  padding: 8px 16px 10px; background: var(--wash);
+  border-radius: 18px 22px 16px 24px / 22px 16px 24px 18px;
+  box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
+}
+.title-card h1 { margin: 0; font-size: 28px; font-weight: normal; letter-spacing: 0.5px; }
+.title-card p { margin: 2px 0 0; font-size: 17px; opacity: 0.8; }
+
+.style-picker {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 12px; background: var(--wash); pointer-events: auto;
+  border-radius: 22px 18px 24px 16px / 16px 24px 18px 22px;
+  box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
+}
+.style-picker .label { font-size: 18px; margin-right: 4px; }
+.style-picker button {
+  font: inherit; font-size: 17px; color: var(--ink); cursor: pointer;
+  background: transparent; border: 2px solid rgba(59, 43, 37, 0.25);
+  border-radius: 14px 12px 15px 11px / 11px 15px 12px 14px; padding: 3px 10px;
+}
+.style-picker button:hover { border-color: rgba(59, 43, 37, 0.55); }
+.style-picker button.active { background: #e9c99a; border-color: var(--ink); }
+.style-picker kbd { font-family: inherit; font-size: 13px; opacity: 0.6; }
+.style-blurb { width: 100%; text-align: center; font-size: 15px; opacity: 0.75; }
