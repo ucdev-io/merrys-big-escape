@@ -25,6 +25,7 @@ import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
 import { AREA_BLURBS } from '../world/areas/areas.js';
 import { Woods } from './town/woods/index.js';
+import { Mud } from './town/mud.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -130,10 +131,18 @@ export class TownChapter {
       this.woods = new Woods({
         scene, world, area: woods, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
         dogName: () => this.profile().name, den: this.state.den, onDen: (n) => { this.state.den = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
-        surfaceY: (x, z) => this.seasons.surfaceY(x, z), look: this.seasons.look, // (prints on the ground you see; the fog under the trees)
+        look: this.seasons.look, // (the fog under the trees)
       });
       this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
       this.pack.onWoods = (m) => this.woods.handle(m);
+    }
+    // 🟤 Mud, from any area's muddy patches (the wood's, the farm's…): one coat of it per dog, friends see it,
+    // a splash in water washes it off. (Prints sit on the ground you see.)
+    const mudZones = (world.areas ?? []).flatMap((a) => a.mud ?? []);
+    if (mudZones.length) {
+      this.mud = new Mud({ scene, hud, player, actions: this.actions, zones: mudZones, surfaceY: (x, z) => this.seasons.surfaceY(x, z) });
+      const onMud = this.remotes.onMud;
+      this.remotes.onMud = (dog, level) => { onMud?.(dog, level); this.mud.setRemote(dog, level); };
     }
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
@@ -377,6 +386,7 @@ export class TownChapter {
     this.life.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
+    this.mud?.update(dt, canAct);
     if (this.pond) { // frogs croak as you get near the pond
       const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));
       music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });

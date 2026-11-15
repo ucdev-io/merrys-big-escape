@@ -10,7 +10,6 @@ import { OWL, DEN } from '../../lines/woods.js';
 import { Brock } from './badger.js';
 import { BigSticks } from './sticks.js';
 import { DenModel } from './den.js';
-import { Mud } from './mud.js';
 import { wsfx } from './sounds.js';
 import { season } from '../../season.js';
 
@@ -30,10 +29,9 @@ export class Woods {
    * @param o.area   the woods' world data (world.areas, from world/areas/woodsBuild.js)
    * @param o.den    how many sticks the den has (from this device's save, until the pack says)
    * @param o.onDen  (n) → remember the den's new size (the chapter saves it)
-   * @param o.surfaceY (x, z) → just above the ground you see (the seasons': ice, snowy hills… and the wood's own paths)
    * @param o.look   the seasons' look (render/seasonLook.js), which owns the fog: the wood's own goes on top
    */
-  constructor({ scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, den = 0, onDen = null, surfaceY = null, look = null }) {
+  constructor({ scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, den = 0, onDen = null, look = null }) {
     Object.assign(this, { scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, onDen, look });
     this.carry = actions.carry;
     this.bags = new Map();
@@ -55,11 +53,8 @@ export class Woods {
     this.den = cleanDen(den);
     this.model.set(this.den);
     this.flying = [];
-    // 🟤 Mud.
-    this.mud = new Mud({ scene, hud, player, actions, zones: area.mud, surfaceY });
-    // (Hooks other areas may want too: chained, never replaced.)
-    const mud = remotes.onMud, bark = remotes.onBark;
-    remotes.onMud = (dog, level) => { mud?.(dog, level); this.mud.setRemote(dog, level); };
+    // (The mud is the town's: see TownChapter. Friends' woofs: a hook other areas may want too, so chained.)
+    const bark = remotes.onBark;
     remotes.onBark = (pos) => { bark?.(pos); this.onBark(pos, false); };
 
     this.fogK = 0;
@@ -197,7 +192,6 @@ export class Woods {
     }
     this.flying = this.flying.filter((f) => f.t < 1);
     this.model.update(dt, this.t);
-    this.mud.update(dt, canAct);
     this.cull(this.camera);
 
     // Under the trees: a softer, closer, greener fog, birdsong and the odd woodpecker, a few motes in the air.

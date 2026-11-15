@@ -1,14 +1,15 @@
 import * as THREE from 'three';
-import { SPHERE, bake, bakedMat } from '../../../entities/shapes.js';
-import { paint } from '../../../render/watercolorMaterial.js';
-import { fbm3 } from '../../../core/rng.js';
-import { LineBag } from '../../dialogue.js';
-import { progress } from '../../progress.js';
-import { MUD } from '../../lines/woods.js';
-import { wsfx } from './sounds.js';
+import { SPHERE, bake, bakedMat } from '../../entities/shapes.js';
+import { paint } from '../../render/watercolorMaterial.js';
+import { fbm3 } from '../../core/rng.js';
+import { LineBag } from '../dialogue.js';
+import { progress } from '../progress.js';
+import { MUD } from '../lines/woods.js';
+import { wsfx } from './woods/sounds.js';
 
 /*
- * 🟤 Glorious mud. Walk through it and your dog gets muddier — paws first, then legs, tummy, everything.
+ * 🟤 Glorious mud (the wood's, the farm's… one Mud for the whole town: every area's muddy patches are its
+ * zones). Walk through it and your dog gets muddier — paws first, then legs, tummy, everything.
  * Roll in it for the full effect. Friends see it (it goes out with your dog's position, see pack.js), muddy
  * paws leave prints wherever you go, and a splash in the stream or the pond washes it all off.
  * Levels: 0 clean · 1 muddy paws · 2 muddy legs and tummy · 3 mud monster.
