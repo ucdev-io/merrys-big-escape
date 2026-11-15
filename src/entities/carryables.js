@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mesh } from '../world/props.js';
 import { smellySock } from './items.js';
+import { treatMesh } from './treats.js';
 
 /*
  * Things a dog can pick up and carry in its mouth. build() makes the model, real-world sized, lying
@@ -97,6 +98,12 @@ export const CARRYABLES = {
   newspaper: { name: 'newspaper', emoji: '📰', build: newspaper, hold: { pos: [0, -0.03, 0.0], rot: [0, 0, 0] } },
   frisbee: { name: 'frisbee', emoji: '🥏', build: frisbee, hold: { pos: [0, -0.04, 0.08], rot: [1.2, 0, 0] } },
   bone: { name: 'old bone', emoji: '🦴', build: oldBone, hold: { pos: [0, -0.025, 0.0], rot: [0, 0, 0] } },
+  // Pinched from the bakery street (heists: see treats.js).
+  croissant: { name: 'croissant', emoji: '🥐', build: () => treatMesh('croissant'), hold: { pos: [0, -0.03, 0.035], rot: [0, 0, 0] } },
+  bun: { name: 'iced bun', emoji: '🧁', build: () => treatMesh('bun'), hold: { pos: [0, -0.06, 0.045], rot: [0.3, 0, 0] } },
+  links: { name: 'string of sausages', emoji: '🌭', build: () => treatMesh('links'), hold: { pos: [0, -0.02, 0.03], rot: [0, 0, 0] } }, // (the end of one: the rest trails behind)
+  sausage: { name: 'sausage', emoji: '🌭', build: () => treatMesh('sausage'), hold: { pos: [0, -0.025, 0.03], rot: [0, 0, 0] } },
+  burger: { name: 'burger', emoji: '🍔', build: () => treatMesh('burger'), hold: { pos: [0, -0.07, 0.05], rot: [0.3, 0, 0] } },
 };
 
 // Lawns are a few centimetres thick and things are put down at ground level: lift the flattest things a

@@ -19,6 +19,7 @@ import { NutAndMeg } from './town/squirrels.js';
 import { Pepper } from './town/pepper.js';
 import { TownLife } from './town/life.js';
 import { TownGames } from './town/games.js';
+import { Heists } from './town/heists.js';
 import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
 
@@ -109,6 +110,9 @@ export class TownChapter {
     this.pack.onStartGame = (kind) => this.games.start(kind);
     this.pack.onRecords = records;
     this.actions.onScatter = (flock, n) => this.games.onScatter(n);
+    // Heists: cheeky food raids on the bakery street, on your own or as a team.
+    this.heists = new Heists({ scene, world, hud, player, actions: this.actions, pack: this.pack, remotes: this.remotes, dogName: () => this.profile().name });
+    this.pack.onHeist = (m) => this.heists.handle(m);
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
     hud.setPlaces?.(this.placeList());
@@ -280,7 +284,7 @@ export class TownChapter {
         this.hud.showCard(`
           <h1>Top explorer! 🗺️</h1>
           <p>${escapeHtml(this.profile().name)} has sniffed every corner of ${this.layout.name}.</p>
-          <p>Next time: <b>new friends</b> — a grumpy cat, a worried duck, a sleepy old basset hound and more…</p>`,
+          <p>There’s lots more to do: <b>friends</b> in the park and at the pond, jobs on the <b>📋 board</b> by your gate, and cheeky <b>🥐 heists</b> on the bakery street…</p>`,
           [['Keep exploring', () => this.hud.hideCard()], ['🎲 Try a new town', () => { writeSave({ town: { seed: randomSeed(), discovered: [] } }); location.reload(); }],
             ['Start over', () => { clearSave(); location.reload(); }]]);
       }, 2500);
@@ -324,7 +328,7 @@ export class TownChapter {
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? 'dig');
-    if (canAct) this.hud.setPrompt(paw?.text ?? b.hint ?? this.friends.hint);
+    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
     // Discover places by walking into them.
@@ -346,6 +350,7 @@ export class TownChapter {
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
     const acted = this.actions.update(dt, { canAct, goal, onBark: () => this.friends.onBark(pos) });
     this.life.update(dt, { barked: acted.barked, canAct });
+    this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.pond) { // frogs croak as you get near the pond
       const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));
       music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });
@@ -355,10 +360,13 @@ export class TownChapter {
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
 
-    // Compass: toward a game's next target, whatever the current job needs, or the next place to discover.
+    // Compass: toward a game's next target, home with loot, whatever the current job needs, a BBQ party, or the next place to discover.
     // (A job can point the compass somewhere else — near, not on, something to sniff out — or hide it.)
-    const race = this.games.update(dt), jc = job && job.compass !== false ? job.compass ?? job.pos : null;
-    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : job ? jc && { x: jc.x, z: jc.z, label: job.label ?? job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
+    const race = this.games.update(dt), loot = this.heists.target(), bbq = this.heists.partyTarget(); // (loot: carrying something home to the stash)
+    const jc = job && job.compass !== false ? job.compass ?? job.pos : null;
+    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : loot ? { x: loot.pos.x, z: loot.pos.z, label: loot.label }
+      : job ? jc && { x: jc.x, z: jc.z, label: job.label ?? job.emoji } : bbq ? { x: bbq.pos.x, z: bbq.pos.z, label: bbq.label }
+      : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
     if (aim && canAct) {
       const yaw = this.follow.yaw;
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;

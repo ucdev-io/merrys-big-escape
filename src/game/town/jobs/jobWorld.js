@@ -45,7 +45,8 @@ export class JobWorld {
     this.pond = world.water?.find((w) => w.kind === 'pond') ?? null;
     const bk = this.places.bakery;
     const shop = bk && world.gardens.find((g) => !g.front && !g.home && Math.abs(g.door.x - bk.x) < H + 2 && Math.abs(g.door.z - bk.z) < H + 2);
-    if (shop) this.add({ id: 'baker', kind: 'baker', name: 'the baker', their: 'his', emoji: '🧑‍🍳', door: shop.door, step: this.outside(shop.door), reach: 1.8 });
+    // (She's the baker at her stall in the heists, too: world.heist.bakery.baker is where she stands.)
+    if (shop) this.add({ id: 'baker', kind: 'baker', name: 'the baker', their: 'her', emoji: '🧑‍🍳', door: shop.door, step: this.outside(shop.door), head: world.heist?.bakery?.baker ?? null, reach: 1.8 });
     // Lampposts on every block corner, and the park's trees (things get stuck up them).
     this.lamps = world.layout.blocks.flatMap((b) => [[1, 1], [1, -1], [-1, 1], [-1, -1]].map(([sx, sz], k) => ({ i: `${b.id}.${k}`, x: b.x + sx * (H + 1.4), z: b.z + sz * (H + 1.4), block: b })));
     this.trees = (world.parkTrees ?? []).map((t, i) => ({ ...t, i }));
@@ -81,7 +82,7 @@ export class JobWorld {
   anchor(p) {
     if (p.kind === 'gus') return () => this.live.gus().clone().add(V(0, 1.05, 0));
     if (p.kind === 'duchess') return () => this.live.duchess().clone().add(V(0, 0.55, 0));
-    const d = (p.garden?.door ?? p.door).clone().setY(2.1);
+    const d = (p.head ?? p.garden?.door ?? p.door).clone().setY(p.head ? 2.0 : 2.1); // (the baker: from behind her stall)
     return () => d;
   }
 

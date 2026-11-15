@@ -428,3 +428,18 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .job-offer .jt small { display: block; font-size: 15px; opacity: 0.75; margin-top: 3px; }
 .big-card .page p.job-now { font-size: 20px; }
 @media (max-height: 520px) { .pill.job-offer { padding: 4px 10px; font-size: 16px; } .job-offer .je { font-size: 26px; } .job-offer .jt small { font-size: 13px; } }
+
+/* Heists: what the baker (or butcher, or BBQ cook) is up to, over their head:
+   🎵 busy · ❗ about to look round · 👀 watching · ❓ distracted */
+.lookout { position: absolute; left: 0; top: 0; font-size: 28px; line-height: 1; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 2px 0 var(--paper), 0 -2px 0 var(--paper), 2px 0 0 var(--paper), -2px 0 0 var(--paper); }
+.lookout.busy { font-size: 24px; }
+.lookout.warn { font-size: 38px; animation: lookwarn 0.22s ease-in-out infinite alternate; }
+.lookout.look { font-size: 50px; }
+@keyframes lookwarn { from { margin-top: 0; } to { margin-top: -8px; } }
+/* Heists: a tug of war over the butcher's sausages (your side fills from the left) */
+.tug-meter { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--wash); border-radius: var(--wobbly);
+  padding: 4px 14px 8px; text-align: center; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); }
+.tug-meter .tug-text { font-size: 18px; white-space: nowrap; }
+.tug-bar { width: min(260px, 70vw); height: 14px; margin-top: 4px; border-radius: 7px; background: #c4786c; overflow: hidden; border: 2px solid rgba(59, 43, 37, 0.3); }
+.tug-bar i { display: block; height: 100%; width: 50%; background: #e0b04a; border-radius: 6px; transition: width 0.2s; }

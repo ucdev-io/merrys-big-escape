@@ -187,7 +187,12 @@ export class Pepper {
         this.awayT = dDog > 35 ? this.awayT + dt : 0;
         if (this.awayT > 15) { this.giveUp(); break; }
         if (hog.curled) break;
-        if (dDog > LAG) { // too far ahead: she waits (and says so)
+        // The dog's at the flowers and she can see them: off she trots, the last bit on her own. (Just
+        // following, she'd stop a step behind the dog — short of the bed if the dog stopped on it.)
+        if (flat(P.pos, this.bed) < 3.5 && flat(pos, this.bed) < 7) {
+          const h = walk(this.world, pos, this.bed.x, this.bed.z, PACE * 1.25, dt, 0);
+          if (h !== null) { hog.root.rotation.y += wrap(h - hog.root.rotation.y) * (1 - Math.exp(-dt * 8)); moving = 1; }
+        } else if (dDog > LAG) { // too far ahead: she waits (and says so)
           snuffle = true;
           if (this.talkT <= 0) { this.talkT = 7; this.say(this.line(PEPPER.wait), 2.2); }
         } else if (dDog > GAP) {

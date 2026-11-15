@@ -93,7 +93,7 @@ export class DogActions {
     let dug = false;
     if (canAct && input.dig) {
       const c = this.carry.press(nose);
-      if (c !== 'grab' && c !== 'drop') {
+      if (c !== 'grab' && c !== 'drop' && c !== 'tug') {
         dug = true;
         P.digTimer = 0.35;
         sfx.dig();
