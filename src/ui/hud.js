@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { ITEMS } from '../entities/items.js';
 import { setMuted, isMuted } from '../core/audio.js';
-import { toggleFullscreen, isFullscreen, onFullscreenChange, fullscreenButtonUseful } from './fullscreen.js';
+import { toggleFullscreen, isFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
+import { getSettings, setSetting } from '../core/settings.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -13,7 +14,9 @@ export class HUD {
     this.root = document.getElementById('hud');
     this.root.innerHTML = '';
 
-    this.objective = el('div', 'objective');
+    // Current goal: pops open when it changes, then tucks away into a small icon. Tap to see it again.
+    this.objective = el('button', 'objective');
+    this.objective.onclick = () => this.expandObjective(this.objective.classList.contains('open') ? 0 : 9000);
     this.root.appendChild(this.objective);
 
     this.prompt = el('div', 'prompt');
@@ -27,16 +30,13 @@ export class HUD {
 
     const tr = el('div', 'top-right');
     this.bookBtn = el('button', 'pill book-btn');
-    this.muteBtn = el('button', 'pill', isMuted() ? '🔇' : '🔊');
-    this.muteBtn.title = 'Sound on/off';
-    this.muteBtn.onclick = () => { setMuted(!isMuted()); this.muteBtn.textContent = isMuted() ? '🔇' : '🔊'; };
     this.mischiefPill = el('div', 'pill mischief hidden');
-    this.fsBtn = el('button', 'pill fs-btn', '⛶');
-    this.fsBtn.title = 'Full screen';
-    this.fsBtn.onclick = () => toggleFullscreen(this);
-    this.fsBtn.classList.toggle('hidden', !fullscreenButtonUseful());
-    onFullscreenChange(() => { this.fsBtn.classList.toggle('active', isFullscreen()); this.fsBtn.title = isFullscreen() ? 'Leave full screen' : 'Full screen'; });
-    tr.append(this.mischiefPill, this.bookBtn, this.fsBtn, this.muteBtn);
+    // One menu for everything that isn't playing: help, full screen, sound, vibration, title.
+    this.menuBtn = el('button', 'pill menu-btn', '☰');
+    this.menuBtn.title = 'Menu';
+    this.menuBtn.onclick = () => this.openMenu();
+    if (getSettings().muted) setMuted(true);
+    tr.append(this.mischiefPill, this.bookBtn, this.menuBtn);
     this.root.appendChild(tr);
 
     this.book = el('div', 'sniff-book hidden');
@@ -54,11 +54,63 @@ export class HUD {
     this.renderBook();
   }
 
-  setObjective(html, sub = '') {
-    this.objective.innerHTML = `<div class="obj-title">Merry's Big Escape</div><div class="obj-text">${html}</div>${sub ? `<div class="obj-sub">${sub}</div>` : ''}`;
+  /**
+   * @param html   the goal, e.g. "Sniff out buried treasure!"
+   * @param sub    extra detail shown when open
+   * @param icon   shown when tucked away
+   * @param short  tiny progress next to the icon, e.g. "2/4"
+   */
+  setObjective(html, sub = '', { icon = '🎯', short = '' } = {}) {
+    const changed = html !== this._objHtml;
+    this._objHtml = html;
+    this.objective.innerHTML = `<span class="obj-icon">${icon}</span><span class="obj-short">${short}</span>`
+      + `<span class="obj-body"><span class="obj-text">${html}</span>${sub ? `<span class="obj-sub">${sub}</span>` : ''}</span>`;
+    if (changed) this.expandObjective(5500);
+  }
+
+  expandObjective(ms) {
+    clearTimeout(this._objT);
+    if (!ms) { this.objective.classList.remove('open'); return; }
+    this.objective.classList.add('open');
     this.objective.classList.remove('pulse');
     void this.objective.offsetWidth;
     this.objective.classList.add('pulse');
+    this._objT = setTimeout(() => this.objective.classList.remove('open'), ms);
+  }
+
+  openMenu() {
+    this.showCard('<h1>Menu</h1><div class="menu-list"></div>', [['Close', () => this.hideCard()]]);
+    const list = this.card.querySelector('.menu-list');
+    const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
+    item('❓ How to play', () => this.showHelp());
+    if (fullscreenButtonUseful()) item(isFullscreen() ? '⛶ Leave full screen' : '⛶ Full screen', () => { this.hideCard(); toggleFullscreen(this); });
+    const sound = item(isMuted() ? '🔇 Sound: off' : '🔊 Sound: on', () => {
+      setMuted(!isMuted());
+      setSetting('muted', isMuted());
+      sound.textContent = isMuted() ? '🔇 Sound: off' : '🔊 Sound: on';
+    });
+    if (navigator.vibrate) {
+      const vib = item(getSettings().haptics ? '📳 Vibration: on' : '📴 Vibration: off', () => {
+        setSetting('haptics', !getSettings().haptics);
+        vib.textContent = getSettings().haptics ? '📳 Vibration: on' : '📴 Vibration: off';
+      });
+    }
+    item('🏠 Back to the title', () => { location.href = '/'; });
+  }
+
+  showHelp() {
+    const keys = `<h3>⌨️ Keyboard</h3><p class="help-keys"><b>WASD</b> or arrows: walk · <b>Shift</b>: zoomies · <b>Space</b>: jump<br>
+      hold <b>F</b>: sniff · <b>E</b>: dig · <b>Q</b>: woof · drag the mouse to look · scroll to zoom</p>`;
+    const touch = `<h3>📱 Touch</h3><p class="help-keys">Drag on the <b>left</b> to walk (push far for zoomies) · drag on the <b>right</b> to look · pinch to zoom<br>
+      🦘 Jump · hold 👃 Sniff · 🐾 Dig · 🗣️ Woof · hold 💨 Zoom</p>`;
+    this.showCard(`<h1>How to play</h1>${isTouchDevice() ? touch + keys : keys + touch}
+      <h3>🐾 Tips</h3><ul class="help-tips">
+        <li><b>Sniff</b> to see a golden trail to where you're going.</li>
+        <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones need a <b>friend's back</b>!</li>
+        <li>Flowerbeds, holes and bins are great fun\u2026 but the neighbours will shout.</li>
+        <li>Water is for paddling. Expect a wet-dog shake.</li>
+        <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
+      </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);
   }
 
   setMischief(n) {

@@ -373,11 +373,10 @@ export class TownChapter {
 
   refreshObjective() {
     const n = this.state.discovered.length, total = this.places.length;
-    const hint = this.isTouch() ? '🦘 Jump · hold <b>👃 Sniff</b> to smell the way' : '<b>Space</b> jump · hold <b>F</b> to sniff the way';
     const nb = this.state.bones.length, tb = this.world.bones?.length ?? 0;
-    const bones = tb ? ` · ✨🦴 golden bones <b>${nb}/${tb}</b>` : '';
-    if (n < total) this.hud.setObjective(`Explore ${this.layout.name}! Places found <b>${n}/${total}</b>`, hint + bones);
-    else this.hud.setObjective(`You know every corner of ${this.layout.name}! 🎉`, nb < tb ? `Can you reach all the golden bones? ${nb}/${tb} 🦘` : 'New friends are coming soon\u2026');
+    const bones = tb ? `✨🦴 Golden bones found: <b>${nb}/${tb}</b>` : '';
+    if (n < total) this.hud.setObjective(`Explore ${this.layout.name}! Places found <b>${n}/${total}</b>`, bones, { icon: '🗺️', short: `${n}/${total}` });
+    else this.hud.setObjective(`You know every corner of ${this.layout.name}! 🎉`, nb < tb ? `Can you reach all the golden bones? ${nb}/${tb} 🦘` : 'New friends are coming soon\u2026', { icon: '🦴', short: `${nb}/${tb}` });
   }
 
   onDiscovered(id, byName) {

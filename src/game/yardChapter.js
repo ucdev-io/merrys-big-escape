@@ -179,12 +179,6 @@ export class YardChapter {
 
   isTouch() { return document.body.classList.contains('touch-mode'); }
 
-  keysHint() {
-    return this.isTouch()
-      ? 'Hold <b>👃 Sniff</b> to smell, tap <b>🐾 Dig</b> to dig, <b>🦘</b> to jump'
-      : 'Hold <b>F</b> to sniff, <b>E</b> to dig, <b>Space</b> to jump';
-  }
-
   get dogName() { return loadSave().profile?.name ?? BREEDS[this.player.breedKey].dogName; }
 
   /** "Who's escaping today?" — pick a dog over the live garden, then the controls card. */
@@ -210,7 +204,9 @@ export class YardChapter {
     this.follow.distance = 7;
     this.follow.yaw = this.player.heading + Math.PI;
     const name = this.dogName;
-    const keys = this.isTouch()
+    const firstTime = !loadSave().seenControls;
+    writeSave({ seenControls: true });
+    const keys = !firstTime ? 'Controls are in <b>☰ \u2192 How to play</b>.' : this.isTouch()
       ? 'Drag on the left to walk · 🦘 to jump · Hold 👃 to sniff · Tap 🐾 to dig · 🗣️ to woof · 💨 for zoomies'
       : '<b>WASD</b> walk · <b>Space</b> jump · hold <b>Shift</b> for zoomies · hold <b>F</b> to sniff · <b>E</b> dig · <b>Q</b> woof';
     this.hud.showCard(`
@@ -236,12 +232,12 @@ export class YardChapter {
   refreshObjective() {
     const n = this.found.filter((k) => k !== 'tunnel').length;
     if (n < TREASURES.length) {
-      this.hud.setObjective(`Sniff out buried treasure! <b>${n}/${TREASURES.length}</b>`, this.keysHint());
+      this.hud.setObjective(`Sniff out buried treasure! <b>${n}/${TREASURES.length}</b>`, 'Sniffing shows a golden trail to the nearest treasure.', { icon: '🦴', short: `${n}/${TREASURES.length}` });
     } else if (!this.found.includes('tunnel')) {
       const t = this.spots.find((s) => s.key === 'tunnel');
-      this.hud.setObjective(t.revealed ? 'Dig a tunnel under the fence! Dig dig dig!' : 'Something smells like <b>freedom</b>… sniff out the soft spot by the fence!', this.keysHint());
+      this.hud.setObjective(t.revealed ? 'Dig a tunnel under the fence! Dig dig dig!' : 'Something smells like <b>freedom</b>… sniff out the soft spot by the fence!', '', { icon: '🕳️', short: '!' });
     } else {
-      this.hud.setObjective('You escaped! 🎉');
+      this.hud.setObjective('You escaped! 🎉', '', { icon: '🎉' });
     }
   }
 
