@@ -92,10 +92,10 @@ export function layoutBeach(a, seed) {
   for (let t = 0, n = 0; t < 80 && n < 9; t++) { // bigger boulders round about (gulls like to stand on these)
     const u = cu + rng.float(-11, 11), v = cv + rng.float(-5, 4);
     if (pools.some((p) => Math.hypot(p.u - u, p.v - v) < p.r + 1.6) || rocks.some((r) => Math.hypot(r.u - u, r.v - v) < r.s + 1.2)) continue;
-    rock(u, v, rng.float(0.8, 1.35));
+    rock(u, v, rng.float(0.55, 0.95));
     n++;
   }
-  for (let k = 0; k < 6; k++) rock(cu + side * rng.float(-4, 9), vS - 4 + k * 1.6 + rng.float(-0.5, 0.5), rng.float(0.5, 1.1)); // and a spit of rocks running into the sea
+  for (let k = 0; k < 6; k++) rock(cu + side * rng.float(-4, 9), vS - 4 + k * 1.6 + rng.float(-0.5, 0.5), rng.float(0.4, 0.8)); // and a spit of rocks running into the sea
   taken.push([cu, cv, 12]);
 
   // ---- the lifeguard's tower: in front of the swimming area, near the middle ----

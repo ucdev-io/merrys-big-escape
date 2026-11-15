@@ -12,6 +12,7 @@ import { CHALLENGES } from '../src/game/challenges.js';
 import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
 import { seasonOpen, seasonWelcome, seasonMessage, seasonLeave, seasonTick } from './seasons.js';
 import { cleanDen, DEN_MAX, STICK_GAP_MS } from '../src/game/denRules.js';
+import { beachWelcome, beachMessage } from './beach.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
@@ -79,6 +80,7 @@ function enter(p, room, msg) {
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
     shared: { discovered: [...room.world.discovered], bones: [...room.world.bones], den: room.world.den ?? 0 },
     season: seasonWelcome(room, p), // the pack's season, weather and seasonal toys
+    beach: beachWelcome(room),      // 🏖️ the sandcastles, as the pack left them
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
   heistJoin(room, p, send); // who's looking, which treats are where
@@ -283,6 +285,9 @@ function onMessage(p, msg) {
       room.world.den = Math.min(DEN_MAX, (room.world.den ?? 0) + 1);
       touchWorld(room.world);
       return broadcast(room, { t: 'woods', a: 'den', n: room.world.den, by: p.id, name: p.name });
+    case 'beach': // 🏖️ sandcastles: built by the whole pack, and kept with the town (see beach.js)
+      if (room) beachMessage(room, p, msg, send, broadcast);
+      return;
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;
       p.carry = msg.item ? cleanId(msg.item) : null;

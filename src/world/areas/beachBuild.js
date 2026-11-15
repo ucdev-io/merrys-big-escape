@@ -40,13 +40,13 @@ const geo = (key, make) => (G[key] ??= make());
 function marramClump() {
   return geo('marram', () => {
     const parts = [];
-    for (let i = 0; i < 7; i++) {
-      const b = new THREE.ConeGeometry(0.016, 0.8, 3, 3, true);
-      b.translate(0, 0.4, 0);
+    for (let i = 0; i < 9; i++) {
+      const b = new THREE.ConeGeometry(0.009, 0.7, 3, 3, true);
+      b.translate(0, 0.35, 0);
       const p = b.attributes.position, lean = 0.25 + (i % 3) * 0.15;
-      for (let k = 0; k < p.count; k++) { const y = p.getY(k), t = y / 0.8; p.setXYZ(k, p.getX(k), y * (1 - t * lean * 0.3), p.getZ(k) + t * t * lean * 0.45); }
-      b.scale(1, 0.75 + (i % 4) * 0.12, 1);
-      b.rotateY((i / 7) * Math.PI * 2 + (i % 2) * 0.4);
+      for (let k = 0; k < p.count; k++) { const y = p.getY(k), t = y / 0.7; p.setXYZ(k, p.getX(k), y * (1 - t * lean * 0.3), p.getZ(k) + t * t * lean * 0.4); }
+      b.scale(1, 0.7 + (i % 4) * 0.12, 1);
+      b.rotateY((i / 9) * Math.PI * 2 + (i % 2) * 0.4);
       b.deleteAttribute('uv');
       parts.push(b.toNonIndexed());
     }
@@ -121,8 +121,8 @@ function beachHut(h) {
   return g;
 }
 
-/** A stripy deckchair. */
-function deckchair(u, v, ry, [a, b]) {
+/** A stripy deckchair (also used by the beach's seasonal crowd: game/town/beach/crowd.js). */
+export function deckchair(u, v, ry, [a, b]) {
   const g = new THREE.Group();
   g.position.set(u, 0, v);
   g.rotation.y = ry;
@@ -140,17 +140,24 @@ function deckchair(u, v, ry, [a, b]) {
 function kiosk(k) {
   const g = new THREE.Group();
   g.position.set(k.u, 0, k.v);
-  const W = 3.2, D = 2.4, H = 2.4;
-  mesh(geo('kioskBody', () => new RoundedBoxGeometry(W, H, D, 2, 0.06)), 0xf8e8ec, g, [0, H / 2, 0]);
+  const W = 3.2, D = 2.4, H = 2.4, T = 0.08, HW = 1.9, H0 = 0.98, H1 = 1.93, WALL = 0xf8e8ec;
+  // Walls round a little room, with a hatch in the front (the keeper stands inside, behind the counter).
+  const wall = (w, h, d, x, y, z) => mesh(new RoundedBoxGeometry(w, h, d, 1, 0.025), WALL, g, [x, y, z]);
+  wall(W, H, T, 0, H / 2, -D / 2 + T / 2);
+  for (const s of [-1, 1]) wall(T, H, D, s * (W / 2 - T / 2), H / 2, 0);
+  wall(W, H0, T, 0, H0 / 2, D / 2 - T / 2);
+  wall(W, H - H1, T, 0, (H1 + H) / 2, D / 2 - T / 2);
+  for (const s of [-1, 1]) wall((W - HW) / 2, H1 - H0, T, s * (HW / 2 + (W - HW) / 4), (H0 + H1) / 2, D / 2 - T / 2);
+  mesh(new THREE.PlaneGeometry(W - 2 * T, H), 0x5a4448, g, [0, H / 2, -D / 2 + T + 0.01]).castShadow = false; // (dim inside)
+  mesh(new THREE.BoxGeometry(0.5, 0.5, 0.4), 0xdfe8ee, g, [0.9, 0.95, -0.6]); // the freezer
   const stripe = geo('kioskStripe', () => new THREE.BoxGeometry(0.22, H - 0.1, 0.02));
   for (let i = 0; i < 6; i++) mesh(stripe, 0xf2a7b8, g, [-W / 2 + 0.35 + i * 0.5, H / 2, -D / 2 - 0.01]); // (stripes on the back)
-  mesh(geo('kioskHatch', () => new THREE.BoxGeometry(1.9, 0.95, 0.03)), 0x5a4448, g, [0, 1.45, D / 2 + 0.005]);
-  mesh(geo('kioskCounter', () => new RoundedBoxGeometry(2.2, 0.08, 0.42, 1, 0.02)), WHITE, g, [0, 0.98, D / 2 + 0.18]);
+  mesh(geo('kioskCounter', () => new RoundedBoxGeometry(2.2, 0.08, 0.5, 1, 0.02)), WHITE, g, [0, H0, D / 2 + 0.12]);
   mesh(geo('kioskRoof', () => new RoundedBoxGeometry(W + 0.4, 0.16, D + 0.4, 2, 0.05)), 0xd9708a, g, [0, H + 0.06, 0]);
-  // The awning: stripes sloping out over the hatch.
+  // The awning: stripes sloping out over the hatch (high enough to see the keeper under it).
   const awn = new THREE.Group();
-  awn.position.set(0, 2.18, D / 2 + 0.02);
-  awn.rotation.x = 0.55;
+  awn.position.set(0, 2.3, D / 2 + 0.02);
+  awn.rotation.x = 0.32;
   const slat = geo('awnSlat', () => new THREE.BoxGeometry(0.25, 0.02, 0.8));
   for (let i = 0; i < 9; i++) mesh(slat, i % 2 ? WHITE : 0xe0607e, awn, [-1.0 + i * 0.25, 0, 0.38]);
   g.add(awn);
@@ -278,7 +285,7 @@ function lighthouse(L, groundY, rng) {
   const base = groundY;
   for (let i = 0; i < 7; i++) {
     const a = (i / 7) * Math.PI * 2 + rng.float(0, 0.5), r = i ? rng.float(1.6, 3.2) : 0, s = i ? rng.float(1.3, 2.2) : 2.8;
-    mesh(blobGeometry(rng.int(0, 30), 0.28, 2), rng.pick(ROCKS), g, [Math.cos(a) * r, base + s * 0.35, Math.sin(a) * r], [rng.float(0, 3), rng.float(0, 3), 0], [s, s * 0.8, s]);
+    mesh(blobGeometry(rng.int(0, 30), 0.28, 3), rng.pick(ROCKS), g, [Math.cos(a) * r, base + s * 0.35, Math.sin(a) * r], [rng.float(0, 3), rng.float(0, 3), 0], [s, s * 0.8, s]);
   }
   const y0 = base + 2.0, H = 9;
   mesh(new THREE.CylinderGeometry(0.85, 1.15, H, 22), WHITE, g, [0, y0 + H / 2, 0]);
@@ -348,7 +355,7 @@ export function buildBeach(g, d, { C, extra, flats }) {
   // Seaweed and shells along the strandline (where the biggest waves leave things).
   for (let i = 0; i < 70; i++) {
     const u = rng.float(uL + 2, uR - 2), v = vS - SWASH - 0.35 + rng.float(-0.45, 0.45);
-    if (rng.chance(0.7)) mesh(blobGeometry(rng.int(0, 20), 0.4, 1), rng.pick([0x5c6b3a, 0x6f7a42, 0x4e5a35]), g, [u, d.sandY(u, v) + 0.02, v], [0, rng.float(0, 6), 0], [rng.float(0.12, 0.3), 0.03, rng.float(0.06, 0.14)]).castShadow = false;
+    if (rng.chance(0.7)) mesh(blobGeometry(rng.int(0, 20), 0.45, 1), rng.pick([0x6b6a3a, 0x7a6f40, 0x5f5a33]), g, [u, d.sandY(u, v) + 0.012, v], [0, rng.float(0, 6), 0], [rng.float(0.08, 0.2), 0.018, rng.float(0.035, 0.08)]).castShadow = false;
     else mesh(geo('shell', () => new THREE.SphereGeometry(1, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2)), rng.pick([0xf4e7d8, 0xf0d2c4, 0xe9dcc4]), g, [u, d.sandY(u, v), v], [0, rng.float(0, 6), 0], [0.05, 0.025, 0.04]).castShadow = false;
   }
   // Driftwood here and there.
@@ -402,7 +409,7 @@ export function buildBeach(g, d, { C, extra, flats }) {
   });
   const rocks = d.rocks.map((r) => {
     const y = r.h * 0.22;
-    mesh(blobGeometry(r.seed, 0.3, r.s > 0.75 ? 2 : 1), rng.pick(ROCKS), g, [r.u, y, r.v], [rng.float(0, 3), r.rot, 0], [r.s, r.h, r.s * 0.9]);
+    mesh(blobGeometry(r.seed, 0.3, r.s > 0.6 ? 3 : 2), rng.pick(ROCKS), g, [r.u, y, r.v], [rng.float(0, 3), r.rot, 0], [r.s, r.h, r.s * 0.9]); // (smooth, not chunky)
     if (r.s > 0.7 && rng.chance(0.5)) mesh(blobGeometry(rng.int(0, 20), 0.35, 1), 0x5f6b3e, g, [r.u, y + r.h * 0.82, r.v], [0, rng.float(0, 3), 0], [r.s * 0.55, r.h * 0.18, r.s * 0.45]).castShadow = false; // seaweed on top
     const top = y + r.h * 0.95;
     C.circle(r.u, r.v, r.s * 0.82, top);
@@ -499,7 +506,7 @@ export function buildBeach(g, d, { C, extra, flats }) {
     shore: vS, dir: a.dir, across: a.across,
     sea: { mesh: sea, swash, uniforms, zone },
     huts: d.huts.map((h) => ({ n: h.n, pos: at(h.u, h.v), door: at(h.u, h.v + 1.3), open: h.open, face: a.turn, color: h.color })),
-    kiosk: { pos: at(d.kiosk.u, d.kiosk.v), counter: at(d.kiosk.u, d.kiosk.v + 1.75), keeper: at(d.kiosk.u, d.kiosk.v + 0.55), face: a.turn },
+    kiosk: { pos: at(d.kiosk.u, d.kiosk.v), counter: at(d.kiosk.u, d.kiosk.v + 1.75), keeper: at(d.kiosk.u, d.kiosk.v + 0.7), face: a.turn }, // (keeper: inside, behind the counter)
     tower: { pos: at(T.u, T.v), top: at(T.u, T.v, 1.67), stand: at(d.stand.u, d.stand.v), face: a.turn },
     pools, rocks, groynes, picnics, perches,
     boat: d.boat && { pos: at(d.boat.u, d.boat.v), under: at(d.boat.u + 0.5, d.boat.v + 0.6), face: a.turn + d.boat.rot },
