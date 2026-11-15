@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ITEMS } from '../entities/items.js';
 import { setMuted, isMuted } from '../core/audio.js';
 import { toggleFullscreen, isFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
-import { getSettings, setSetting } from '../core/settings.js';
+import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -95,6 +95,13 @@ export class HUD {
         vib.textContent = getSettings().haptics ? '📳 Vibration: on' : '📴 Vibration: off';
       });
     }
+    const levels = Object.keys(TEXTURE_NAMES);
+    const tex = item(`🎨 Paint texture: ${TEXTURE_NAMES[getSettings().texture] ?? 'Light'}`, () => {
+      const next = levels[(levels.indexOf(getSettings().texture) + 1) % levels.length];
+      setSetting('texture', next);
+      tex.textContent = `🎨 Paint texture: ${TEXTURE_NAMES[next]}`;
+      this.onTexture?.(next);
+    });
     item('🏠 Back to the title', () => { location.href = '/'; });
   }
 

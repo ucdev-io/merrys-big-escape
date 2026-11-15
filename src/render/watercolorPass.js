@@ -167,6 +167,9 @@ export class WatercolorPipeline {
       inkColor: '#4a3a33',
     };
     this.outW = 1; this.outH = 1;
+    // How strong the paper/wash texture is (0 = clean colour, 1 = full watercolour paper).
+    // Scales the screen-space layers that read like an overlay: blotchy wash, paper grain, paper tint, border.
+    this.texture = 1;
     this.frameTimes = [];
     this.qualityCooldown = 2;
 
@@ -263,18 +266,19 @@ export class WatercolorPipeline {
     cu.uFar.value = camera.far;
     cu.uWetEdge.value = p.wetEdge;
     cu.uWetRadius.value = p.wetRadius;
-    cu.uDensity.value = p.density;
+    const tex = this.texture;
+    cu.uDensity.value = p.density * tex;
     cu.uDensityScale.value = p.densityScale;
-    cu.uGranulation.value = p.granulation;
+    cu.uGranulation.value = p.granulation * tex;
     cu.uInk.value = p.ink;
     cu.uInkWidth.value = p.inkWidth;
     cu.uInkWobble.value = p.inkWobble;
-    cu.uPaper.value = p.paper;
+    cu.uPaper.value = p.paper * tex;
     cu.uPaperScale.value = p.paperScale;
     // Shader works in display space, so hand it the sRGB values as-is.
     cu.uPaperColor.value.setStyle(p.paperColor, THREE.SRGBColorSpace).convertLinearToSRGB();
     cu.uInkColor.value.setStyle(p.inkColor, THREE.SRGBColorSpace).convertLinearToSRGB();
-    cu.uVignette.value = p.vignette;
+    cu.uVignette.value = p.vignette * tex;
     cu.uSaturation.value = p.saturation;
     cu.uSniff.value = this.sniff ?? 0;
   }

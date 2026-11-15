@@ -300,3 +300,4 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .objective .obj-body { display: none; max-width: none; opacity: 1; transition: none; }
 .objective.open .obj-body { display: flex; animation: objIn 0.35s ease-out; }
 @keyframes objIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.title-screen .settings select { font: inherit; font-size: 17px; margin-left: 6px; border-radius: 8px; border: 2px solid rgba(59, 43, 37, 0.3); background: #fffaf0; color: var(--ink); }
