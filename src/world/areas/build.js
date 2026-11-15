@@ -3,6 +3,8 @@ import { fbm3 } from '../../core/rng.js';
 import { areaFillers, worldRect } from './areas.js';
 import { layoutWoods } from './woodsLayout.js';
 import { buildWoods } from './woodsBuild.js';
+import { layoutFarm } from './farmLayout.js';
+import { buildFarm } from './farmBuild.js';
 
 /*
  * Turning a town's planned areas (./areas.js) into the world: first each area's layout (plain data, so
@@ -10,8 +12,8 @@ import { buildWoods } from './woodsBuild.js';
  * A new kind of area adds a layout and a builder here.
  */
 
-const LAYOUTS = { woods: layoutWoods };
-const BUILDERS = { woods: buildWoods };
+const LAYOUTS = { woods: layoutWoods, farm: layoutFarm };
+const BUILDERS = { woods: buildWoods, farm: buildFarm };
 
 /** Each planned area's layout (in the town's order). */
 export function layoutAreas(layout) { return (layout.areas ?? []).map((a) => LAYOUTS[a.kind](a, layout.seed)); }

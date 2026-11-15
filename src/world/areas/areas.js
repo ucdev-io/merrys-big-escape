@@ -35,6 +35,13 @@ export const AREA_KINDS = {
     depth: 70,      // how far out the strip goes from the town's edge (m)
     front: 15,      // the meadow between the town and the wood's fence (m)
   },
+  farm: {
+    emoji: '🚜',
+    names: ['Buttercup Farm', 'Muddy Lane Farm', 'Clover Farm', 'Hayseed Farm', 'Wobbly Gate Farm', 'Daisy Bank Farm'],
+    blurb: 'Baa! Oink! Cluck! And a farmer who could use a hand.',
+    depth: 72,
+    front: 13,      // the buttercup meadow between the town and the farm's hedge
+  },
 };
 export const AREA_EMOJI = Object.fromEntries(Object.entries(AREA_KINDS).map(([k, a]) => [k, a.emoji]));
 export const AREA_BLURBS = Object.fromEntries(Object.entries(AREA_KINDS).map(([k, a]) => [k, a.blurb]));
