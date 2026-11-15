@@ -53,7 +53,7 @@ Object.assign(SMELLS, {
   bonfire: { emoji: '🔥', name: 'Bonfire smoke', xp: 3, lines: ['Smoky! Somebody’s had a bonfire.', 'Bonfire smell. Toasty!'] },
   toffee: { emoji: '🍎', name: 'Toffee apple', xp: 4, lines: ['A toffee apple! Sticky and sweet.', 'Toffee! Somebody dropped a bit of toffee apple.'] },
   pumpkin: { emoji: '🎃', name: 'Pumpkin', xp: 3, lines: ['Pumpkin! Someone’s been carving.', 'Pumpkin seeds everywhere. Squishy!'] },
-  conker: { emoji: '🌰', name: 'Conker', xp: 3, lines: ['A conker! Shiny and smooth.', 'Conkers! Somebody’s been playing conkers.'] },
+  conker: { emoji: '🌰', name: 'Conkers', xp: 3, lines: ['A conker! Shiny and smooth.', 'Conkers! Somebody’s been playing conkers.', 'Conkers! Shiny and brown and not for eating.', 'Somebody dropped a conker. A champion one, by the smell.'] },
   blossom: { emoji: '🌸', name: 'Blossom', xp: 3, lines: ['Blossom! Pink and sneezy. A-CHOO!', 'Petals everywhere. Pretty!'] },
   chocegg: { emoji: '🥚', name: 'Chocolate egg', xp: 4, lines: ['Chocolate! Somebody had an Easter egg here.', 'A foil wrapper. The chocolate’s gone. Rats.'] },
   grass: { emoji: '🌱', name: 'Cut grass', xp: 3, lines: ['Fresh cut grass! Mowbot’s been busy.', 'Grassy! Roll in it? Roll in it.'] },
@@ -75,11 +75,14 @@ export const SEASON_SMELLS = {
   showers: { add: { worm: 3, puddle: 2, wetleaves: 2 }, less: { chips: 0.6 } },
 };
 
-/** How often each smell turns up right now (this season, maybe Christmas, this weather). */
-export function smellWeights(season, weather, festive) {
-  const w = { ...SMELL_WEIGHTS };
+/**
+ * How often each smell turns up right now (this season, maybe Christmas, this weather).
+ * Out in an area (the Woods…) pass its own weights and its own seasonal table.
+ */
+export function smellWeights(season, weather, festive, base = SMELL_WEIGHTS, table = SEASON_SMELLS) {
+  const w = { ...base };
   for (const key of [season, festive, weather]) {
-    const s = SEASON_SMELLS[key];
+    const s = table[key];
     if (!s) continue;
     for (const [k, v] of Object.entries(s.add ?? {})) w[k] = (w[k] ?? 0) + v;
     for (const [k, v] of Object.entries(s.less ?? {})) if (w[k]) w[k] *= v;

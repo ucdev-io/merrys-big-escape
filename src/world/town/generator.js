@@ -1,4 +1,5 @@
 import { RNG } from '../../core/rng.js';
+import { planAreas, AREA_EMOJI } from '../areas/areas.js';
 
 // ---- Fun shareable seeds like "SOGGY-WAFFLE-42" -------------------------------------------
 const ADJ = ['SOGGY', 'WIGGLY', 'FLUFFY', 'BOUNCY', 'SNIFFY', 'MUDDY', 'SLEEPY', 'GIGGLY', 'CRUNCHY', 'SQUISHY', 'ZOOMY', 'WAGGY', 'SNOOZY', 'FUZZY', 'JOLLY', 'PUDDLY'];
@@ -32,7 +33,7 @@ const PLACE_NAMES = {
   alley: ['Whiffy Alley', 'Pong Passage', 'Stinky Lane', 'Bin Bag Alley'],
   home: ['Home'],
 };
-export const PLACE_EMOJI = { park: '🌳', pond: '🦆', bakery: '🥐', alley: '🗑️', home: '🏡' };
+export const PLACE_EMOJI = { park: '🌳', pond: '🦆', bakery: '🥐', alley: '🗑️', home: '🏡', ...AREA_EMOJI };
 
 /** Block centre in world coordinates. */
 export function blockCenter(i, j) {
@@ -73,5 +74,9 @@ export function generateTown(seed) {
   const home = blocks.find((b) => b.type === 'home');
   home.homeLot = { qx: rng.pick([-1, 1]), qz: rng.pick([-1, 1]), faceX: rng.chance(0.5) };
 
-  return { seed, name: townName(seed), blocks, places };
+  // Out beyond the edge of town: the Woods (see ../areas/). They have their own dice, so nothing above moves.
+  const areas = planAreas(seed, townName(seed));
+  places.push(...areas.map((a) => a.place));
+
+  return { seed, name: townName(seed), blocks, places, areas };
 }

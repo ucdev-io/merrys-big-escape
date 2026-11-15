@@ -78,6 +78,7 @@ export class Pack {
     net.on('game', (m) => this.onGame?.(m));
     net.on('heist', (m) => this.onHeist?.(m));
     net.on('season', (m) => this.onSeason?.(m));
+    net.on('woods', (m) => this.onWoods?.(m));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
@@ -86,7 +87,8 @@ export class Pack {
   /** Send my dog's state (~12×/s). */
   sendState(dt, P, sniffing) {
     if (!this.net) return;
-    const flags = (sniffing ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0) | (P.sledging ? 32 : 0);
+    const flags = (sniffing ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0) | (P.sledging ? 32 : 0)
+      | (((P.mudLevel ?? 0) & 3) << 6); // (+ how muddy: 0–3)
     this.net.sendState(dt, P.pos, P.heading, P.speed, flags);
   }
 

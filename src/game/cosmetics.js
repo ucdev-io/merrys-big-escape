@@ -45,6 +45,11 @@ COSMETICS.push(
   { id: 'collar-conker', slot: 'collar', name: 'Conker collar', emoji: '🌰', color: 0x6b3417, level: 1, friend: 'conkers', jobs: 20, hint: 'Find 20 conkers (autumn)', boost: { speed: 2 } },
   { id: 'hat-bunny', slot: 'hat', name: 'Bunny ears', emoji: '🐰', color: 0xf7f3ea, level: 1, friend: 'eggs', jobs: 6, hint: 'Sniff out 6 eggs (spring)', boost: { zoomies: 3 } },
 );
+// Prizes from the Woods: Brock the badger's thank-you, and one for building the den (big sticks brought).
+COSMETICS.push(
+  { id: 'neck-bracken', slot: 'neck', name: 'Brock’s bracken bandana', emoji: '🦡', color: 0xb5713a, level: 1, friend: 'badger', jobs: 3, hint: 'Help Brock the badger 3 times', boost: { speed: 1, zoomies: 2 } },
+  { id: 'collar-twig', slot: 'collar', name: 'Den builder’s collar', emoji: '🪵', color: 0x7f5f45, level: 1, friend: 'den', jobs: 10, hint: 'Bring 10 big sticks to the den', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

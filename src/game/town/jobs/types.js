@@ -9,7 +9,7 @@
 //   stars   base reward (distance and twists add more)      level  how tricky (1–3 paws)
 //   givers  who asks: house (grown-ups), kid, gus, duchess, baker
 //   items   what it could be, per kind of giver (keys from carryables.js / jobItems.js)
-//   wheres  where it could be: park, pond, bakery, alley, garden (someone's), street (a pavement), bins
+//   wheres  where it could be: park, pond, bakery, alley, garden (someone's), street (a pavement), bins, woods
 //   twists  which twists suit it (see TWISTS in lines/jobs.js)   team  only with a friend in the pack
 //   weight  how often it comes up
 
@@ -21,21 +21,21 @@ export const JOB_TYPES = {
       house: ['slipper', 'sock', 'hat', 'scarf', 'keys', 'teddy', 'newspaper', 'glove'], kid: ['ball', 'frisbee', 'teddy', 'car', 'duck', 'boat', 'squeaky', 'kite'],
       gus: ['slipper', 'stick', 'ball', 'squeaky'], duchess: ['hat', 'scarf'], baker: ['glove', 'keys'],
     },
-    wheres: ['park', 'pond', 'bakery', 'alley', 'garden', 'street'],
+    wheres: ['park', 'pond', 'bakery', 'alley', 'garden', 'street', 'woods'],
     twists: ['quiet', 'timer', 'dry', 'clean', 'friend'],
   },
   sniff: {
     emoji: '👃', step: 'hidden', stars: 16, level: 2, weight: 3,
     givers: { house: 5, kid: 4, gus: 1, duchess: 1 },
     items: { house: ['keys', 'sock', 'slipper', 'glove', 'letter'], kid: ['car', 'duck', 'squeaky', 'ball', 'teddy'], gus: ['squeaky', 'slipper'], duchess: ['scarf'] },
-    wheres: ['park', 'pond', 'garden', 'alley', 'bakery'],
+    wheres: ['park', 'pond', 'garden', 'alley', 'bakery', 'woods'],
     twists: ['quiet', 'timer', 'dry', 'clean', 'friend'],
   },
   dig: {
     emoji: '🕳️', step: 'buried', stars: 18, level: 2, weight: 3,
     givers: { house: 4, kid: 4, gus: 2 },
     items: { house: ['keys', 'sock', 'slipper'], kid: ['car', 'duck', 'ball', 'squeaky', 'teddy'], gus: ['bone', 'squeaky', 'ball'] },
-    wheres: ['park', 'pond', 'garden'],
+    wheres: ['park', 'pond', 'garden', 'woods'],
     twists: ['quiet', 'timer', 'clean', 'friend'],
   },
   deliver: {

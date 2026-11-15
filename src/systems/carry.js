@@ -54,7 +54,7 @@ export class Carry {
   nearby(nose, r = 0.8) {
     let best = null, bd = Infinity;
     for (const it of this.items) {
-      const reach = it.buried ? r + 0.3 : r;
+      const reach = (it.buried ? r + 0.3 : r) + (it.def.reach ?? 0); // (long things can be grabbed from further off)
       const d = Math.hypot(it.pos.x - nose.x, it.pos.z - nose.z);
       if (d < reach && d < bd && Math.abs(it.pos.y - this.player.pos.y) < 0.7) { bd = d; best = it; }
     }
@@ -126,7 +126,7 @@ export class Carry {
     if (this.held) return { act: this.held.pulls?.() ? 'pull' : 'drop', text: `Carrying the ${this.held.def.name} ${this.held.def.emoji} · 🐾 drops it` };
     const it = this.nearby(nose);
     if (!it) return null;
-    if (it.buried) return { act: 'dig', text: 'Something’s buried here! Dig dig dig! 🐾' };
+    if (it.buried) return { act: 'dig', text: it.def.digText ?? 'Something’s buried here! Dig dig dig! 🐾' };
     return { act: 'grab', text: `${it.def.emoji} Grab the ${it.def.name}!` };
   }
 
