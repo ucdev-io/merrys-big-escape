@@ -69,6 +69,7 @@ export function tree(x, z, s = 1, rng, col, { detail = 3, blobs } = {}) {
   }
   col?.circle(x, z, 0.3 * s);
   g.userData.bend = bend; // (how far the trunk leans: things that climb it need to know)
+  g.userData.tree = { s, bend }; // (for the seasons: leaf piles and conkers under it — see collectLandmarks)
   return g;
 }
 
@@ -141,6 +142,7 @@ function gableRoof(w, d, h, overhang, color) {
 export function house(x, z, rotY, rng, col, { w = 6, d = 5, h = 3.2, wall = PALETTE.wall, roof = PALETTE.roof, door = PALETTE.door } = {}) {
   const g = new THREE.Group();
   g.userData.occluder = true;
+  g.userData.house = { w, d, h }; // (for the seasons: Christmas lights along the eaves)
   g.position.set(x, 0, z);
   g.rotation.y = rotY;
   mesh(new RoundedBoxGeometry(w, h, d, 2, 0.12), wall, g, [0, h / 2, 0]);
@@ -149,7 +151,7 @@ export function house(x, z, rotY, rng, col, { w = 6, d = 5, h = 3.2, wall = PALE
   g.add(r);
   mesh(new RoundedBoxGeometry(0.6, 1.2, 0.6, 1, 0.08), PALETTE.brick, g, [w * 0.25, h + h * 0.45, -d * 0.15]);
   // door + step
-  mesh(new RoundedBoxGeometry(0.95, 1.9, 0.12, 1, 0.05), door, g, [0, 0.95, d / 2 + 0.03]);
+  mesh(new RoundedBoxGeometry(0.95, 1.9, 0.12, 1, 0.05), door, g, [0, 0.95, d / 2 + 0.03]).userData.season = 'world'; // (a green door isn't a plant)
   mesh(new THREE.SphereGeometry(0.045, 10, 8), 0xe8c66a, g, [0.32, 0.95, d / 2 + 0.11]);
   mesh(new RoundedBoxGeometry(1.4, 0.16, 0.6, 1, 0.05), PALETTE.path, g, [0, 0.08, d / 2 + 0.3]);
   // windows
@@ -183,6 +185,7 @@ export function shed(x, z, rotY, col) {
   for (let i = -5; i <= 5; i++) mesh(new THREE.BoxGeometry(0.03, 1.9, 0.02), PALETTE.woodDark, g, [i * 0.21, 1.0, 0.91]);
   const r = gableRoof(2.4, 1.8, 0.8, 0.2, PALETTE.leafDark);
   r.position.y = 2.0; g.add(r);
+  r.userData.season = 'world';
   mesh(new RoundedBoxGeometry(0.8, 1.5, 0.06, 2, 0.03), PALETTE.woodDark, g, [0.4, 0.78, 0.93]);
   if (col) col.box(x - 1.3, z - 1.1, x + 1.3, z + 1.1);
   return g;
@@ -332,12 +335,14 @@ export function skyDome(radius = 160) {
       uTop: { value: new THREE.Color(0x8fb8d8) },
       uHorizon: { value: new THREE.Color(0xf3e6cf) },
       uTime: { value: 0 },
+      uCloud: { value: 0 },                                // more cloud (0 = a fine day; the weather turns it up)
+      uCloudCol: { value: new THREE.Color(1.0, 0.98, 0.95) },
     },
     vertexShader: /* glsl */ `
       varying vec3 vDir;
       void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uTop, uHorizon; uniform float uTime;
+      uniform vec3 uTop, uHorizon, uCloudCol; uniform float uTime, uCloud;
       varying vec3 vDir;
       float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
       float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
@@ -347,8 +352,8 @@ export function skyDome(radius = 160) {
         float y = clamp(vDir.y, 0.0, 1.0);
         vec3 c = mix(uHorizon, uTop, smoothstep(0.0, 0.55, y));
         vec2 p = vDir.xz / (vDir.y + 0.25) * 1.6 + vec2(uTime * 0.01, 0.0);
-        float cl = smoothstep(0.5, 0.75, fbm(p));
-        c = mix(c, vec3(1.0, 0.98, 0.95), cl * 0.75 * smoothstep(0.02, 0.2, y));
+        float cl = smoothstep(0.5 - uCloud * 0.3, 0.75 - uCloud * 0.15, fbm(p));
+        c = mix(c, uCloudCol, cl * (0.75 + uCloud * 0.2) * smoothstep(0.02, 0.2, y));
         gl_FragColor = vec4(c, 1.0);
       }`,
   });

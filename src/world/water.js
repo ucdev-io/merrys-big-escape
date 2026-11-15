@@ -2,13 +2,15 @@
 //   pond: an ellipse with a shelving beach — you wade in, then it gets deep enough to swim.
 //   pool: the garden paddling pool — shallow, for splashing about in.
 // zones: [{ kind: 'pond', x, z, rx, rz, surface } | { kind: 'pool', x, z, r, surface }]
+//   (frozen: true in winter — then it's ice to stand and slide on, not water; ice: count it anyway)
 
 const BEACH = 0.22; // how much of the pond's radius is the shelving bit near the edge
 
 /** @returns {{ zone, depth: number (0 at the edge → 1 deep), surface: number, wade: boolean } | null} */
-export function waterAt(zones, x, z) {
+export function waterAt(zones, x, z, ice = false) {
   if (!zones) return null;
   for (const w of zones) {
+    if (w.frozen && !ice) continue;
     if (w.kind === 'pond') {
       const e = Math.hypot((x - w.x) / w.rx, (z - w.z) / w.rz);
       if (e < 1) return { zone: w, depth: Math.min(1, (1 - e) / BEACH), surface: w.surface, wade: false };

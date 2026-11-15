@@ -4,6 +4,7 @@ import { packLink, packPath, fillShareBox } from '../../net/links.js';
 import { watchPacks, renderPackRows } from '../../net/packs.js';
 import { townName } from '../../world/town/generator.js';
 import { CHALLENGES } from '../challenges.js';
+import { localSeason } from '../season.js';
 
 const WORLD_ACTS = ['tip', 'hole', 'trample', 'scatter']; // things that change the world, not just a dog
 
@@ -42,7 +43,7 @@ export class Pack {
     if (this.net) return;
     try {
       const net = new NetClient();
-      const w = await net.enter('create', { seed: this.seed(), ...this.me(), ...this.progress() });
+      const w = await net.enter('create', { seed: this.seed(), ...this.me(), ...this.progress(), season: localSeason() }); // (whoever opens a pack picks its season)
       this.attach(net, w, { rejoin: true }); // you're already at your gate; don't teleport
       this.hud.showToastRaw('🏘️', 'Your neighbourhood is open!', 'Friends on this Wi-Fi can join you from their menu.');
     } catch { /* no server: solo play */ }
@@ -51,7 +52,7 @@ export class Pack {
   /** Join someone's pack. Resolves with { net, welcome }; call attach() if you're staying in this town. */
   async join(code) {
     const net = this.net ?? new NetClient();
-    const welcome = await net.enter('join', { code, ...this.me() });
+    const welcome = await net.enter('join', { code, ...this.me(), season: localSeason() });
     return { net, welcome };
   }
 
@@ -76,6 +77,7 @@ export class Pack {
     net.on('carry', (m) => this.remotes.setCarry(m.id, m.item));
     net.on('game', (m) => this.onGame?.(m));
     net.on('heist', (m) => this.onHeist?.(m));
+    net.on('season', (m) => this.onSeason?.(m));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
@@ -84,7 +86,7 @@ export class Pack {
   /** Send my dog's state (~12×/s). */
   sendState(dt, P, sniffing) {
     if (!this.net) return;
-    const flags = (sniffing ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0);
+    const flags = (sniffing ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0) | (P.sledging ? 32 : 0);
     this.net.sendState(dt, P.pos, P.heading, P.speed, flags);
   }
 
@@ -95,6 +97,9 @@ export class Pack {
 
   /** A heist move (grab a treat, distract the baker…): the server settles it. */
   sendHeist(msg) { if (this.net) this.net.send({ t: 'heist', ...msg }); }
+
+  /** A seasons move (pick the season, build a snowman, leap into a leaf pile…): the server settles it. */
+  sendSeason(msg) { if (this.net) this.net.send({ t: 'season', ...msg }); }
 
   /** Tell the pack what my dog is carrying (or null). */
   sendCarry(item) { if (this.net) this.net.send({ t: 'carry', item: item ?? null }); }
@@ -212,11 +217,11 @@ export class Pack {
     try {
       const net = new NetClient();
       let w;
-      try { w = await net.enter('join', { code: this.code, ...this.me() }); }
+      try { w = await net.enter('join', { code: this.code, ...this.me(), season: localSeason() }); }
       catch (e) {
         if (!/No pack/.test(e.message)) throw e;
         // Everyone's phone slept and the pack closed: open it again with the same code and progress.
-        w = await net.enter('create', { code: this.code, seed: this.seed(), ...this.me(), ...this.progress() });
+        w = await net.enter('create', { code: this.code, seed: this.seed(), ...this.me(), ...this.progress(), season: localSeason() });
       }
       this.reconnecting = false;
       this.attach(net, w, { rejoin: true });

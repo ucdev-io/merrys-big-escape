@@ -29,6 +29,7 @@ export function lamppost(x, z) {
 
 export function wheelieBin(x, z, ry, color = 0x5d8c55) {
   const g = G(x, z, ry);
+  g.userData.season = 'world'; // (green bins aren't plants: no frosty or lush greens for them)
   mesh(RB(0.55, 0.95, 0.6, 0.06), color, g, [0, 0.5, 0]);
   mesh(RB(0.6, 0.06, 0.66, 0.03), color, g, [0, 1.0, 0], [-0.05, 0, 0]);
   for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 12), 0x2b2b2b, g, [s * 0.25, 0.09, -0.25], [0, 0, Math.PI / 2]);
@@ -66,6 +67,7 @@ export function birdbath(x, z) {
 
 export function mailbox(x, z, ry, color = 0xd9534f) {
   const g = G(x, z, ry);
+  g.userData.season = 'world';
   mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 6), 0x7a5a42, g, [0, 0.45, 0]);
   mesh(RB(0.25, 0.25, 0.45, 0.1), color, g, [0, 1.0, 0]);
   mesh(RB(0.03, 0.15, 0.06, 0.01), 0xf6d06a, g, [0.14, 1.12, -0.1]);
@@ -150,6 +152,7 @@ export function cafeTable(x, z, color = 0xf2a0b4) {
 export function shop(x, z, ry, rng, { w = 6, d = 6, h = 4, wall, awning, sign } = {}) {
   const g = G(x, z, ry);
   g.userData.occluder = true;
+  g.userData.shop = { w, d, h }; // (for the seasons: Christmas lights)
   wall ??= rng.pick(HOUSE_WALLS);
   awning ??= rng.pick([0xd9534f, 0x5b86c4, 0x6f9a52, 0xe0b04a, 0x8e6fb0]);
   mesh(RB(w, h, d, 0.1, 3), wall, g, [0, h / 2, 0]);
@@ -157,12 +160,12 @@ export function shop(x, z, ry, rng, { w = 6, d = 6, h = 4, wall, awning, sign } 
   // shop window + door
   mesh(RB(w * 0.55, 1.6, 0.1, 0.04), 0xfff8e8, g, [-w * 0.15, 1.3, d / 2 + 0.02]);
   mesh(RB(w * 0.5, 1.45, 0.06, 0.03), 0x9ab8cf, g, [-w * 0.15, 1.3, d / 2 + 0.06]);
-  mesh(RB(1.0, 2.0, 0.1, 0.04), rng.pick(DOORS), g, [w * 0.3, 1.0, d / 2 + 0.03]);
+  mesh(RB(1.0, 2.0, 0.1, 0.04), rng.pick(DOORS), g, [w * 0.3, 1.0, d / 2 + 0.03]).userData.season = 'world';
   // striped awning
   const stripes = 7;
   for (let i = 0; i < stripes; i++) {
     const sw = (w - 0.4) / stripes;
-    mesh(new THREE.BoxGeometry(sw, 0.05, 1.3), i % 2 ? 0xfff8e8 : awning, g, [-w / 2 + 0.2 + sw * (i + 0.5), 2.55, d / 2 + 0.6], [0.35, 0, 0]);
+    mesh(new THREE.BoxGeometry(sw, 0.05, 1.3), i % 2 ? 0xfff8e8 : awning, g, [-w / 2 + 0.2 + sw * (i + 0.5), 2.55, d / 2 + 0.6], [0.35, 0, 0]).userData.season = 'world';
   }
   // sign board
   mesh(RB(w * 0.6, 0.6, 0.12, 0.05), sign ?? 0x3b2b25, g, [0, 3.35, d / 2 + 0.05]);
@@ -185,6 +188,7 @@ export function brickBuilding(x, z, ry, w, d, h, color = 0xc88e74) {
 
 export function car(x, z, ry, color) {
   const g = G(x, z, ry);
+  g.userData.season = 'world'; // (snow on the roof in winter, but a green car stays green)
   mesh(RB(1.7, 0.6, 3.6, 0.25, 3), color, g, [0, 0.55, 0]);
   mesh(RB(1.5, 0.55, 2.0, 0.25, 3), color, g, [0, 1.05, -0.2]);
   for (const sz of [0.75, -1.15]) mesh(RB(1.38, 0.42, 0.06, 0.05), 0x9ab8cf, g, [0, 1.05, sz], [sz > 0 ? -0.3 : 0.3, 0, 0]);

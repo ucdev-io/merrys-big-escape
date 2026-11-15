@@ -13,6 +13,7 @@ import { Sprinkler } from './yard/sprinkler.js';
 import { Pickles } from './yard/pickles.js';
 import { escapeCutscene } from './yard/escape.js';
 import { progress } from './progress.js';
+import { Seasons } from './seasons/seasons.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -59,6 +60,9 @@ export class YardChapter {
     this.sprinkler = new Sprinkler(scene, world, V(3.2, 0, -4.6));
     this.gnome = world.props.gnome;
     this.gnomeTip = 0;
+    // 🍂❄️🌸☀️ The garden follows the seasons too (the calendar's, or the one picked in ☰ → Seasons).
+    this.seasons = new Seasons({ scene, world, player, hud, input, actions: this.actions, pipeline, follow, chapter: 'yard', seed: 'garden' });
+    hud.onSeasons = () => this.seasons.showCard();
 
     this.refreshObjective();
     hud.setFound(this.found, TREASURES.length);
@@ -166,6 +170,7 @@ export class YardChapter {
     }
     if (!canAct) this.hud.setPrompt('');
     else if (st.prompt) this.hud.setPrompt(st.prompt);
+    else if (!st.near && this.seasons.prompt) this.hud.setPrompt(this.seasons.prompt);
     else if (st.near) {
       const n = st.near;
       const bar = n.need > 6 ? '  ' + '▮'.repeat(Math.round((n.progress / n.need) * 10)).padEnd(10, '▯') : '';
@@ -176,9 +181,10 @@ export class YardChapter {
     this.actions.update(dt, {
       canAct,
       goal: st.nearest?.pos ?? null,
-      onDig: () => this.digSpot(st.near),
-      onBark: () => this.reactToBark(),
+      onDig: (nose) => (st.near ? this.digSpot(st.near) : this.seasons.onDig(nose) || this.digSpot(null)),
+      onBark: () => { this.reactToBark(); this.seasons.onBark(pos); },
     });
+    this.seasons.update(dt, { canAct });
     if (canAct) this.pickles.sniffing(this.actions.sniffHeld);
     if (P.leftWater) this.later(0.6, () => { if (this.pickles.say('wet', { cooldown: 30 })) this.pickles.laugh(1); });
 

@@ -179,6 +179,7 @@ export class HUD {
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
     item('🐶 My dog', () => this.showMyDog());
     item('❓ How to play', () => this.showHelp());
+    if (this.onSeasons) item('🌦️ Seasons', () => this.onSeasons());
     if (fullscreenButtonUseful()) item(isFullscreen() ? '⛶ Leave full screen' : '⛶ Full screen', () => { this.hideCard(); toggleFullscreen(this); });
     const sound = item(isMuted() ? '🔇 Sound: off' : '🔊 Sound: on', () => {
       setMuted(!isMuted());
@@ -262,7 +263,7 @@ export class HUD {
     if (act === this._pawAct) return;
     this._pawAct = act;
     const b = document.querySelector('.touch [data-b="dig!"]');
-    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!' }[act] ?? 'Dig'}`;
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */

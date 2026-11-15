@@ -62,6 +62,7 @@ export class Player {
     this.leftWater = false;
     this.shakeIn = 0;
     this.wetTime = 0;
+    this.grip = 1;           // how well paws grip (ice: hardly at all — wheee!)
   }
 
   /** Swap to a different dog (lobby), keeping position and facing. */
@@ -120,7 +121,7 @@ export class Player {
     const amt = Math.min(1, Math.hypot(mv.x, mv.y));
 
     const target = new THREE.Vector2(dx, dz).multiplyScalar(max);
-    const accel = amt > 0.01 ? 10 : 7;
+    const accel = (amt > 0.01 ? 10 : 7) * this.grip;
     this.vel.lerp(target, 1 - Math.exp(-dt * accel));
     const speed = this.vel.length();
     this.speed = speed;
@@ -193,7 +194,7 @@ export class Player {
       // In deep water the "ground" is wherever a floating dog's body sits at the surface;
       // the shelving beach eases you in from standing to swimming.
       wtr = world?.water ? waterAt(world.water, this.pos.x, this.pos.z) : null;
-      let base = 0;
+      let base = world?.heightAt?.(this.pos.x, this.pos.z) ?? 0; // (the ground can rise: a frozen pond, a snowy hill)
       if (wtr && !wtr.wade) base = (wtr.surface - (this.dog.bodyY + 0.03) * this.dog.breed.size) * wtr.depth;
       const ground = world ? world.colliders.surfaceAt(this.pos.x, this.pos.z, this.pos.y, this.grounded ? 0.3 : 0.05, this.platforms, undefined, base) : 0;
       impact = Math.max(speed, -this.vy);

@@ -4,7 +4,7 @@ import { paint } from '../../render/watercolorMaterial.js';
 import { PALETTE } from '../../render/palette.js';
 import { RNG, fbm3 } from '../../core/rng.js';
 import { Colliders } from '../collision.js';
-import { mergeStatic, collectOccluders } from '../merge.js';
+import { mergeStatic, collectOccluders, collectLandmarks } from '../merge.js';
 import { GrassField } from '../grassField.js';
 import { tree, bush, picketFence, house, flowerBed, steppingStones, skyDome, gnome, paddlingPool, mesh, blobGeometry } from '../props.js';
 import { TOWN } from './generator.js';
@@ -93,6 +93,7 @@ function streets(g, layout, rng, col, bones) {
   // Tarmac under the whole town.
   const tarmac = mesh(new THREE.PlaneGeometry(S + 6, S + 6), 0xb7b2aa, g, [0, 0.01, 0], [-Math.PI / 2, 0, 0]);
   tarmac.castShadow = false;
+  tarmac.userData.season = 'road'; // (snowy roads are slushy)
   // Pavement ring + lawn for each block.
   for (const b of layout.blocks) {
     const pv = mesh(new RoundedBoxGeometry(TOWN.BLOCK + 4, 0.09, TOWN.BLOCK + 4, 2, 0.04), 0xddd2bf, g, [b.x, 0, b.z]);
@@ -109,8 +110,8 @@ function streets(g, layout, rng, col, bones) {
     for (let t = -S / 2; t < S / 2; t += 4) {
       const nearCross = (((t + S / 2 - TOWN.ROAD / 2) % step) + step) % step;
       if (nearCross < TOWN.ROAD / 2 + 1 || nearCross > step - TOWN.ROAD / 2 - 1) continue;
-      const a = mesh(dashGeo, 0xf4ecd8, g, [line, 0.015, t]); a.castShadow = false;
-      const b = mesh(dashGeo, 0xf4ecd8, g, [t, 0.015, line], [0, Math.PI / 2, 0]); b.castShadow = false;
+      const a = mesh(dashGeo, 0xf4ecd8, g, [line, 0.015, t]); a.castShadow = false; a.userData.season = 'road';
+      const b = mesh(dashGeo, 0xf4ecd8, g, [t, 0.015, line], [0, Math.PI / 2, 0]); b.castShadow = false; b.userData.season = 'road';
     }
   }
   // Lampposts on block corners, street trees, parked cars.
@@ -425,6 +426,7 @@ export function buildTown(layout) {
         // The tunnel Merry dug in the yard chapter pops out here.
         const hole = mesh(new THREE.CircleGeometry(0.4, 18), 0x4a3426, root, [spawn.x - home.front[0] * 0.6, 0.06, spawn.z - home.front[1] * 0.6], [-Math.PI / 2, 0, 0]);
         hole.castShadow = false;
+        hole.userData.season = 'none'; // (a hole stays a hole, snow or no snow)
       }
     } else if (b.type === 'park') park = { block: b, ...parkBlock(g, lc, br) };
     else if (b.type === 'pond') pondBlock(g, lc, br);
@@ -465,6 +467,7 @@ export function buildTown(layout) {
   };
 
   const occluders = collectOccluders(root);
+  const landmarks = collectLandmarks(root); // (houses, shops and trees, for the seasons)
   const group = mergeStatic(root, { chunk: 45 });
   const half = TOWN.SIZE / 2 + 4;
   return {
@@ -487,6 +490,7 @@ export function buildTown(layout) {
     homes: [{ pos: spawn.clone(), face: spawnFace, garden: extra.gardens.find((gd) => gd.home) }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: { x0: -half, x1: half, z0: -half, z1: half },
     layout,
+    landmarks,
     props: {},
     grass: null,
     attach(scene) { this.grass = new GrassField(scene, isLawn); },
