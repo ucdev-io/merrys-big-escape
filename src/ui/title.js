@@ -35,12 +35,15 @@ export function showTitle(save) {
     const where = save.chapter === 'town' ? 'the neighbourhood' : save.found?.length && !save.escaped ? 'the garden' : null;
     const done = save.yardDone || save.escaped;
     const s = getSettings();
+    // Merry and Pippin, plus a few different friends each time.
+    const rest = BREED_KEYS.filter((k) => k !== 'merry' && k !== 'pippin').sort(() => Math.random() - 0.5);
+    const featured = ['merry', 'pippin', ...rest.slice(0, 4)];
     el.innerHTML = `
       <div class="page">
         <div class="paws">🐾 🐾 🐾</div>
         <h1>Merry's Big Escape</h1>
         <p class="tag">A muddy-pawed adventure for dogs who follow their noses.</p>
-        <div class="pack">${BREED_KEYS.map((k) => `<span title="${BREEDS[k].breed}">${BREEDS[k].swatch.map((c) => `<i style="background:${c}"></i>`).join('')}<b>${BREEDS[k].dogName}</b></span>`).join('')}</div>
+        <div class="pack">${featured.map((k) => `<span title="${BREEDS[k].breed}">${BREEDS[k].swatch.map((c) => `<i style="background:${c}"></i>`).join('')}<b>${BREEDS[k].dogName}</b></span>`).join('')}<span class="more">…and ${BREED_KEYS.length - featured.length} more dogs!</span></div>
         <div class="friends hidden"><h3>👥 Friends playing now</h3><div class="list"></div></div>
         <div class="choices">
           ${where ? `<button class="pill big" data-c="continue">▶ Continue in ${where}</button>` : ''}

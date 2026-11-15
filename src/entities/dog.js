@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { paint } from '../render/watercolorMaterial.js';
-import { BREEDS } from './breeds.js';
+import { breedOf } from './breeds.js';
 import { COSMETIC } from '../game/cosmetics.js';
+import { fbm3 } from '../core/rng.js';
 
 const TAU = Math.PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -114,21 +116,74 @@ const HEAD = [
 const SPHERE = new THREE.SphereGeometry(1, 32, 22);
 
 /**
+ * Fluffy coats: puff a part's surface out in soft, uneven tufts (curl > 0 adds tight curls).
+ * `amt` is in dog units; `scale` is the mesh's own scale (unit spheres get stretched into ears etc.),
+ * so tufts come out the same size whatever the part.
+ */
+function fluffify(geo, amt, curl = 0, scale = [1, 1, 1]) {
+  let g = geo;
+  if (g.attributes.uv) g.deleteAttribute('uv');
+  g.deleteAttribute('normal');
+  g = mergeVertices(g);
+  g.computeVertexNormals();
+  const p = g.attributes.position, nr = g.attributes.normal;
+  const v = new THREE.Vector3(), n = new THREE.Vector3(), w = new THREE.Vector3();
+  const [sx, sy, sz] = scale;
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i); n.fromBufferAttribute(nr, i);
+    w.set(v.x * sx, v.y * sy, v.z * sz); // where this point really is on the dog
+    const tuft = fbm3(w.x * 45 + 11, w.y * 45, w.z * 45 - 7, 3);
+    const curls = curl ? (fbm3(w.x * 170, w.y * 170 + 3, w.z * 170, 2) - 0.5) * curl : 0;
+    const d = amt * (0.55 + tuft * 0.9 + curls * 1.8);
+    v.set(v.x + (n.x * d) / sx, v.y + (n.y * d) / sy, v.z + (n.z * d) / sz);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// A lumpy ball of fur (ruffs, beards, topknots, fluffy ears).
+const FLUFF = (() => {
+  let g = new THREE.IcosahedronGeometry(1, 3);
+  g.deleteAttribute('normal'); g.deleteAttribute('uv');
+  g = mergeVertices(g);
+  const p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    v.multiplyScalar(1 + (fbm3(v.x * 2.4 + 5, v.y * 2.4, v.z * 2.4, 3) - 0.5) * 0.55);
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  g.computeVertexNormals();
+  return g;
+})();
+
+const UP_TAILS = new Set(['up', 'curl', 'plume']);
+const TAIL_FLUFF = { plume: 1.7, feather: 1.6, sabre: 1.3, otter: 0.6, curl: 0.8 };
+const DARK_EYE = 0x241a17;
+// Finished (fluffed and painted) coat shapes per breed: every dog of a breed is identical, so build it once.
+const GEO_CACHE = new Map();
+
+/**
  * A dog of any breed (see breeds.js), built from smooth lofted shapes and animated procedurally.
  * Faces +Z. Root sits on the ground.
  */
 export class Dog {
   constructor(breedKey = 'merry') {
-    const br = (this.breed = BREEDS[breedKey] ?? BREEDS.merry);
+    const br = (this.breed = breedOf(breedKey));
     const { L, T, len, gx, gy, tuck, neck: NL, headLen: HL, headW: HW } = br;
+    const F = br.fluff ?? 0, CURL = br.curl ?? 0, HF = F * (br.headFluff ?? 0.3);
     this.root = new THREE.Group();
     this.root.scale.setScalar(br.size);
     this.bodyY = 0.065 + 0.415 * L;
     this.body = group(this.root, [0, this.bodyY, 0]);
     const B = this.body;
     const coatParts = [];
-    const coat = (geo, kind, parent, ref, pos, rot, scale) => {
-      const m = new THREE.Mesh(geo.clone(), paint(0xffffff, { vertexColors: true }));
+    const cached = GEO_CACHE.get(br);
+    let ci = 0;
+    // fl: how fluffy this part is (dog units).
+    const coat = (geo, kind, parent, ref, pos, rot, scale, fl = 0) => {
+      const g = cached ? cached[ci++] : fl > 0 ? fluffify(geo.clone(), fl, CURL, scale) : geo.clone();
+      const m = new THREE.Mesh(g, paint(0xffffff, { vertexColors: true }));
       if (pos) m.position.set(...pos);
       if (rot) m.rotation.set(...rot);
       if (scale) m.scale.set(...scale);
@@ -139,14 +194,16 @@ export class Dog {
     };
 
     // Torso.
-    this.chest = coat(loft(TORSO.map(([z, top, bot, w, flat]) => [z * len, top * gy, lerp(flat, bot, tuck) * gy, w * gx])), 'body', B, B);
-    if (br.fluffyBum) coat(SPHERE, 'extra', B, B, [0, 0.0, -0.37 * len], [0, 0, 0], [0.07 * gx, 0.065 * gy, 0.05]);
+    this.chest = coat(loft(TORSO.map(([z, top, bot, w, flat]) => [z * len, top * gy, lerp(flat, bot, tuck) * gy, w * gx])), 'body', B, B, null, null, undefined, F);
+    if (br.fluffyBum) coat(SPHERE, 'extra', B, B, [0, 0.0, -0.37 * len], [0, 0, 0], [0.07 * gx, 0.065 * gy, 0.05], F);
+    // A fluffy chest ruff (collies, huskies, poms…).
+    if (br.ruff) coat(FLUFF, 'body', B, B, [0, 0.005 * gy, 0.255 * len], [0.35, 0, 0], [0.074 * gx * br.ruff, 0.088 * gy * br.ruff, 0.062 * br.ruff]);
 
     // Neck.
     this.neck = group(B, [0, 0.03 * gy, 0.24 * len], [0.85, 0, 0]);
     const nr = Math.max(gx, gy);
-    coat(taperedTube([[0, -0.03, -0.01], [0, 0.06 * NL, 0.012], [0, 0.13 * NL, 0.008], [0, 0.18 * NL, -0.005]], 0.06 * nr, 0.036 * nr, 20, 24), 'neck', this.neck, this.neck);
-    this.dims = { NL, nr, gx, gy, len };
+    coat(taperedTube([[0, -0.03, -0.01], [0, 0.06 * NL, 0.012], [0, 0.13 * NL, 0.008], [0, 0.18 * NL, -0.005]], 0.06 * nr, 0.036 * nr, 20, 24), 'neck', this.neck, this.neck, null, null, undefined, F * 1.15);
+    this.dims = { NL, nr, gx, gy, len, F, HF };
     if (br.collar) this.breedCollar = this.makeCollar(br.collar.color, br.collar.tag); // e.g. Pippin's own black collar
     this.head = group(this.neck, [0, 0.175 * NL, -0.005], [-0.6, 0, 0]);
     this.head.scale.setScalar(HW);
@@ -154,31 +211,62 @@ export class Dog {
     const muzzle = (z) => (z > 0.03 ? 0.03 + (z - 0.03) * HL : z);
     const MW = br.muzzleW ?? 1; // broader muzzle for terriers
     const mw = (z) => 1 + (MW - 1) * Math.min(1, Math.max(0, (z - 0.02) / 0.06));
-    coat(loft(HEAD.map(([z, t, b, w]) => [muzzle(z), t * mw(z), b * mw(z), w * mw(z)]), 40, 32, 0.15), 'head', H, H);
+    coat(loft(HEAD.map(([z, t, b, w]) => [muzzle(z), t * mw(z), b * mw(z), w * mw(z)]), 40, 32, 0.15), 'head', H, H, null, null, undefined, HF / HW);
     const tip = muzzle(0.166);
-    mesh(SPHERE, br.nose, H, [0, 0.0, tip], [0, 0, 0], [0.016, 0.014, 0.012]);
-    if (br.beard) coat(SPHERE, 'extra', H, H, [0, -0.03, tip - 0.035], [0, 0, 0], [0.022, 0.018, 0.03]);
-    this.eyes = [-1, 1].map((s) => {
-      const e = mesh(SPHERE, 0x241a17, H, [s * 0.036, 0.026, 0.035], [0, s * 0.35, 0], [0.011, 0.012, 0.009]);
+    const hf = HF / HW; // fluffy faces: sit the eyes, nose and brows on top of the fur
+    mesh(SPHERE, br.nose, H, [0, 0.0, tip + hf * 0.7], [0, 0, 0], [0.016, 0.014, 0.012]);
+    if (br.beard) coat(FLUFF, 'extra', H, H, [0, -0.03, tip - 0.03], [0.3, 0, 0], [0.024, 0.02, 0.032]);
+    // Droopy lips (boxers, bulldogs, Great Danes…).
+    if (br.jowls) for (const s of [-1, 1]) coat(SPHERE, 'head', H, H, [s * 0.016 * MW, -0.022, tip - 0.026], [0, 0, s * 0.25], [0.014 * MW, 0.02, 0.025]);
+    const es = br.eyeSize ?? 1;
+    this.eyeY = 0.012 * es;
+    this.eyes = [-1, 1].map((s, i) => {
+      const col = Array.isArray(br.eyeColor) ? br.eyeColor[i] : br.eyeColor ?? DARK_EYE;
+      const e = mesh(SPHERE, col, H, [s * (0.036 + hf * 0.6), 0.026 + hf * 0.2, 0.035 + hf * 0.6], [0, s * 0.35, 0], [0.011 * es, 0.012 * es, 0.009 * es]);
+      if (col !== DARK_EYE) mesh(SPHERE, 0x16110f, e, [0, 0, 0.62], [0, 0, 0], [0.55, 0.6, 0.45]); // pupil for pale eyes
       mesh(SPHERE, 0xffffff, e, [s * 0.25, 0.35, 0.6], [0, 0, 0], [0.3, 0.3, 0.3]);
       return e;
     });
     const bs = br.browSize ?? 1;
     this.browTilt = br.grumpy ? 0.45 : -0.3;
-    this.brows = [-1, 1].map((s) => mesh(SPHERE, br.brow, H, [s * 0.034, 0.044, 0.035], [0, 0, s * this.browTilt], [0.012 * bs, 0.0035 * bs, 0.006 * bs]));
+    this.browY = 0.044 + hf * 0.3;
+    this.brows = [-1, 1].map((s) => mesh(SPHERE, br.brow, H, [s * (0.034 + hf * 0.5), this.browY, 0.035 + hf * 0.6], [0, 0, s * this.browTilt], [0.012 * bs, 0.0035 * bs, 0.006 * bs]));
+    // A topknot with a bow (Maltese).
+    if (br.topknot) {
+      this.topknot = group(H, [0, 0.058 + hf * 0.6, -0.004]);
+      coat(FLUFF, 'head', this.topknot, H, [0, 0.01, 0], [0, 0, 0], [0.024, 0.022, 0.024]);
+      for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.012, 0.024, 12), br.topknot, this.topknot, [s * 0.012, 0.03, 0], [0, 0, (-s * Math.PI) / 2]);
+      mesh(SPHERE, br.topknot, this.topknot, [0, 0.03, 0], [0, 0, 0], [0.007, 0.007, 0.007]);
+    }
 
     // Ears.
+    const el = br.earLen ?? 1;
     this.ears = [-1, 1].map((s) => {
       let g;
       if (br.ears === 'flop') {
         g = group(H, [s * 0.04, 0.035, -0.02], [0, 0, s * 0.15]);
-        coat(SPHERE, 'ear', g, g, [s * 0.008, -0.042, 0.0], [0, 0, 0], [0.011, 0.05, 0.032]);
+        coat(SPHERE, 'ear', g, g, [s * 0.008, -0.042 * el, 0.0], [0, 0, 0], [0.011, 0.05 * el, 0.032], F * 0.8);
         g.userData.base = [0, 0, s * 0.15];
+        g.userData.flop = true;
+      } else if (br.ears === 'long') { // spaniels and doodles: long, silky, hanging past the jaw
+        g = group(H, [s * 0.043, 0.032, -0.022], [0, 0, s * 0.08]);
+        coat(F > 0 ? FLUFF : SPHERE, 'ear', g, g, [s * 0.012, -0.05 * el, 0.004], [0, 0, 0], [0.014, 0.06 * el, 0.034], F * 0.7);
+        g.userData.base = [0, 0, s * 0.08];
         g.userData.flop = true;
       } else if (br.ears === 'prick') {
         g = group(H, [s * 0.03, 0.05, -0.02], [0, 0, s * -0.3]);
-        coat(new THREE.ConeGeometry(0.028, 0.075, 12), 'ear', g, g, [0, 0.035, 0], [0, 0, 0], [1, 1, 0.45]);
+        coat(new THREE.ConeGeometry(0.028, 0.075, 12), 'ear', g, g, [0, 0.035, 0], [0, 0, 0], [1, 1, 0.45], F * 0.25);
         g.userData.base = [0, 0, s * -0.3];
+      } else if (br.ears === 'bat') { // French bulldog: big, round and upright
+        g = group(H, [s * 0.033, 0.047, -0.018], [0.05, s * 0.3, s * -0.45]);
+        coat(SPHERE, 'ear', g, g, [0, 0.033, 0], [0, 0, 0], [0.028, 0.041, 0.009]);
+        g.userData.base = [0.05, s * 0.3, s * -0.45];
+      } else if (br.ears === 'tipped') { // collies: up at the base, tips folded over
+        g = group(H, [s * 0.03, 0.05, -0.02], [0.1, 0, s * -0.25]);
+        coat(new THREE.ConeGeometry(0.027, 0.05, 12), 'ear', g, g, [0, 0.022, 0], [0, 0, 0], [1, 1, 0.45], F * 0.25);
+        const tipG = group(g, [0, 0.045, 0.002], [1.2, 0, 0]);
+        coat(new THREE.ConeGeometry(0.015, 0.032, 10), 'ear', tipG, g, [0, 0.013, 0], [0, 0, 0], [1, 1, 0.45]);
+        g.userData.base = [0.1, 0, s * -0.25];
       } else if (br.ears === 'button') {
         g = group(H, [s * 0.035, 0.05, -0.01], [0.9, 0, s * -0.5]);
         coat(SPHERE, 'ear', g, g, [s * 0.004, 0.012, 0.012], [0, 0, 0], [0.008, 0.02, 0.022]);
@@ -188,6 +276,7 @@ export class Dog {
         coat(SPHERE, 'ear', g, g, [s * 0.005, 0.006, -0.026], [0.35, 0, 0], [0.009, 0.02, 0.036]);
         g.userData.base = [-0.5, s * 0.2, s * -0.7];
       }
+      g.scale.setScalar(br.earSize ?? 1);
       return g;
     });
     this.tongue = mesh(SPHERE, 0xe88a8f, H, [0, -0.032, tip - 0.055], [0.3, 0, 0], [0.016, 0.005, 0.028]);
@@ -200,31 +289,40 @@ export class Dog {
       up: [[[0, 0, 0], [0, 0.05, -0.025], [0, 0.1, -0.03], [0, 0.13, -0.025]], 0.02, 0.012],
       otter: [[[0, 0, 0], [0, -0.03, -0.1], [0, -0.1, -0.18], [0, -0.18, -0.22]], 0.032, 0.01],
       straight: [[[0, 0, 0], [0, -0.02, -0.1], [0, -0.08, -0.19], [0, -0.13, -0.25], [0, -0.14, -0.29]], 0.018, 0.005],
+      // A tight curl on the hip (pugs, shibas).
+      curl: [[[0, 0, 0], [0, 0.045, -0.025], [0, 0.085, -0.01], [0, 0.095, 0.025], [0.012, 0.07, 0.045], [0.016, 0.045, 0.03]], 0.022, 0.012],
+      // A big bushy tail carried up over the back (huskies, poms, samoyeds).
+      plume: [[[0, 0, 0], [0, 0.06, -0.05], [0, 0.13, -0.05], [0, 0.17, 0.0], [0.008, 0.16, 0.07], [0.014, 0.12, 0.11]], 0.03, 0.014],
+      // Long and feathery, carried low (goldens, collies).
+      feather: [[[0, 0, 0], [0, -0.05, -0.08], [0, -0.14, -0.13], [0, -0.22, -0.14], [0, -0.28, -0.11]], 0.022, 0.009],
+      // A low, bushy brush (shepherds, kelpies).
+      sabre: [[[0, 0, 0], [0, -0.06, -0.07], [0, -0.16, -0.1], [0, -0.25, -0.09], [0, -0.29, -0.05]], 0.026, 0.012],
     };
-    if (br.tail === 'stub') coat(SPHERE, 'tail', this.tail, this.tail, [0, 0.005, -0.01], [0, 0, 0], [0.025, 0.022, 0.03]);
-    else { const [pts, r0, r1] = tails[br.tail]; coat(taperedTube(pts, r0 * T, r1 * T), 'tail', this.tail, this.tail); }
+    const tf = F * (TAIL_FLUFF[br.tail] ?? 1);
+    if (br.tail === 'stub') coat(SPHERE, 'tail', this.tail, this.tail, [0, 0.005, -0.01], [0, 0, 0], [0.025, 0.022, 0.03], tf);
+    else { const [pts, r0, r1] = tails[br.tail] ?? tails.long; coat(taperedTube(pts, r0 * T, r1 * T), 'tail', this.tail, this.tail, null, null, undefined, tf); }
 
     // Legs.
     const P = 0.4 + 0.6 * L; // how much the haunch shrinks with short legs
     this.legs = [];
     const mkFront = (side) => {
       const hip = group(B, [side * 0.052 * gx, -0.03 * gy, 0.18 * len]);
-      coat(taperedTube([[0, 0.02, 0.01], [0, -0.1 * L, -0.005], [0, -0.215 * L, 0]], 0.042 * T, 0.022 * T, 16, 16), 'upperLeg', hip, hip);
+      coat(taperedTube([[0, 0.02, 0.01], [0, -0.1 * L, -0.005], [0, -0.215 * L, 0]], 0.042 * T, 0.022 * T, 16, 16), 'upperLeg', hip, hip, null, null, undefined, F * 0.7);
       const knee = group(hip, [0, -0.215 * L, 0]);
-      coat(taperedTube([[0, 0.01, 0], [0, -0.1 * L, 0.004], [0, -0.2 * L, 0.008]], 0.021 * T, 0.016 * T, 12, 12), 'lowerLeg', knee, knee);
+      coat(taperedTube([[0, 0.01, 0], [0, -0.1 * L, 0.004], [0, -0.2 * L, 0.008]], 0.021 * T, 0.016 * T, 12, 12), 'lowerLeg', knee, knee, null, null, undefined, F * 0.35);
       const ankle = group(knee, [0, -0.2 * L, 0.008]);
-      coat(SPHERE, 'paw', ankle, ankle, [0, -0.004, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T]);
+      coat(SPHERE, 'paw', ankle, ankle, [0, -0.004, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T], F * 0.2);
       return { hip, knee, ankle, front: true, side, rest: [0.08, -0.08, 0] };
     };
     const mkRear = (side) => {
       const hip = group(B, [side * 0.06 * gx, 0.0, -0.28 * len]);
-      coat(SPHERE, 'upperLeg', hip, hip, [0, -0.06 * P, 0.005], [0.15, 0, 0], [0.048 * gx * T * 0.9, 0.115 * P, 0.072 * T]);
+      coat(SPHERE, 'upperLeg', hip, hip, [0, -0.06 * P, 0.005], [0.15, 0, 0], [0.048 * gx * T * 0.9, 0.115 * P, 0.072 * T], F * 0.9);
       const knee = group(hip, [0, -0.17 * L, 0]);
-      coat(taperedTube([[0, 0.03, 0.01], [0, -0.08 * L, 0], [0, -0.17 * L, 0]], 0.034 * T, 0.018 * T, 12, 12), 'lowerLeg', knee, knee);
+      coat(taperedTube([[0, 0.03, 0.01], [0, -0.08 * L, 0], [0, -0.17 * L, 0]], 0.034 * T, 0.018 * T, 12, 12), 'lowerLeg', knee, knee, null, null, undefined, F * 0.5);
       const ankle = group(knee, [0, -0.17 * L, 0]);
-      coat(taperedTube([[0, 0.01, 0], [0, -0.125 * L, 0]], 0.019 * T, 0.015 * T, 8, 12), 'lowerLeg', ankle, ankle);
+      coat(taperedTube([[0, 0.01, 0], [0, -0.125 * L, 0]], 0.019 * T, 0.015 * T, 8, 12), 'lowerLeg', ankle, ankle, null, null, undefined, F * 0.3);
       const foot = group(ankle, [0, -0.125 * L, 0]);
-      coat(SPHERE, 'paw', foot, foot, [0, -0.002, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T]);
+      coat(SPHERE, 'paw', foot, foot, [0, -0.002, 0.014], [0, 0, 0], [0.022 * T, 0.014 * T, 0.032 * T], F * 0.2);
       return { hip, knee, ankle, foot, front: false, side, rest: [-0.32, 0.82, -0.5] };
     };
     this.legs.push(mkFront(-1), mkFront(1), mkRear(-1), mkRear(1));
@@ -236,7 +334,7 @@ export class Dog {
     this.root.scale.setScalar(1);
     this.root.updateMatrixWorld(true);
     const v = new THREE.Vector3(), d = new THREE.Vector3(), l = new THREE.Vector3(), n = new THREE.Vector3(), c = new THREE.Color();
-    for (const [m, kind, ref] of coatParts) {
+    for (const [m, kind, ref] of cached ? [] : coatParts) {
       const p = m.geometry.attributes.position;
       const cols = new Float32Array(p.count * 3);
       const toRef = new THREE.Matrix4().copy(ref.matrixWorld).invert().multiply(m.matrixWorld);
@@ -250,6 +348,7 @@ export class Dog {
       }
       m.geometry.setAttribute('color', new THREE.BufferAttribute(cols, 3));
     }
+    if (!cached) GEO_CACHE.set(br, coatParts.map(([m]) => m.geometry));
     this.root.scale.copy(savedScale);
 
     // Animation state.
@@ -276,7 +375,7 @@ export class Dog {
   makeCollar(color, tagColor = 0xdfe3e8) {
     const { NL, nr } = this.dims;
     const g = group(this.neck);
-    const cy = 0.085 * NL, cr = 0.049 * nr;
+    const cy = 0.085 * NL, cr = 0.049 * nr + (this.dims.F ?? 0) * 1.3; // sits on top of fluffy fur
     mesh(new THREE.TorusGeometry(cr, 0.007, 8, 32), color, g, [0, cy, 0.008], [Math.PI / 2 + 0.3, 0, 0]);
     mesh(new THREE.TorusGeometry(0.006, 0.0018, 6, 12), 0xb8bec6, g, [0, cy - 0.016, cr + 0.012], [0, 0, 0]);
     mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.003, 20), tagColor, g, [0, cy - 0.032, cr + 0.014], [Math.PI / 2 - 0.3, 0, 0]);
@@ -291,15 +390,16 @@ export class Dog {
     for (const m of this.lookMeshes ?? []) m.removeFromParent();
     this.lookMeshes = [];
     const keep = (m) => { this.lookMeshes.push(m); return m; };
-    const { gx, gy, len } = this.dims;
+    const { gx, gy, len, F, HF } = this.dims;
     const c = (slot) => COSMETIC[look[slot]];
     if (this.breedCollar) this.breedCollar.visible = !c('collar');
+    if (this.topknot) this.topknot.visible = !c('hat'); // the bow comes off for a hat
 
     if (c('collar')) keep(this.makeCollar(c('collar').color, 0xf2c14e));
 
     if (c('neck')) {
       // Bandana: a soft triangle hanging at the front of the chest.
-      const g = keep(group(this.body, [0, 0.035 * gy, 0.255 * len], [0.25, 0, 0]));
+      const g = keep(group(this.body, [0, 0.035 * gy, 0.255 * len + F * 1.4], [0.25, 0, 0]));
       const cone = new THREE.ConeGeometry(0.075, 0.13, 3, 1);
       cone.rotateZ(Math.PI); cone.rotateY(Math.PI / 6);
       mesh(cone, c('neck').color, g, [0, -0.045, 0.012], [0, 0, 0], [gx, 1, 0.32]);
@@ -308,7 +408,7 @@ export class Dog {
 
     const hat = c('hat');
     if (hat) {
-      const g = keep(group(this.head, [0, 0.06, -0.012], [0.15, 0, 0]));
+      const g = keep(group(this.head, [0, 0.06 + (HF / this.breed.headW) * 0.8, -0.012], [0.15, 0, 0]));
       if (hat.id === 'hat-party') {
         mesh(new THREE.ConeGeometry(0.032, 0.11, 18), hat.color, g, [0, 0.055, 0]);
         mesh(new THREE.TorusGeometry(0.031, 0.006, 6, 18), 0xf6d06a, g, [0, 0.008, 0], [Math.PI / 2, 0, 0]);
@@ -420,7 +520,7 @@ export class Dog {
 
     // Whippet shiver: random little shivers when standing still (they're always cold!).
     this.shiverT -= dt * (1 - moving);
-    if (this.shiverT < 0) { this.shiver = br === BREEDS.merry ? 1.2 : 0; this.shiverT = 7 + Math.random() * 8; }
+    if (this.shiverT < 0) { this.shiver = br.shivers ? 1.2 : 0; this.shiverT = 7 + Math.random() * 8; }
     this.shiver = Math.max(0, this.shiver - dt);
     B.position.x = Math.sin(t * 70) * 0.006 * Math.min(1, this.shiver * 2);
 
@@ -448,8 +548,9 @@ export class Dog {
     // Tail: happy wag, streams out behind during zoomies.
     const happy = s.happy ?? 0.5;
     this.wag = lerp(this.wag, happy, 1 - Math.exp(-dt * 3));
-    this.tail.rotation.y = Math.sin(t * lerp(6, 16, this.wag)) * lerp(0.2, 0.6, this.wag) * (1 - g * 0.7);
-    this.tail.rotation.x = br.tail === 'up' ? 0.2 - g * 0.6 : -g * 1.0 - this.wag * 0.25;
+    const wagK = br.tail === 'curl' ? 0.45 : 1; // curly tails just wiggle
+    this.tail.rotation.y = Math.sin(t * lerp(6, 16, this.wag)) * lerp(0.2, 0.6, this.wag) * (1 - g * 0.7) * wagK;
+    this.tail.rotation.x = UP_TAILS.has(br.tail) ? 0.2 - g * (br.tail === 'up' ? 0.6 : 0.4) : -g * 1.0 - this.wag * 0.25;
 
     // Swimming: doggy paddle — legs churn under the water, body level, head held high,
     // tail floating out behind. Blends in/out smoothly as she wades deeper or climbs out.
@@ -493,8 +594,8 @@ export class Dog {
     this.blinkT -= dt;
     const blink = this.blinkT < 0.12 ? 0.15 : 1;
     if (this.blinkT < 0) this.blinkT = 2 + Math.random() * 3.5;
-    this.eyes.forEach((e) => (e.scale.y = 0.012 * blink * (br.grumpy ? 0.75 : 1)));
-    this.brows.forEach((b) => (b.position.y = 0.044 + (br.grumpy ? -0.004 : this.wag * 0.006) + this.sniff * -0.004));
+    this.eyes.forEach((e) => (e.scale.y = this.eyeY * blink * (br.grumpy ? 0.75 : 1)));
+    this.brows.forEach((b) => (b.position.y = this.browY + (br.grumpy ? -0.004 : this.wag * 0.006) + this.sniff * -0.004));
     this.tongue.visible = g > 0.4;
     this.tongue.rotation.x = 0.3 + Math.sin(t * 20) * 0.15;
   }

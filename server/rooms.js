@@ -2,8 +2,7 @@
 // Trust model: home Wi-Fi play, so clients own their own dog's position; the server only
 // validates shapes/sizes, relays, and keeps the shared quest state for each pack.
 import { WebSocketServer } from 'ws';
-
-const BREEDS = ['merry', 'pippin', 'teddy', 'waffles', 'bramble', 'dotty'];
+import { BREED_IDS as BREEDS } from '../src/entities/breedIds.js';
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80;
 

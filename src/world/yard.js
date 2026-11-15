@@ -59,10 +59,13 @@ export function buildYard(seed = 'biscuit-yard') {
   // The family home along the back of the yard.
   group.add(house(0, -11.6, 0, rng, col, { w: 12, d: 6, h: 3.4 }));
 
-  // Fences: front + sides (house closes the back).
+  // Fences: front + sides, and along the back from each side of the house to the corners
+  // (the house is narrower than the garden, so it only closes the middle of the back).
   group.add(picketFence(YARD.x0, YARD.z1, YARD.x1, YARD.z1, col));
   group.add(picketFence(YARD.x0, YARD.z0, YARD.x0, YARD.z1, col));
   group.add(picketFence(YARD.x1, YARD.z0, YARD.x1, YARD.z1, col));
+  group.add(picketFence(YARD.x0, YARD.z0, -5.95, YARD.z0, col));
+  group.add(picketFence(5.95, YARD.z0, YARD.x1, YARD.z0, col));
 
   // Garden features.
   group.add(tree(-6.5, 4.6, 1.35, rng, col));

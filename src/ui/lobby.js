@@ -1,4 +1,4 @@
-import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
+import { BREEDS, BREED_KEYS, BREED_GROUPS } from '../entities/breeds.js';
 import { watchPacks, renderPackRows } from '../net/packs.js';
 
 /**
@@ -14,13 +14,14 @@ export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onJoin
     <div class="page">
       <h1>Who's playing?</h1>
       <p class="sub">Welcome to <b class="town"></b>!</p>
-      <div class="breeds">${BREED_KEYS.map((k) => {
+      <div class="breeds">${BREED_GROUPS.map((g) => `<h4>${g.name}</h4><div class="bgrid">${BREED_KEYS.filter((k) => BREEDS[k].group === g.id).map((k) => {
         const b = BREEDS[k];
         return `<button class="breed" data-k="${k}">
           <span class="sw">${b.swatch.map((c) => `<i style="background:${c}"></i>`).join('')}</span>
           <span class="bn">${b.dogName}</span><span class="bb">${b.breed}</span></button>`;
-      }).join('')}</div>
+      }).join('')}</div>`).join('')}</div>
       <p class="blurb"></p>
+      <button class="link surprise">🎲 Surprise me!</button>
       <label class="name">Name <input maxlength="14" autocomplete="off" spellcheck="false"></label>
       <div class="btns">
         <button class="pill big solo">🏘️ Explore <span class="town2"></span></button>
@@ -63,11 +64,18 @@ export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onJoin
     onBreed(k);
   };
   wrap.querySelectorAll('.breed').forEach((b) => (b.onclick = () => select(b.dataset.k)));
+  wrap.querySelector('.surprise').onclick = () => {
+    const others = BREED_KEYS.filter((k) => k !== breed);
+    const k = others[Math.floor(Math.random() * others.length)];
+    select(k);
+    wrap.querySelector(`.breed[data-k="${k}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  };
   nameIn.oninput = () => (customName = nameIn.value.trim() !== '' && nameIn.value !== BREEDS[breed].dogName);
   // Typing in the boxes mustn't make the dog run about.
   for (const i of [nameIn, codeIn]) i?.addEventListener('keydown', (e) => e.stopPropagation());
   codeIn?.addEventListener('input', () => (codeIn.value = codeIn.value.toUpperCase()));
   select(breed);
+  requestAnimationFrame(() => wrap.querySelector('.breed.active')?.scrollIntoView({ block: 'nearest' }));
   if (window.__packError) { err.textContent = window.__packError; window.__packError = null; }
 
   const choice = () => ({ breed, name: nameIn.value.trim().slice(0, 14) || BREEDS[breed].dogName });

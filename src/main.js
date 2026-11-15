@@ -83,7 +83,7 @@ if (inTown && packCode && save.profile) {
   const profile = save.profile;
   try {
     net = new NetClient();
-    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed });
+    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed, level: progress.level, look: progress.look });
     writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
   } catch (e) {
     net = null;

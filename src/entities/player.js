@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { Dog } from './dog.js';
+import { BREEDS } from './breeds.js';
+
+const known = (key) => (Object.hasOwn(BREEDS, key) ? key : 'merry');
 import { buzz } from '../core/haptics.js';
 import { waterAt } from '../world/water.js';
 
@@ -11,8 +14,8 @@ const COYOTE = 0.12, BUFFER = 0.14; // forgiving: jump just after leaving a ledg
 // Turns input into motion for Merry, relative to the camera's view.
 export class Player {
   constructor(breedKey = 'merry') {
-    this.dog = new Dog(breedKey);
-    this.breedKey = breedKey;
+    this.breedKey = known(breedKey);
+    this.dog = new Dog(this.breedKey);
     this.mult = this.dog.breed.speed;
     this.object = this.dog.root;
     this.pos = this.object.position;
@@ -49,9 +52,9 @@ export class Player {
   setBreed(key) {
     const parent = this.object.parent, pos = this.pos.clone();
     parent?.remove(this.object);
-    this.dog = new Dog(key);
+    this.breedKey = known(key);
+    this.dog = new Dog(this.breedKey);
     if (this.look) this.dog.setLook(this.look);
-    this.breedKey = key;
     this.mult = this.dog.breed.speed;
     this.object = this.dog.root;
     this.pos = this.object.position;

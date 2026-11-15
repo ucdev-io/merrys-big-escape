@@ -152,7 +152,14 @@ body.touch-mode .stamina { bottom: 180px; }
 .lobby .page { pointer-events: auto; max-width: 470px; margin-right: 4vw; }
 .lobby h1 { font-weight: normal; font-size: 36px; margin: 0; }
 .lobby .sub { margin: 0 0 10px; font-size: 18px; opacity: 0.8; }
-.lobby .breeds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lobby .breeds {
+  max-height: min(44vh, 400px); overflow-y: auto; overscroll-behavior: contain; padding: 0 4px 4px 0;
+  border-radius: 12px; scrollbar-width: thin;
+}
+.lobby .breeds h4 { margin: 8px 0 4px; font-weight: normal; font-size: 16px; opacity: 0.7; text-align: left; }
+.lobby .breeds h4:first-child { margin-top: 0; }
+.lobby .bgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.lobby .surprise { margin: 0 0 6px; }
 .lobby .breed {
   cursor: pointer; background: #fbf3e2; border: 2px solid rgba(59, 43, 37, 0.2); border-radius: var(--wobbly);
   padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -160,8 +167,8 @@ body.touch-mode .stamina { bottom: 180px; }
 .lobby .breed.active { border-color: var(--ink); background: var(--accent); }
 .lobby .sw { display: flex; }
 .lobby .sw i { width: 16px; height: 16px; border-radius: 50%; margin: 0 -2px; border: 1.5px solid rgba(59, 43, 37, 0.35); display: inline-block; }
-.lobby .bn { font-size: 20px; }
-.lobby .bb { font-size: 14px; opacity: 0.7; }
+.lobby .bn { font-size: 18px; line-height: 1.1; }
+.lobby .bb { font-size: 12.5px; opacity: 0.7; line-height: 1.1; text-align: center; }
 .lobby .blurb { font-size: 17px; min-height: 22px; margin: 8px 0; }
 .lobby .name { font-size: 18px; display: inline-flex; gap: 8px; align-items: center; }
 .lobby input {
@@ -178,7 +185,9 @@ body.touch-mode .stamina { bottom: 180px; }
   .lobby { align-items: flex-end; justify-content: center; padding: 8px; }
   .lobby .page { margin: 0; max-height: 62vh; padding: 12px 14px; }
   .lobby h1 { font-size: 28px; }
-  .lobby .bn { font-size: 17px; }
+  .lobby .bn { font-size: 16px; }
+  .lobby .bgrid { grid-template-columns: repeat(3, 1fr); }
+  .lobby .breeds { max-height: 30vh; }
 }
 
 /* Other players */
@@ -201,6 +210,7 @@ body.touch-mode .stamina { bottom: 180px; }
 .title-screen .pack span { display: flex; align-items: center; gap: 6px; font-size: 18px; }
 .title-screen .pack i { width: 14px; height: 14px; border-radius: 50%; margin-right: -4px; border: 1.5px solid rgba(59, 43, 37, 0.35); display: inline-block; }
 .title-screen .pack b { font-weight: normal; margin-left: 6px; }
+.title-screen .pack .more { opacity: 0.7; }
 .title-screen .choices { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .title-screen .choices .pill { width: min(420px, 100%); }
 .title-screen small { display: block; font-size: 15px; opacity: 0.7; }
