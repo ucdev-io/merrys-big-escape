@@ -16,11 +16,13 @@ function build() {
   const head = bake([
     { geo: SPHERE, color: WHITE, pos: [0, 0, 0.0], scale: [0.09, 0.085, 0.12] },
     { geo: new THREE.ConeGeometry(0.06, 0.2, 16), color: WHITE, pos: [0, -0.02, 0.15], rot: [Math.PI / 2, 0, 0], scale: [1, 1, 0.75] },
-    [SPHERE, BLACK, [0.042, 0.022, 0.05], [0.12, 0.2, 0], [0.024, 0.032, 0.15]],      // the stripes: long and narrow
-    [SPHERE, BLACK, [-0.042, 0.022, 0.05], [0.12, -0.2, 0], [0.024, 0.032, 0.15]],
+    [SPHERE, BLACK, [0.04, 0.03, 0.02], [0.1, 0.16, 0], [0.022, 0.036, 0.13]],        // the stripes: from the ears…
+    [SPHERE, BLACK, [-0.04, 0.03, 0.02], [0.1, -0.16, 0], [0.022, 0.036, 0.13]],
+    [SPHERE, BLACK, [0.028, 0.008, 0.15], [0.28, 0.12, 0], [0.014, 0.022, 0.085]],    // …over the eyes and down the snout
+    [SPHERE, BLACK, [-0.028, 0.008, 0.15], [0.28, -0.12, 0], [0.014, 0.022, 0.085]],
     [SPHERE, NOSE, [0, -0.02, 0.25], [0, 0, 0], [0.024, 0.02, 0.018]],
-    [SPHERE, 0xffffff, [0.047, 0.03, 0.07], [0, 0, 0], [0.006, 0.006, 0.004]],       // a glint of an eye, in each stripe
-    [SPHERE, 0xffffff, [-0.041, 0.03, 0.07], [0, 0, 0], [0.006, 0.006, 0.004]],
+    [SPHERE, 0xffffff, [0.043, 0.032, 0.085], [0, 0, 0], [0.006, 0.006, 0.004]],      // a glint of an eye, in each stripe
+    [SPHERE, 0xffffff, [-0.037, 0.032, 0.085], [0, 0, 0], [0.006, 0.006, 0.004]],
     [SPHERE, BLACK, [0.065, 0.05, -0.06], [0, 0, 0], [0.026, 0.028, 0.015]],          // little round ears…
     [SPHERE, BLACK, [-0.065, 0.05, -0.06], [0, 0, 0], [0.026, 0.028, 0.015]],
     [SPHERE, WHITE, [0.068, 0.062, -0.057], [0, 0, 0], [0.016, 0.01, 0.011]],         // …with white tips

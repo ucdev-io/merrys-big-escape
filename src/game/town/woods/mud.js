@@ -131,6 +131,7 @@ class Prints {
       this.mesh.setMatrixAt(n++, this._m);
     }
     this.mesh.count = n;
+    this.mesh.visible = n > 0; // (no prints, no drawing)
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 }

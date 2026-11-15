@@ -61,6 +61,28 @@ export class Woods {
     this.fogBase = null;
     this.ambT = 8;
     this.moteT = 0;
+    // The wood's own baked meshes (out in the strip): skipped when they're beyond the fog anyway (from town).
+    const a = area.plan;
+    this.far = (world.group?.children ?? []).filter((o) => {
+      if (!o.isMesh || o.isInstancedMesh || !o.geometry?.attributes.position) return false;
+      o.geometry.computeBoundingSphere();
+      const c = o.geometry.boundingSphere.center;
+      return a.dir[0] * c.x + a.dir[1] * c.z > a.v0 - 3;
+    });
+    this.camera = null;
+  }
+
+  /**
+   * Hide the wood's meshes that are wholly past the fog (they'd be drawn, but you couldn't see them). Fog
+   * goes by depth, not distance, so off to the side of the view things fog a bit later: hence the margin.
+   */
+  cull(camera) {
+    const fog = this.scene.fog;
+    if (!fog || !camera) return;
+    for (const o of this.far) {
+      const s = o.geometry.boundingSphere;
+      o.visible = camera.position.distanceTo(s.center) - s.radius < fog.far * 1.25 + 2;
+    }
   }
 
   line(list, vars = {}) {
@@ -170,6 +192,7 @@ export class Woods {
     this.flying = this.flying.filter((f) => f.t < 1);
     this.model.update(dt, this.t);
     this.mud.update(dt, canAct);
+    this.cull(this.camera);
 
     // Under the trees: a softer, closer, greener fog, birdsong and the odd woodpecker, a few motes in the air.
     const k = this.area.depth(P.pos.x, P.pos.z);

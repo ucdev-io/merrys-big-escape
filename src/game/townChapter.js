@@ -123,6 +123,7 @@ export class TownChapter {
         scene, world, area: woods, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
         dogName: () => this.profile().name, den: this.state.den, onDen: (n) => { this.state.den = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
       });
+      this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
       this.pack.onWoods = (m) => this.woods.handle(m);
     }
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
