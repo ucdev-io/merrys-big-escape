@@ -32,7 +32,7 @@ export class SausageString {
   /** Point at end 0 (the dangling one) or end 1 (tied on). */
   end(e) { return this.p[e ? LAST : 0]; }
 
-  /** Back on the rail: in swags between the hooks, the last four sausages dangling down. */
+  /** Back on the rail: in swags between the hooks, the last four sausages dangling down (laid out for ten). */
   hang() {
     const [h0, h1, h2, h3] = this.hooks, sag = (a, b, k, d) => a.clone().lerp(b, k).setY(a.y - d);
     const at = [];

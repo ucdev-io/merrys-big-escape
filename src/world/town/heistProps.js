@@ -5,8 +5,8 @@ import { paint } from '../../render/watercolorMaterial.js';
 import { treatGeometry } from '../../entities/treats.js';
 
 // The bakery street's heist props (static, so they're baked in with the rest of the town). Each piece
-// is built at its own origin, front facing +Z. The moving parts (the baker, the treats on the trays)
-// are added by the game: see src/game/town/heists.js.
+// is built at its own origin, front facing +Z. The moving parts (the baker and the butcher, the treats,
+// the string of sausages) are added by the game: see src/game/town/heists.js.
 const G = (x = 0, z = 0, ry = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; return g; };
 const RB = (w, h, d, r = 0.03, s = 2) => new RoundedBoxGeometry(w, h, d, s, r);
 const WOOD = 0xc79b6d, DARK_WOOD = 0x8a6346;
@@ -14,7 +14,7 @@ export const SAUSAGE = 0xd98f84, SAUSAGE_TWIST = 0xc4786c; // raw pork bangers, 
 
 /** Where the treats sit on the stall's two trays (stall space): 6 croissants, then 6 iced buns. */
 export const STALL_SLOTS = [];
-for (const [tx] of [[-0.58], [0.58]]) for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) STALL_SLOTS.push([tx + (c - 1) * 0.3, 0.535, (r - 0.5) * 0.24]);
+for (const tx of [-0.58, 0.58]) for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) STALL_SLOTS.push([tx + (c - 1) * 0.3, 0.535, (r - 0.5) * 0.24]);
 
 /** The baker's stall: a trestle table with a scalloped cloth, a wicker tray and a baking tray. */
 export function bakeryStall(x, z, ry) {

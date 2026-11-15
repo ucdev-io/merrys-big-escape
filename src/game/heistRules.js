@@ -1,7 +1,7 @@
-// 🥐🌭🍔 Heists: cheeky food raids on the bakery street (and at BBQ parties). Shared by the game and the server (no three.js
-// here). Whoever runs a HeistRoom decides when the grown-ups look round and who has which treat, so
-// every dog sees the same thing: the server, for a pack; your own game, when you play on your own.
-// Times go out as "for so many ms" (everyone's clock is a bit different).
+// 🥐🌭🍔 Heists: cheeky food raids on the bakery street (and at BBQ parties). Shared by the game and
+// the server (no three.js here). Whoever runs a HeistRoom decides when the grown-ups look round and
+// who has which treat, so every dog sees the same thing: the server, for a pack; your own game, when
+// you play on your own. Times go out as "for so many ms" (everyone's clock is a bit different).
 
 /**
  * The grown-ups keeping an eye on things, and how long they spend on each step (seconds):
@@ -39,7 +39,7 @@ const RESTOCK_MS = { bk: 20000, bq: 25000 }, TIDY_MS = 45000; // fresh batches; 
 
 /** What a loot id is ('croissant', 'bun', 'sausage', 'burger'), or null if it isn't one. */
 export function lootKind(id) {
-  const m = /^(bk|bq)(\d{1,2})$/.exec(String(id));
+  const m = /^(bk|bq)(0|[1-9]\d?)$/.exec(String(id));
   if (!m) return null;
   const n = Number(m[2]);
   if (m[1] === 'bq') return n < PARTY.sausage ? 'sausage' : n < PARTY.sausage + PARTY.burger ? 'burger' : null;
@@ -179,7 +179,7 @@ export class HeistRoom {
 
   /** A bark at the door: the grown-up turns to see who it is (unless they've only just been fooled). */
   distract(pid, id, now) {
-    const n = this.npcs[id];
+    const n = Object.hasOwn(this.npcs, id) ? this.npcs[id] : null;
     if (!n || n.s === 'door' || (LOOKOUTS[id].party && !this.party)) return [];
     if (now < n.cool) {
       if (now < n.wiseAt) return [];
@@ -202,7 +202,7 @@ export class HeistRoom {
       for (const id of PARTY_IDS) { const l = this.get(id); if (l.s !== 'held') Object.assign(l, { s: 'home', by: null, at: now }); }
       const cook = this.npcs.cook;
       this.set(cook, 'look', rand(LOOKOUTS.cook.look), now);
-      cook.cool = 0;
+      Object.assign(cook, { by: null, cool: 0, doorEnd: 0 });
       return [all({ a: 'party', n: this.party.n, ms: PARTY.ms }), all(this.npcMsg('cook', now))];
     }
     if (this.party && now >= this.party.until) {

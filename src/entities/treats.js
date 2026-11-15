@@ -8,8 +8,8 @@ import { paint } from '../render/watercolorMaterial.js';
  * Real-world sized (a little generous, so they read at a distance), lying on the ground at y = 0.
  */
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _c = new THREE.Color();
-const SPHERE = new THREE.SphereGeometry(1, 16, 12);
-const DOME = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+const SPHERE = new THREE.SphereGeometry(1, 12, 9); // (small things: plenty smooth, and a tray of them stays light)
+const DOME = new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2);
 
 /** [geometry, colour, position, rotation, scale] parts → one vertex-coloured geometry. */
 export function bakeParts(parts) {
