@@ -107,6 +107,8 @@ export const sfx = {
   clang() { tone('square', 180, 90, 0.35, 0.12); noise(0.3, 0.25, 'bandpass', 1800, 4); tone('triangle', 900, 860, 0.5, 0.06, 0.02); },
   rustle() { for (let i = 0; i < 4; i++) noise(0.08, 0.1, 'highpass', 2500, 0.8, i * 0.05); },
   boink() { tone('sine', 700, 200, 0.18, 0.25); },
+  // Pigeons taking off: a clatter of wings and an indignant coo.
+  flutter() { for (let i = 0; i < 9; i++) noise(0.05, 0.13, 'bandpass', 1200 + Math.random() * 900, 1.4, i * 0.035); tone('sine', 520, 380, 0.2, 0.06, 0.05); },
   plip() { tone('sine', 950 + Math.random() * 300, 450, 0.07, 0.07); }, // paddling
   hooray() {
     const notes = [523, 587, 659, 784, 659, 784, 1047];

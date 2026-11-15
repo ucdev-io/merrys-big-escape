@@ -11,6 +11,7 @@ import { waterAt } from '../world/water.js';
 import { DogActions } from '../systems/dogActions.js';
 import { GoldenBones } from './town/bones.js';
 import { Pack } from './town/pack.js';
+import { progress } from './progress.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -58,14 +59,15 @@ export class TownChapter {
 
     this.pack = new Pack({
       hud, remotes: this.remotes,
-      me: () => ({ name: this.profile().name, breed: this.player.breedKey }),
+      me: () => ({ name: this.profile().name, breed: this.player.breedKey, level: progress.level, look: progress.look }),
       seed: () => this.layout.seed,
       progress: () => ({ discovered: this.state.discovered, bones: this.state.bones }),
       onWelcome: (w, { rejoin }) => this.onWelcome(w, rejoin),
       onEvent: (ev, byName) => this.applyEvent(ev, byName),
-      onMischief: (m) => this.actions.mischief.remote(m),
+      onMischief: (m) => (m.a === 'scatter' ? this.actions.remoteScatter(m.id, m.x) : this.actions.mischief.remote(m)),
     });
 
+    progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
     hud.setPlaces?.(this.placeList());
     this.refreshObjective();
@@ -183,6 +185,8 @@ export class TownChapter {
 
   onBone(id, byName) {
     this.bones.hide(id);
+    if (byName) progress.award(5, 'Team bonus!');
+    else { progress.stat('bones'); progress.award(25, 'Golden bone!'); }
     sfx.found();
     buzz([25, 40, 25]);
     const n = this.state.bones.length, t = this.bones.count;
@@ -194,6 +198,8 @@ export class TownChapter {
   onDiscovered(id, byName) {
     const p = this.places.find((q) => q.id === id);
     if (!p) return;
+    if (byName) progress.award(5, 'Team bonus!');
+    else { progress.stat('places'); progress.award(30, 'New place!'); }
     sfx.found();
     buzz([25, 40, 25]);
     this.hud.showToastRaw(PLACE_EMOJI[p.type], `${byName ? '<span class="who"></span> found' : 'Discovered:'} <b>${p.name}</b>!`, BLURBS[p.type]);

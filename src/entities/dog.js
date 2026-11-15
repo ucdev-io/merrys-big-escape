@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { paint } from '../render/watercolorMaterial.js';
 import { BREEDS } from './breeds.js';
+import { COSMETIC } from '../game/cosmetics.js';
 
 const TAU = Math.PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -145,13 +146,8 @@ export class Dog {
     this.neck = group(B, [0, 0.03 * gy, 0.24 * len], [0.85, 0, 0]);
     const nr = Math.max(gx, gy);
     coat(taperedTube([[0, -0.03, -0.01], [0, 0.06 * NL, 0.012], [0, 0.13 * NL, 0.008], [0, 0.18 * NL, -0.005]], 0.06 * nr, 0.036 * nr, 20, 24), 'neck', this.neck, this.neck);
-    if (br.collar) {
-      // Collar with a little round name tag.
-      const cy = 0.085 * NL, cr = 0.049 * nr;
-      mesh(new THREE.TorusGeometry(cr, 0.007, 8, 32), br.collar.color, this.neck, [0, cy, 0.008], [Math.PI / 2 + 0.3, 0, 0]);
-      mesh(new THREE.TorusGeometry(0.006, 0.0018, 6, 12), 0xb8bec6, this.neck, [0, cy - 0.016, cr + 0.012], [0, 0, 0]);
-      mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.003, 20), br.collar.tag, this.neck, [0, cy - 0.032, cr + 0.014], [Math.PI / 2 - 0.3, 0, 0]);
-    }
+    this.dims = { NL, nr, gx, gy, len };
+    if (br.collar) this.breedCollar = this.makeCollar(br.collar.color, br.collar.tag); // e.g. Pippin's own black collar
     this.head = group(this.neck, [0, 0.175 * NL, -0.005], [-0.6, 0, 0]);
     this.head.scale.setScalar(HW);
     const H = this.head;
@@ -274,6 +270,73 @@ export class Dog {
     this.shakeT = 0;
     this.air = 0;
     this.squash = 0;
+  }
+
+  /** A collar with a little round tag, sized to this dog's neck. */
+  makeCollar(color, tagColor = 0xdfe3e8) {
+    const { NL, nr } = this.dims;
+    const g = group(this.neck);
+    const cy = 0.085 * NL, cr = 0.049 * nr;
+    mesh(new THREE.TorusGeometry(cr, 0.007, 8, 32), color, g, [0, cy, 0.008], [Math.PI / 2 + 0.3, 0, 0]);
+    mesh(new THREE.TorusGeometry(0.006, 0.0018, 6, 12), 0xb8bec6, g, [0, cy - 0.016, cr + 0.012], [0, 0, 0]);
+    mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.003, 20), tagColor, g, [0, cy - 0.032, cr + 0.014], [Math.PI / 2 - 0.3, 0, 0]);
+    return g;
+  }
+
+  /**
+   * Dress up: { collar, neck, hat } cosmetic ids (or null). Swaps the meshes on the dog;
+   * a cosmetic collar replaces the breed's own collar while worn.
+   */
+  setLook(look = {}) {
+    for (const m of this.lookMeshes ?? []) m.removeFromParent();
+    this.lookMeshes = [];
+    const keep = (m) => { this.lookMeshes.push(m); return m; };
+    const { gx, gy, len } = this.dims;
+    const c = (slot) => COSMETIC[look[slot]];
+    if (this.breedCollar) this.breedCollar.visible = !c('collar');
+
+    if (c('collar')) keep(this.makeCollar(c('collar').color, 0xf2c14e));
+
+    if (c('neck')) {
+      // Bandana: a soft triangle hanging at the front of the chest.
+      const g = keep(group(this.body, [0, 0.035 * gy, 0.255 * len], [0.25, 0, 0]));
+      const cone = new THREE.ConeGeometry(0.075, 0.13, 3, 1);
+      cone.rotateZ(Math.PI); cone.rotateY(Math.PI / 6);
+      mesh(cone, c('neck').color, g, [0, -0.045, 0.012], [0, 0, 0], [gx, 1, 0.32]);
+      mesh(new THREE.TorusGeometry(0.06 * gx, 0.012, 6, 20, Math.PI), c('neck').color, g, [0, 0.012, -0.012], [Math.PI / 2 + 0.2, 0, Math.PI]);
+    }
+
+    const hat = c('hat');
+    if (hat) {
+      const g = keep(group(this.head, [0, 0.06, -0.012], [0.15, 0, 0]));
+      if (hat.id === 'hat-party') {
+        mesh(new THREE.ConeGeometry(0.032, 0.11, 18), hat.color, g, [0, 0.055, 0]);
+        mesh(new THREE.TorusGeometry(0.031, 0.006, 6, 18), 0xf6d06a, g, [0, 0.008, 0], [Math.PI / 2, 0, 0]);
+        mesh(SPHERE, 0xf6d06a, g, [0, 0.115, 0], [0, 0, 0], [0.012, 0.012, 0.012]);
+      } else if (hat.id === 'hat-cap') {
+        mesh(new THREE.SphereGeometry(0.045, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, 0, 0]);
+        mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.003, 0.03], [0, Math.PI, 0], [1, 1, 1.25]);
+        mesh(SPHERE, 0xffffff, g, [0, 0.046, 0], [0, 0, 0], [0.008, 0.006, 0.008]);
+      } else if (hat.id === 'hat-crown') {
+        mesh(new THREE.CylinderGeometry(0.036, 0.034, 0.03, 20, 1, true), hat.color, g, [0, 0.015, 0], [0, 0, 0], [1, 1, 1], );
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          mesh(new THREE.ConeGeometry(0.01, 0.028, 6), hat.color, g, [Math.cos(a) * 0.034, 0.042, Math.sin(a) * 0.034]);
+          mesh(SPHERE, i % 2 ? 0xd9534f : 0x5b86c4, g, [Math.cos(a) * 0.036, 0.016, Math.sin(a) * 0.036], [0, 0, 0], [0.006, 0.006, 0.006]);
+        }
+      } else if (hat.id === 'hat-flowers') {
+        mesh(new THREE.TorusGeometry(0.04, 0.006, 6, 24), hat.color, g, [0, 0.006, 0], [Math.PI / 2, 0, 0]);
+        const petals = [0xf2a0b4, 0xf6d06a, 0xffffff, 0xb69be0, 0xf08a6a];
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2;
+          mesh(SPHERE, petals[i % petals.length], g, [Math.cos(a) * 0.04, 0.012, Math.sin(a) * 0.04], [0, 0, 0], [0.012, 0.009, 0.012]);
+        }
+      } else if (hat.id === 'hat-wizard') {
+        mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
+        mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);
+        for (let i = 0; i < 4; i++) mesh(SPHERE, 0xf6d06a, g, [Math.cos(i * 1.7) * 0.02, 0.04 + i * 0.022, Math.sin(i * 1.7) * 0.02 + 0.012], [0, 0, 0], [0.005, 0.005, 0.005]);
+      }
+    }
   }
 
   bark() { this.barkT = 0.45; }

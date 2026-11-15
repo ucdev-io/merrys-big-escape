@@ -4,7 +4,7 @@ import { packLink, packPath, fillShareBox } from '../../net/links.js';
 import { watchPacks, renderPackRows } from '../../net/packs.js';
 import { townName } from '../../world/town/generator.js';
 
-const MISCHIEF = ['tip', 'hole', 'trample'];
+const WORLD_ACTS = ['tip', 'hole', 'trample', 'scatter']; // things that change the world, not just a dog
 
 /**
  * Your pack: the connection to friends on the same Wi-Fi. Opens your neighbourhood to others,
@@ -28,6 +28,10 @@ export class Pack {
     this.badge.className = 'pill pack-badge hidden';
     this.badge.onclick = () => this.showCard();
     hud.root.querySelector('.top-right').prepend(this.badge);
+    // Leaving the page (or the browser parking it in its back/forward cache): leave the pack
+    // properly so we don't linger as a ghost in friends' lists, and rejoin if the page comes back.
+    addEventListener('pagehide', () => this.park());
+    addEventListener('pageshow', () => this.unpark());
   }
 
   get connected() { return !!this.net; }
@@ -66,7 +70,8 @@ export class Pack {
     });
     net.on('leave', (m) => { this.remotes.remove(m.id); this.updateBadge(); });
     net.on('ss', (m) => this.remotes.onStates(m.p, net.id));
-    net.on('act', (m) => (MISCHIEF.includes(m.a) ? this.onMischief(m) : this.remotes.onAct(m.id, m.a)));
+    net.on('act', (m) => (WORLD_ACTS.includes(m.a) ? this.onMischief(m) : this.remotes.onAct(m.id, m.a)));
+    net.on('look', (m) => this.remotes.setLook(m.id, m.look, m.level));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
@@ -80,6 +85,9 @@ export class Pack {
   }
 
   act(a, extra) { this.net?.act(a, extra); }
+
+  /** Tell the pack about a new outfit or level. */
+  sendLook() { if (this.net) this.net.send({ t: 'look', look: this.me().look, level: this.me().level }); }
 
   /**
    * Shared-adventure event. In a pack the server echoes it to everyone (us included), so the
@@ -140,6 +148,22 @@ export class Pack {
         await fillShareBox(card.querySelector('.invite'), code ? await packLink(code) : location.origin, { text: 'Come and play Merry’s Big Escape!' });
       }
     });
+  }
+
+  park() {
+    if (!this.net) return;
+    (this.oldIds ??= new Set()).add(this.net.id);
+    this.net.close();
+    this.net = null;
+    this.parked = true;
+    this.remotes.clear();
+    this.updateBadge();
+  }
+
+  unpark() {
+    if (!this.parked) return;
+    this.parked = false;
+    if (this.code && !this.net && !this.reconnecting) { this.reconnecting = true; this.tryRejoin(0); }
   }
 
   /** Phone slept or Wi-Fi blipped: keep playing, and quietly get back into the pack. */

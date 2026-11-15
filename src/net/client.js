@@ -30,6 +30,9 @@ export class NetClient {
 
   send(msg) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify(msg)); }
 
+  /** Hang up on purpose (no 'close' callback, so nothing tries to reconnect). */
+  close() { this.handlers.close = null; this.ws?.close(); }
+
   /** Create or join a pack; resolves with the server's welcome message. */
   async enter(kind, data) {
     if (!this.connected) await this.connect();

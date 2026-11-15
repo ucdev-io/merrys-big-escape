@@ -18,6 +18,7 @@ import { NetClient } from './net/client.js';
 import { showTitle } from './ui/title.js';
 import { packCodeFromUrl, packPath } from './net/links.js';
 import { getSettings, TEXTURE_LEVELS } from './core/settings.js';
+import { progress } from './game/progress.js';
 import { autoFullscreen } from './ui/fullscreen.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
@@ -149,6 +150,10 @@ if (location.search.includes('debug') || getSettings().debug) {
 pipeline.texture = TEXTURE_LEVELS[getSettings().texture] ?? TEXTURE_LEVELS.light;
 const hud = new HUD(camera);
 hud.onTexture = (level) => (pipeline.texture = TEXTURE_LEVELS[level]);
+// Stars float up from your dog; outfits you pick go straight on.
+hud.dogAnchor = () => player.pos.clone().add(new THREE.Vector3(0, 1.15, 0));
+hud.onLook = (look) => player.setLook(look);
+player.setLook(progress.look);
 createTouchControls(input, follow);
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })

@@ -4,6 +4,8 @@ import { ScentTrail } from './scentTrail.js';
 import { Mischief } from './mischief.js';
 import { WaterFx } from './waterFx.js';
 import { sfx } from '../core/audio.js';
+import { Pigeons } from './pigeons.js';
+import { progress } from '../game/progress.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -30,7 +32,15 @@ export class DogActions {
       scene, hud, gardens: world.gardens, beds: world.beds, bins: world.bins, dirt: this.dirt, glow: this.glow,
       dogName, breedName, onAct: (m) => this.onAct?.(m.a, m),
     });
-    this.mischief.onChange = (n) => { hud.setMischief(n); hud.float('😈 +1', this.anchor(), 'dig'); this.onMischief?.(n); };
+    this.mischief.onChange = (n) => {
+      hud.setMischief(n);
+      progress.stat('mischief');
+      progress.award(2, 'Naughty!');
+      this.onMischief?.(n);
+    };
+    // Pigeon flocks to scatter (if this world has any).
+    this.pigeons = world.pigeonSpots?.length ? new Pigeons(scene, world.pigeonSpots, world.pigeonFlocks ?? []) : null;
+    this.splashCD = 0;
     this.sniffAmt = 0;
     this.sniffSfxT = 0;
     this.sniffHeld = 0;
@@ -93,10 +103,15 @@ export class DogActions {
       this.hud.float('WOOF!', this.anchor());
       this.onAct?.('bark');
       this.mischief.barkAt(P.pos);
+      if (this.pigeons) this.scared(this.pigeons.bark(P.pos));
       onBark?.();
     }
 
     if (canAct) this.mischief.update(dt, P);
+    if (this.pigeons) this.scared(this.pigeons.update(dt, canAct ? P : { pos: P.pos, speed: 0 }));
+    // A star for a good splash now and then.
+    this.splashCD -= dt;
+    if (P.enteredSpeed && this.splashCD <= 0) { this.splashCD = 15; progress.stat('splashes'); progress.award(3, 'Splash!'); }
     this.waterFx.update(dt, P.dog, {
       pos: P.pos, heading: P.heading, speed: P.speed, inWater: P.inWater, swim: P.swim,
       surface: P.waterSurface, enteredSpeed: P.enteredSpeed, leftWater: P.leftWater,
@@ -105,6 +120,26 @@ export class DogActions {
     this.glow.update(dt);
     this.hud.setStamina(P.stamina, P.speed > 3);
     return { sniffing, dug, barked, nose };
+  }
+
+  /** Pigeons the dog just sent flying: stars, stats, and tell the pack (so they see them fly too). */
+  scared(list) {
+    for (const { flock, landing } of list) {
+      if (landing === null || landing === undefined) continue;
+      const n = flock.birds.length;
+      progress.stat('pigeons', n);
+      progress.award(3 + n, `${n} pigeons!`);
+      this.onAct?.('scatter', { id: flock.id, x: landing, z: 0 });
+      this.onScatter?.(flock, n);
+    }
+  }
+
+  /** Another player's dog scared a flock: fly it to the same place. */
+  remoteScatter(id, landing) {
+    const f = this.pigeons?.byId(id);
+    if (!f || f.state !== 'ground' || !this.pigeons.spots[landing]) return;
+    const near = f.home.distanceTo(this.player.pos) < 18;
+    this.pigeons.scatter(f, f.home.clone().add(V(rand(-1, 1), 0, rand(-1, 1))), landing, near);
   }
 
   /** Clods of earth flying out behind the dog. */

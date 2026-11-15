@@ -11,6 +11,7 @@ import { DigSpots } from './yard/digSpots.js';
 import { Sprinkler } from './yard/sprinkler.js';
 import { Pickles } from './yard/pickles.js';
 import { escapeCutscene } from './yard/escape.js';
+import { progress } from './progress.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -46,6 +47,7 @@ export class YardChapter {
       dogName: () => this.dogName, breedName: () => BREEDS[this.player.breedKey].breed,
     });
     this.actions.onMischief = () => this.pickles.say('mischief', { cooldown: 25 });
+    this.actions.onScatter = () => this.pickles.say('pigeons', { cooldown: 20 });
     this.spots = new DigSpots(scene, [...TREASURES, TUNNEL], this.found, this.actions);
     this.pickles = new Pickles(scene, hud, () => ({ name: this.dogName, breed: BREEDS[this.player.breedKey].breed, breedKey: this.player.breedKey }));
     this.sprinkler = new Sprinkler(scene, world, V(3.2, 0, -4.6));
@@ -168,7 +170,7 @@ export class YardChapter {
     // The sprinkler gag.
     if (this.sprinkler.update(dt, pos, this.started)) {
       this.later(1.0, () => this.actions.waterFx.shake(P.dog, P.pos));
-      this.later(1.3, () => { this.pickles.say('soggy', { force: true, dur: 3 }); this.pickles.laugh(2); sfx.meow(); });
+      this.later(1.3, () => { this.pickles.say('soggy', { force: true, dur: 3 }); this.pickles.laugh(2); sfx.meow(); progress.award(5, 'Soggy doggy!'); });
     }
     this.updateGnome(dt);
     this.pickles.update(dt, P, { talk: this.started && !this.cutscene && !P.frozen });
@@ -199,6 +201,8 @@ export class YardChapter {
     this.hud.setFound(this.found, TREASURES.length);
     if (s.key === 'tunnel') { this.startEscape(s); return; }
 
+    progress.stat('treasures');
+    progress.award(20, `${ITEMS[s.key].name}!`);
     const obj = ITEMS[s.key].build();
     obj.position.copy(s.pos);
     if (s.hang) this.hud.float('YOINK!', V(s.pos.x, 1.6, s.pos.z));
@@ -246,7 +250,7 @@ export class YardChapter {
     if (this.gnome.position.distanceTo(pos) < 3.5 && this.gnomeTip <= 0) {
       this.gnomeTip = 4.5;
       this.later(0.45, () => sfx.bonk());
-      this.later(1.0, () => { this.pickles.say('gnome', { force: true, dur: 2.5 }); this.pickles.laugh(1.5); });
+      this.later(1.0, () => { this.pickles.say('gnome', { force: true, dur: 2.5 }); this.pickles.laugh(1.5); progress.award(5, 'Timber!'); });
     }
   }
 
@@ -269,6 +273,7 @@ export class YardChapter {
       onFree: () => { this.pickles.say('escaped', { force: true, dur: 4 }); sfx.meow(); },
       onDone: () => {
         this.cutscene = null;
+        if (!this.escaped) progress.award(50, 'Escaped!');
         this.escaped = true;
         writeSave({ found: this.found, escaped: true, yardDone: true });
         this.refreshObjective();

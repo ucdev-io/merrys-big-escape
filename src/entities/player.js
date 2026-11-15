@@ -50,6 +50,7 @@ export class Player {
     const parent = this.object.parent, pos = this.pos.clone();
     parent?.remove(this.object);
     this.dog = new Dog(key);
+    if (this.look) this.dog.setLook(this.look);
     this.breedKey = key;
     this.mult = this.dog.breed.speed;
     this.object = this.dog.root;
@@ -58,6 +59,9 @@ export class Player {
     this.object.rotation.y = this.heading;
     parent?.add(this.object);
   }
+
+  /** Wear these: { collar, neck, hat } cosmetic ids. Kept when changing breed. */
+  setLook(look) { this.look = look; this.dog.setLook(look); }
 
   update(dt, input, cameraYaw, world) {
     let mv = this.frozen ? { x: 0, y: 0 } : input.move();

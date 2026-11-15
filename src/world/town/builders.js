@@ -48,6 +48,8 @@ function localColliders(col, bx, bz, bones, extra) {
     box: (x0, z0, x1, z1, top) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz, top),
     // A golden bone resting on something `top` high. `friend`: too high to reach alone.
     bone: (x, z, top, friend = false) => bones?.push({ x: x + bx, y: top + 0.18, z: z + bz, need: top - 0.15, friend }),
+    // A place pigeons like to land.
+    birdSpot: (x, z) => extra?.birdSpots.push(new THREE.Vector3(x + bx, 0, z + bz)),
   };
 }
 
@@ -247,6 +249,7 @@ function parkBlock(g, lc, rng) {
     n++;
   }
   g.add(birdbath(0, 0)); lc.circle(0, 0, 0.35, 0.92);
+  lc.birdSpot(4.5, -3.5); lc.birdSpot(-4.8, 3.2); lc.birdSpot(-3.5, -11.5);
   lc.bone(0, 0, 1.15, true); // floating above the birdbath: needs a friend's back to reach
   g.add(flowerBed(-2.8, 2.8, 2, 2, rng, null)); lc.bed(-2.8, 2.8, 2, 2);
   g.add(flowerBed(2.8, -2.8, 2, 2, rng, null)); lc.bed(2.8, -2.8, 2, 2);
@@ -279,6 +282,7 @@ function pondBlock(g, lc, rng) {
   const deep = mesh(new THREE.CircleGeometry(1, 40), 0x78afc8, g, [0.8, 0.08, -0.4], [-Math.PI / 2, 0, 0], [rx * 0.6, rz * 0.55, 1]);
   deep.castShadow = false;
   lc.water(rx, rz, 0.075); // swimmable! (shelving beach, then doggy paddle)
+  lc.birdSpot(-rx - 0.6, 0); lc.birdSpot(rx + 0.6, 1.5);
   // Lily pads.
   for (let i = 0; i < 14; i++) {
     const a = rng.float(0, Math.PI * 2), k = rng.float(0.3, 0.85);
@@ -326,6 +330,7 @@ function bakeryBlock(g, lc, rng) {
     g.add(cafeTable(tx, tz, rng.pick([0xf2a0b4, 0xf6d06a, 0x8fc4d8])));
     lc.circle(tx, tz, 0.45, 0.74);
     if (i === 1) lc.bone(tx, tz, 0.74);
+    if (i !== 1) { const [cx, cz] = T.p(x + 1.2, 13.6); lc.birdSpot(cx, cz); } // crumbs under the café tables
   });
   // Back yard behind the shops: bins, crates and the famous BBQ. The baker shouts from the shop door.
   const [sdx, sdz] = T.p(-9.5 + 2.5, 10.2);
@@ -368,6 +373,7 @@ function alleyBlock(g, lc, rng) {
     else if (r === 1) { const s = rng.float(0.8, 1.2); g.add(crate(x, z, rng.float(0, 1), s)); lc.circle(x, z, 0.4, 0.5 * s); }
     else { g.add(cardboardBox(x, z, rng.float(0, 6))); lc.circle(x, z, 0.35, 0.36); }
   });
+  lc.birdSpot(0, 0);
   // Crate staircase against the wall: 1, 2 then 3 crates high.
   for (let n = 1; n <= 3; n++) {
     const x = 5.2 + (n - 1) * 0.66, z = -3.55;
@@ -385,7 +391,7 @@ export function buildTown(layout) {
   const root = new THREE.Group();
   const col = new Colliders();
   const bones = [];
-  const extra = { root, beds: [], gardens: [], bins: [], water: [] };
+  const extra = { root, beds: [], gardens: [], bins: [], water: [], birdSpots: [] };
 
   root.add(ground());
   streets(root, layout, rng, col, bones);
@@ -414,6 +420,15 @@ export function buildTown(layout) {
     else if (b.type === 'bakery') bakeryBlock(g, lc, br);
     else if (b.type === 'alley') alleyBlock(g, lc, br);
   }
+
+  // Pigeons also hang about on the pavements.
+  for (const b of layout.blocks) {
+    const side = rng.int(0, 3), along = rng.float(-8, 8), off = H + 1;
+    const [x, z] = [[along, off], [off, along], [along, -off], [-off, along]][side];
+    extra.birdSpots.push(new THREE.Vector3(b.x + x, 0, b.z + z));
+  }
+  const spotOrder = rng.shuffle(extra.birdSpots.map((_, i) => i));
+  const pigeonFlocks = spotOrder.slice(0, 9).map((spot, i) => ({ id: `f${i}`, spot, size: rng.int(5, 10) }));
 
   // Countryside around the town.
   for (let i = 0; i < 60; i++) {
@@ -450,6 +465,8 @@ export function buildTown(layout) {
     bones: bones.map((b, i) => ({ ...b, id: `bone${i}` })),
     beds: extra.beds,
     water: extra.water,
+    pigeonSpots: extra.birdSpots,
+    pigeonFlocks,
     gardens: extra.gardens,
     bins: extra.bins,
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.

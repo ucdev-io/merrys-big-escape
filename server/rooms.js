@@ -25,7 +25,9 @@ function makeCode() {
 
 const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
 const broadcast = (room, msg, except) => { for (const p of room.players.values()) if (p !== except) send(p.ws, msg); };
-const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot });
+const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot, level: p.level, look: p.look });
+const cleanLevel = (v) => Math.max(1, Math.min(99, v | 0));
+const cleanLook = (v) => Object.fromEntries(['collar', 'neck', 'hat'].map((k) => [k, typeof v?.[k] === 'string' ? cleanId(v[k]) : null]));
 // Each dog gets the lowest free house number (0 = the host's garden).
 const freeSlot = (room) => { const used = new Set([...room.players.values()].map((q) => q.slot)); let i = 0; while (used.has(i)) i++; return i; };
 
@@ -62,7 +64,7 @@ function onMessage(p, msg) {
       const list = (v, n) => (Array.isArray(v) ? v : []).slice(0, n).map(cleanId);
       const r = { code, seed, players: new Map(), discovered: new Set(list(msg.discovered, 20)), bones: new Set(list(msg.bones, 50)) };
       rooms.set(code, r);
-      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: 0 });
+      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: 0, level: cleanLevel(msg.level), look: cleanLook(msg.look) });
       r.players.set(p.id, p);
       return welcome(r, p);
     }
@@ -71,7 +73,7 @@ function onMessage(p, msg) {
       const r = rooms.get(String(msg.code ?? '').toUpperCase().trim());
       if (!r) return send(p.ws, { t: 'error', msg: 'No pack with that code. Check the code and try again!' });
       if (r.players.size >= MAX_PLAYERS) return send(p.ws, { t: 'error', msg: 'That pack is full (8 dogs max).' });
-      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: freeSlot(r) });
+      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: freeSlot(r), level: cleanLevel(msg.level), look: cleanLook(msg.look) });
       r.players.set(p.id, p);
       return welcome(r, p);
     }
@@ -81,10 +83,15 @@ function onMessage(p, msg) {
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
-      if (!room || !['bark', 'dig', 'shake', 'tip', 'hole', 'trample'].includes(msg.a)) return;
-      // Mischief carries what/where (a bin id, or a spot); barks etc. just say who.
-      if (['tip', 'hole', 'trample'].includes(msg.a)) return broadcast(room, { t: 'act', by: p.id, a: msg.a, id: cleanId(msg.id), x: num(msg.x), z: num(msg.z) }, p);
+      if (!room || !['bark', 'dig', 'shake', 'tip', 'hole', 'trample', 'scatter'].includes(msg.a)) return;
+      // World changes carry what/where (a bin or flock id, a spot); barks etc. just say who.
+      if (['tip', 'hole', 'trample', 'scatter'].includes(msg.a)) return broadcast(room, { t: 'act', by: p.id, a: msg.a, id: cleanId(msg.id), x: num(msg.x), z: num(msg.z) }, p);
       return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
+    case 'look': // new outfit or level
+      if (!room) return;
+      p.level = cleanLevel(msg.level);
+      p.look = cleanLook(msg.look);
+      return broadcast(room, { t: 'look', id: p.id, level: p.level, look: p.look }, p);
     case 'ev': { // shared adventure progress
       const kinds = { discover: 'discovered', bone: 'bones' };
       if (!room || !msg.ev || !kinds[msg.ev.type]) return;

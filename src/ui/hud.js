@@ -3,6 +3,11 @@ import { ITEMS } from '../entities/items.js';
 import { setMuted, isMuted } from '../core/audio.js';
 import { toggleFullscreen, isFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
 import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
+import { progress } from '../game/progress.js';
+import { COSMETICS, SLOTS } from '../game/cosmetics.js';
+import { loadSave } from '../core/save.js';
+import { sfx } from '../core/audio.js';
+import { buzz } from '../core/haptics.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -36,7 +41,20 @@ export class HUD {
     this.menuBtn.title = 'Menu';
     this.menuBtn.onclick = () => this.openMenu();
     if (getSettings().muted) setMuted(true);
-    tr.append(this.mischiefPill, this.bookBtn, this.menuBtn);
+    // Level & stars: tap for "My dog" (stats, dress up).
+    this.xpPill = el('button', 'pill xp-pill', '<span class="lv"></span><span class="bar"><i></i></span>');
+    this.xpPill.onclick = () => this.showMyDog();
+    tr.append(this.xpPill, this.mischiefPill, this.bookBtn, this.menuBtn);
+    this.levelBanner = el('div', 'levelup');
+    this.root.appendChild(this.levelBanner);
+    this.levelBanner.onclick = () => { this.levelBanner.classList.remove('show'); this.showWardrobe(); };
+    this.updateXp();
+    progress.on((e) => {
+      if (e.amount) this.float(`+${e.amount} ⭐ ${e.reason ?? ''}`.trim(), this.dogAnchor?.() ?? new THREE.Vector3(), 'xp');
+      if (e.levelUp) this.celebrateLevel(e.levelUp, e.unlocked);
+      if (e.look) this.onLook?.(e.look);
+      this.updateXp();
+    });
     this.root.appendChild(tr);
 
     this.book = el('div', 'sniff-book hidden');
@@ -78,10 +96,66 @@ export class HUD {
     this._objT = setTimeout(() => this.objective.classList.remove('open'), ms);
   }
 
+  updateXp() {
+    this.xpPill.querySelector('.lv').textContent = `⭐ ${progress.level}`;
+    this.xpPill.querySelector('.bar i').style.width = `${Math.round(progress.levelProgress * 100)}%`;
+    this.xpPill.title = `Level ${progress.level} · ${progress.title}`;
+  }
+
+  celebrateLevel(level, unlocked) {
+    sfx.hooray();
+    buzz([40, 60, 40, 60, 80]);
+    const items = unlocked.map((c) => `${c.emoji} ${c.name}`).join(' · ');
+    this.levelBanner.innerHTML = `<div class="big">⭐ Level ${level}! ⭐</div><div class="ttl">${progress.title}</div>`
+      + (items ? `<div class="new">New: ${items}<br><small>Tap to dress up!</small></div>` : '');
+    this.levelBanner.classList.remove('show'); void this.levelBanner.offsetWidth; this.levelBanner.classList.add('show');
+    clearTimeout(this._lvT);
+    this._lvT = setTimeout(() => this.levelBanner.classList.remove('show'), 5500);
+    this.onLevelUp?.(level);
+  }
+
+  showMyDog() {
+    const s = progress.stats, name = loadSave().profile?.name ?? 'Your dog';
+    const stat = (emoji, label, key) => `<div class="stat"><b>${emoji} ${s[key] ?? 0}</b><span>${label}</span></div>`;
+    this.showCard(`<h1 class="dogname"></h1>
+      <p class="lvl">Level ${progress.level} · <b>${progress.title}</b></p>
+      <div class="xpbar"><i style="width:${Math.round(progress.levelProgress * 100)}%"></i></div>
+      <p class="small">${progress.toNext} ⭐ to level ${progress.level + 1} · ${progress.xp} ⭐ altogether</p>
+      <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
+        ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}</div>`,
+      [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
+    this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
+  }
+
+  showWardrobe() {
+    this.showCard('<h1>👕 Dress up</h1><div class="wardrobe"></div>', [['Back', () => this.showMyDog()], ['Done', () => this.hideCard()]]);
+    const w = this.card.querySelector('.wardrobe');
+    const render = () => {
+      w.innerHTML = '';
+      for (const [slot, label] of Object.entries(SLOTS)) {
+        const row = el('div', 'wrow', `<h3>${label}</h3>`);
+        const items = el('div', 'witems');
+        const opt = (text, id, ok, lockLevel) => {
+          const b = el('button', `witem${progress.look[slot] === id ? ' on' : ''}`);
+          b.innerHTML = ok ? text : `🔒<small>Lv ${lockLevel}</small>`;
+          b.disabled = !ok;
+          b.onclick = () => { progress.equip(slot, id); render(); };
+          items.appendChild(b);
+        };
+        opt('🚫<small>None</small>', null, true);
+        for (const c of COSMETICS.filter((q) => q.slot === slot)) opt(`${c.emoji}<small>${c.name}</small>`, c.id, progress.isUnlocked(c.id), c.level);
+        row.appendChild(items);
+        w.appendChild(row);
+      }
+    };
+    render();
+  }
+
   openMenu() {
     this.showCard('<h1>Menu</h1><div class="menu-list"></div>', [['Close', () => this.hideCard()]]);
     const list = this.card.querySelector('.menu-list');
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
+    item('🐶 My dog', () => this.showMyDog());
     item('❓ How to play', () => this.showHelp());
     if (fullscreenButtonUseful()) item(isFullscreen() ? '⛶ Leave full screen' : '⛶ Full screen', () => { this.hideCard(); toggleFullscreen(this); });
     const sound = item(isMuted() ? '🔇 Sound: off' : '🔊 Sound: on', () => {

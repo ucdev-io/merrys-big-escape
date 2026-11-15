@@ -119,6 +119,10 @@ export function buildYard(seed = 'biscuit-yard') {
     props: { gnome: g },
     occluders,
     water: [{ kind: 'pool', x: 3, z: 2.2, r: 0.84, surface: 0.26 }],
+    // Pigeons: spots on the lawn, plus the house roof ridge (out of reach — bark them down!).
+    pigeonSpots: [new THREE.Vector3(-4, 0, -5.6), new THREE.Vector3(5.2, 0, 0.4), new THREE.Vector3(-6.2, 0, 2.6),
+      new THREE.Vector3(1.2, 0, 4.8), new THREE.Vector3(0, 5.3, -12.6), new THREE.Vector3(0, 5.3, -10.6)],
+    pigeonFlocks: [{ id: 'g0', spot: 0, size: 5 }],
     beds: beds.map(([x, z, w, d]) => ({ x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2 })),
     gardens: [{ rect: { x0: YARD.x0, z0: YARD.z0, x1: YARD.x1, z1: YARD.z1 }, door: new THREE.Vector3(0, 1.6, -8.5), own: true }],
     spawn: new THREE.Vector3(0.5, 0, -1),

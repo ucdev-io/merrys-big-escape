@@ -18,11 +18,12 @@ export class RemoteDogs {
   add(p) {
     if (this.dogs.has(p.id)) return;
     const dog = new Dog(p.breed);
+    if (p.look) dog.setLook(p.look);
     this.scene.add(dog.root);
     dog.root.visible = false; // until the first position arrives
     const tag = document.createElement('div');
     tag.className = 'name-tag';
-    tag.textContent = `${BREEDS[p.breed]?.emoji ?? '🐕'} ${p.name}`; // textContent: names are untrusted
+    tag.textContent = `${BREEDS[p.breed]?.emoji ?? '🐕'} ${p.name}${p.level ? ` \u00b7 ⭐${p.level}` : ''}`; // textContent: names are untrusted
     this.hud.root.appendChild(tag);
     this.dogs.set(p.id, { ...p, dog, tag, buf: [], heading: 0, digT: 0 });
   }
@@ -62,6 +63,14 @@ export class RemoteDogs {
   }
 
   get(id) { return this.dogs.get(id); }
+
+  /** Another dog changed outfit or levelled up. */
+  setLook(id, look, level) {
+    const r = this.dogs.get(id);
+    if (!r) return;
+    r.dog.setLook(look ?? {});
+    if (level) { r.level = level; r.tag.textContent = `${BREEDS[r.breed]?.emoji ?? '🐕'} ${r.name} \u00b7 ⭐${level}`; }
+  }
 
   /** Each standing dog's back is a little platform another dog can hop onto. */
   platforms() {
