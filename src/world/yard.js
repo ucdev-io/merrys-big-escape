@@ -68,9 +68,9 @@ export function buildYard(seed = 'biscuit-yard') {
   group.add(tree(-6.5, 4.6, 1.35, rng, col));
   group.add(tree(7.6, -5.2, 1.0, rng, col));
   group.add(shed(7.6, 5.3, -Math.PI / 2, col));
-  group.add(flowerBed(-5, -7.4, 5, 1.3, rng, col));
-  group.add(flowerBed(4.6, -7.4, 4.2, 1.3, rng, col));
-  group.add(flowerBed(-9.2, -0.5, 1.2, 4.5, rng, col));
+  // Flowerbeds you can walk (and trample) through.
+  const beds = [[-5, -7.4, 5, 1.3], [4.6, -7.4, 4.2, 1.3], [-9.2, -0.5, 1.2, 4.5]];
+  for (const [x, z, w, d] of beds) group.add(flowerBed(x, z, w, d, rng, null));
   group.add(paddlingPool(3, 2.2, null));
   col.circle(3, 2.2, 1.15, 0.42);           // stand on the pool's rim
   // Things to jump up on.
@@ -116,6 +116,8 @@ export function buildYard(seed = 'biscuit-yard') {
     colliders: col,
     props: { gnome: g },
     occluders,
+    beds: beds.map(([x, z, w, d]) => ({ x0: x - w / 2, z0: z - d / 2, x1: x + w / 2, z1: z + d / 2 })),
+    gardens: [{ rect: { x0: YARD.x0, z0: YARD.z0, x1: YARD.x1, z1: YARD.z1 }, door: new THREE.Vector3(0, 1.6, -8.5), own: true }],
     spawn: new THREE.Vector3(0.5, 0, -1),
     bounds: { x0: YARD.x0 + 0.3, x1: YARD.x1 - 0.3, z0: YARD.z0 + 0.3, z1: YARD.z1 - 0.3 },
     update(t) { for (const f of animated) f(t); },

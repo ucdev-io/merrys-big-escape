@@ -101,12 +101,11 @@ export function swingSet(x, z, ry) {
 
 export function slide(x, z, ry) {
   const g = G(x, z, ry);
-  mesh(RB(0.9, 0.08, 0.9), 0xf6d06a, g, [0, 1.5, -1.0]);
-  for (const sx of [-0.4, 0.4]) for (const sz of [-1.4, -0.6]) mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6), 0x5b86c4, g, [sx, 0.75, sz]);
-  mesh(RB(0.7, 0.06, 2.2, 0.03), 0xd9534f, g, [0, 0.8, 0.4], [0.6, 0, 0]);
+  mesh(RB(0.9, 0.08, 0.9), 0xf6d06a, g, [0, 1.16, -1.0]);
+  for (const sx of [-0.4, 0.4]) for (const sz of [-1.4, -0.6]) mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6), 0x5b86c4, g, [sx, 0.6, sz]);
+  mesh(RB(0.7, 0.06, 2.0, 0.03), 0xd9534f, g, [0, 0.62, 0.35], [0.55, 0, 0]);
   // Chunky steps up the back — big enough for a dog.
-  for (let i = 0; i < 3; i++) mesh(RB(0.8, 0.12, 0.34, 0.03), 0xf6d06a, g, [0, 0.34 + i * 0.4, -2.45 + i * 0.35]);
-  for (let i = 0; i < 3; i++) mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.34 + i * 0.4, 6), 0x5b86c4, g, [0.36, (0.34 + i * 0.4) / 2, -2.45 + i * 0.35]);
+  for (let i = 0; i < 3; i++) mesh(RB(0.8, 0.3 * (i + 1), 0.36, 0.03), 0xf6d06a, g, [0, 0.15 * (i + 1), -2.5 + i * 0.36]);
   return g;
 }
 

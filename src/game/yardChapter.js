@@ -9,6 +9,7 @@ import { loadSave, writeSave, clearSave } from '../core/save.js';
 import { BREEDS } from '../entities/breeds.js';
 import { showLobby } from '../ui/lobby.js';
 import { packPath } from '../net/links.js';
+import { Mischief } from '../systems/mischief.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const hd = (a, b) => Math.hypot(a.x - b.x, a.z - b.z); // distance on the ground, ignoring jumps
@@ -102,6 +103,11 @@ export class YardChapter {
     this.catAnchor = () => this.cat.bubbleAnchor(new THREE.Vector3());
     this.merryAnchor = () => this.player.pos.clone().add(V(0, 1.0, 0));
 
+    this.mischief = new Mischief({
+      scene, hud, gardens: world.gardens, beds: world.beds, dirt: this.dirt, glow: this.glow,
+      dogName: () => this.dogName, breedName: () => BREEDS[this.player.breedKey].breed,
+    });
+    this.mischief.onChange = (n) => { hud.setMischief(n); this.hud.float('😈 +1', this.merryAnchor(), 'dig'); };
     this.buildSprinkler(V(3.2, 0, -4.6));
     this.gnome = world.props.gnome;
     this.gnomeTip = 0;
@@ -332,7 +338,10 @@ export class YardChapter {
           if (near.progress === Math.floor(near.need / 2)) this.hud.say(LINES.tunnelHalf, this.catAnchor, 3);
         }
         if (near.progress >= near.need) this.complete(near);
-      } else if (!this.saidNothing && Math.random() < 0.5) {
+      } else {
+        this.mischief.dig(nose.clone().setY(0));
+      }
+      if (!near && !this.saidNothing && Math.random() < 0.5) {
         this.saidNothing = true;
         this.hud.say(LINES.nothing, this.catAnchor, 2.5);
       }
@@ -348,6 +357,7 @@ export class YardChapter {
       this.reactToBark();
     }
 
+    if (canAct) this.mischief.update(dt, P);
     this.updateSprinkler(dt);
     this.updateGnome(dt);
 

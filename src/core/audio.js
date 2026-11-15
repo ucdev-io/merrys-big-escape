@@ -97,6 +97,14 @@ export const sfx = {
   bonk() { tone('sine', 300, 90, 0.25, 0.35); noise(0.08, 0.2, 'lowpass', 900); },
   tunnel() { noise(1.2, 0.3, 'lowpass', 400, 1, 0, 120); },
   pop() { tone('sine', 400, 1200, 0.08, 0.25); },
+  // A cross grown-up shouting "HEY!" from a doorway (formant-ish saw, nothing scary).
+  shout() {
+    tone('sawtooth', 210, 260, 0.16, 0.16, 0, { type: 'bandpass', freq: 900, q: 5 });
+    tone('sawtooth', 260, 180, 0.22, 0.16, 0.16, { type: 'bandpass', freq: 750, q: 5 });
+  },
+  clang() { tone('square', 180, 90, 0.35, 0.12); noise(0.3, 0.25, 'bandpass', 1800, 4); tone('triangle', 900, 860, 0.5, 0.06, 0.02); },
+  rustle() { for (let i = 0; i < 4; i++) noise(0.08, 0.1, 'highpass', 2500, 0.8, i * 0.05); },
+  boink() { tone('sine', 700, 200, 0.18, 0.25); },
   hooray() {
     const notes = [523, 587, 659, 784, 659, 784, 1047];
     notes.forEach((f, i) => tone('triangle', f, f, 0.2, 0.18, i * 0.13));

@@ -79,7 +79,9 @@ function onMessage(p, msg) {
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
-      if (!room || !['bark', 'dig', 'shake'].includes(msg.a)) return;
+      if (!room || !['bark', 'dig', 'shake', 'tip', 'hole', 'trample'].includes(msg.a)) return;
+      // Mischief carries what/where (a bin id, or a spot); barks etc. just say who.
+      if (['tip', 'hole', 'trample'].includes(msg.a)) return broadcast(room, { t: 'act', by: p.id, a: msg.a, id: cleanId(msg.id), x: num(msg.x), z: num(msg.z) }, p);
       return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
     case 'ev': { // shared adventure progress
       const kinds = { discover: 'discovered', bone: 'bones' };

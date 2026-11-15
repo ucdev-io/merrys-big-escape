@@ -17,8 +17,32 @@ const H = TOWN.BLOCK / 2;          // 15: half block
 const EDGE = H - 0.4;              // where garden fences sit
 
 /** Colliders in block-local coordinates (blocks are never rotated, only offset). */
-function localColliders(col, bx, bz, bones) {
+/** A wheelie bin that can be knocked over: pivot (spins to face the fall) → tilt (hinged at the front edge) → bin. */
+function tippableBin(x, z, ry, color) {
+  const pivot = new THREE.Group();
+  pivot.position.set(x, 0, z);
+  pivot.userData.noMerge = true;
+  const tilt = new THREE.Group();
+  tilt.position.z = 0.3;
+  const body = mergeStatic(wheelieBin(0, 0, ry, color));
+  body.position.z = -0.3;
+  tilt.add(body);
+  pivot.add(tilt);
+  return pivot;
+}
+
+function localColliders(col, bx, bz, bones, extra) {
+  const W = (x0, z0, x1, z1) => ({ x0: Math.min(x0, x1) + bx, z0: Math.min(z0, z1) + bz, x1: Math.max(x0, x1) + bx, z1: Math.max(z0, z1) + bz });
   return {
+    // Mischief bookkeeping (world coordinates).
+    bed: (x, z, w, d) => extra?.beds.push(W(x - w / 2, z - d / 2, x + w / 2, z + d / 2)),
+    garden: (x0, z0, x1, z1, door) => { const gdn = { rect: W(x0, z0, x1, z1), door: new THREE.Vector3(door[0] + bx, 1.4, door[1] + bz) }; extra?.gardens.push(gdn); return gdn; },
+    bin: (x, z, ry, color, garden = null) => {
+      const pivot = tippableBin(x + bx, z + bz, ry, color);
+      extra?.root.add(pivot);
+      const collider = col.circle(x + bx, z + bz, 0.4, 1.05);
+      extra?.bins.push({ id: `bin${extra.bins.length}`, pivot, x: x + bx, z: z + bz, collider, garden });
+    },
     circle: (x, z, r, top, stand) => col.circle(x + bx, z + bz, r, top, stand),
     box: (x0, z0, x1, z1, top) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz, top),
     // A golden bone resting on something `top` high. `friend`: too high to reach alone.
@@ -157,7 +181,12 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
   const [bx, bz] = at(H / 2 - 1.2, rng.pick([-1, 1]) * 5.6);
   g.add(bush(bx, bz, rng.float(0.8, 1.1), rng, lc, undefined, 2));
   const [fx, fz] = at(-1.8 + d / 2 + 1.1, rng.pick([-1, 1]) * 2.6);
-  g.add(faceX ? flowerBed(fx, fz, 0.9, 2.2, rng, lc) : flowerBed(fx, fz, 2.2, 0.9, rng, lc));
+  const [bw, bd] = faceX ? [0.9, 2.2] : [2.2, 0.9];
+  g.add(flowerBed(fx, fz, bw, bd, rng, null)); // walk right through it… and get told off
+  lc.bed(fx, fz, bw, bd);
+  const [dx, dz] = at(-1.8 + d / 2 + 0.15);
+  const garden = lc.garden(0, 0, qx * H, qz * H, [dx, dz]);
+  garden.home = home;
   const [mx, mz] = at(H / 2 - 0.9, 1.6);
   g.add(mailbox(mx, mz, ry, rng.pick([0xd9534f, 0x5b86c4, 0x6f9a52])));
   lc.circle(mx, mz, 0.2);
@@ -167,17 +196,19 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
     g.add(paddlingPool(px, pz, lc));
     const [gx, gz] = at(3.5, 3.8);
     g.add(gnome(gx, gz, ry));
-    return { gateOutside: at(H / 2 + 1.3), front: f, home: true };
+    return { gateOutside: at(H / 2 + 1.3), front: f, home: true, garden };
   }
   const extras = [
     () => { const [x, z] = at(-5.5, 4); g.add(kennel(x, z, ry)); lc.circle(x, z, 0.6, 1.05); },
     () => { const [x, z] = at(2.5, -4.5); g.add(birdbath(x, z)); lc.circle(x, z, 0.3); },
     () => { const [x, z] = at(-6, -4); g.add(bench(x, z, ry)); lc.circle(x, z, 0.75, 0.5); },
     () => { const [x, z] = at(3.8, 4.2); g.add(gnome(x, z, ry)); lc.circle(x, z, 0.2); },
-    () => { const [x, z] = at(-6.2, 0); g.add(swingSet(x, z, ry + Math.PI / 2)); lc.circle(x, z, 1.4); },
+    () => { const [x, z] = at(-6.2, 0); g.add(swingSet(x, z, ry + Math.PI / 2)); },
   ];
   rng.shuffle(extras).slice(0, rng.int(1, 2)).forEach((fn) => fn());
-  return { gateOutside: at(H / 2 + 1.3), front: f };
+  // Bin day: some houses have put their bin out on the pavement.
+  if (rng.chance(0.4)) { const [bx2, bz2] = at(H / 2 + 0.9, -2.6); lc.bin(bx2, bz2, ry + Math.PI, rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52]), garden); }
+  return { gateOutside: at(H / 2 + 1.3), front: f, garden };
 }
 
 function housesBlock(g, lc, rng, homeLot) {
@@ -216,23 +247,23 @@ function parkBlock(g, lc, rng) {
   }
   g.add(birdbath(0, 0)); lc.circle(0, 0, 0.35, 0.92);
   lc.bone(0, 0, 1.15, true); // floating above the birdbath: needs a friend's back to reach
-  g.add(flowerBed(-2.8, 2.8, 2, 2, rng, lc));
-  g.add(flowerBed(2.8, -2.8, 2, 2, rng, lc));
+  g.add(flowerBed(-2.8, 2.8, 2, 2, rng, null)); lc.bed(-2.8, 2.8, 2, 2);
+  g.add(flowerBed(2.8, -2.8, 2, 2, rng, null)); lc.bed(2.8, -2.8, 2, 2);
   for (const a of [0.6, 2.4, 4.3]) {
     const x = Math.cos(a) * 10.4, z = Math.sin(a) * 10.4;
     g.add(bench(x, z, Math.atan2(-x, -z))); lc.circle(x, z, 0.75, 0.5);
     if (a === 2.4) lc.bone(x, z, 0.5);
   }
-  g.add(swingSet(-10, 6, 0.3)); lc.circle(-10, 6, 1.4);
+  g.add(swingSet(-10, 6, 0.3));
   g.add(slide(9.5, -6.5, -0.8));
   {
     // Steps (0.4, 0.8, 1.2) up to the platform (1.55): hop, hop, hop!
     const ry = -0.8, s = Math.sin(ry), c = Math.cos(ry);
     const at = (lz) => [9.5 + s * lz, -6.5 + c * lz];
-    [[-2.45, 0.4], [-2.1, 0.8], [-1.75, 1.2]].forEach(([lz, top]) => { const [x, z] = at(lz); lc.circle(x, z, 0.24, top); });
+    [[-2.5, 0.3], [-2.14, 0.6], [-1.78, 0.9]].forEach(([lz, top]) => { const [x, z] = at(lz); lc.circle(x, z, 0.24, top); });
     const [px, pz] = at(-1.0);
-    lc.circle(px, pz, 0.45, 1.55);
-    lc.bone(px, pz, 1.55);
+    lc.circle(px, pz, 0.48, 1.2);
+    lc.bone(px, pz, 1.2);
   }
   const mower = lawnmower(6, 4, -0.6);
   g.add(mower); lc.circle(6, 4, 0.5);
@@ -246,7 +277,7 @@ function pondBlock(g, lc, rng) {
   water.castShadow = false;
   const deep = mesh(new THREE.CircleGeometry(1, 40), 0x78afc8, g, [0.8, 0.08, -0.4], [-Math.PI / 2, 0, 0], [rx * 0.6, rz * 0.55, 1]);
   deep.castShadow = false;
-  for (const [x, r] of [[-6, 4.6], [-2, 6], [2, 6], [6, 4.6]]) lc.circle(x, 0, r, 0.29, false);
+  for (const [x, r] of [[-6, 4.6], [-2, 6], [2, 6], [6, 4.6]]) lc.circle(x, 0, r, 0.31, false);
   // Lily pads.
   for (let i = 0; i < 14; i++) {
     const a = rng.float(0, Math.PI * 2), k = rng.float(0.3, 0.85);
@@ -295,12 +326,14 @@ function bakeryBlock(g, lc, rng) {
     lc.circle(tx, tz, 0.45, 0.74);
     if (i === 1) lc.bone(tx, tz, 0.74);
   });
-  // Back yard behind the shops: bins, crates and the famous BBQ.
+  // Back yard behind the shops: bins, crates and the famous BBQ. The baker shouts from the shop door.
+  const [sdx, sdz] = T.p(-9.5 + 2.5, 10.2);
+  const shopkeeper = lc.garden(sdx, sdz, sdx, sdz, [sdx, sdz]);
   const [qx, qz] = T.p(4, -2);
   g.add(bbq(qx, qz, T.ry(0))); lc.circle(qx, qz, 0.5);
   for (let i = 0; i < 4; i++) {
     const [x, z] = T.p(-12 + i * 1.2, 1.6);
-    g.add(wheelieBin(x, z, T.ry(Math.PI), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52]))); lc.circle(x, z, 0.4, 1.05);
+    lc.bin(x, z, T.ry(Math.PI), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52]), shopkeeper);
     if (i === 2) lc.bone(x, z, 1.05, true); // on a bin lid: give a friend a boost
   }
   for (let i = 0; i < 3; i++) { const [x, z] = T.p(10 + rng.float(-1, 1), 1.2 + i * 0.1); g.add(crate(x, z, rng.float(0, 1))); lc.circle(x, z, 0.4, 0.5); }
@@ -330,7 +363,7 @@ function alleyBlock(g, lc, rng) {
     if (Math.abs(x) < 3 && Math.abs(z) < 3) return;
     if (x > 4.5 && x < 8.5 && z < -2) return; // keep the staircase clear
     const r = k % 3;
-    if (r === 0) { g.add(wheelieBin(x, z, rng.float(0, 6), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52, 0x9b7452]))); lc.circle(x, z, 0.4, 1.05); }
+    if (r === 0) lc.bin(x, z, rng.float(0, 6), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52, 0x9b7452]));
     else if (r === 1) { const s = rng.float(0.8, 1.2); g.add(crate(x, z, rng.float(0, 1), s)); lc.circle(x, z, 0.4, 0.5 * s); }
     else { g.add(cardboardBox(x, z, rng.float(0, 6))); lc.circle(x, z, 0.35, 0.36); }
   });
@@ -351,6 +384,7 @@ export function buildTown(layout) {
   const root = new THREE.Group();
   const col = new Colliders();
   const bones = [];
+  const extra = { root, beds: [], gardens: [], bins: [] };
 
   root.add(ground());
   streets(root, layout, rng, col, bones);
@@ -361,11 +395,11 @@ export function buildTown(layout) {
     const g = new THREE.Group();
     g.position.set(b.x, 0, b.z);
     root.add(g);
-    const lc = localColliders(col, b.x, b.z, bones);
+    const lc = localColliders(col, b.x, b.z, bones, extra);
     const br = new RNG(b.seed);
     if (b.type === 'houses' || b.type === 'home') {
       const lots = housesBlock(g, lc, br, b.type === 'home' ? b.homeLot : null);
-      for (const l of lots) if (!l.home) otherHomes.push({ pos: new THREE.Vector3(b.x + l.gateOutside[0], 0, b.z + l.gateOutside[1]), face: Math.atan2(l.front[0], l.front[1]) });
+      for (const l of lots) if (!l.home) otherHomes.push({ pos: new THREE.Vector3(b.x + l.gateOutside[0], 0, b.z + l.gateOutside[1]), face: Math.atan2(l.front[0], l.front[1]), garden: l.garden });
       const home = lots.find((l) => l.home);
       if (home) {
         spawn = new THREE.Vector3(b.x + home.gateOutside[0], 0, b.z + home.gateOutside[1]);
@@ -413,8 +447,11 @@ export function buildTown(layout) {
     spawn,
     spawnFace,
     bones: bones.map((b, i) => ({ ...b, id: `bone${i}` })),
+    beds: extra.beds,
+    gardens: extra.gardens,
+    bins: extra.bins,
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.
-    homes: [{ pos: spawn.clone(), face: spawnFace }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
+    homes: [{ pos: spawn.clone(), face: spawnFace, garden: extra.gardens.find((gd) => gd.home) }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: { x0: -half, x1: half, z0: -half, z1: half },
     layout,
     props: {},

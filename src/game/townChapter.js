@@ -9,6 +9,7 @@ import { RemoteDogs } from '../net/remoteDogs.js';
 import { NetClient } from '../net/client.js';
 import { showLobby } from '../ui/lobby.js';
 import { paint } from '../render/watercolorMaterial.js';
+import { Mischief } from '../systems/mischief.js';
 import { packLink, packPath, fillShareBox } from '../net/links.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -53,6 +54,13 @@ export class TownChapter {
 
     this.remotes = new RemoteDogs(scene, hud, () => this.player.pos);
     this.buildBones();
+    this.mischief = new Mischief({
+      scene, hud, gardens: world.gardens, beds: world.beds, bins: world.bins, dirt: this.dirt, glow: this.glow,
+      dogName: () => this.profile().name, breedName: () => BREEDS[this.player.breedKey].breed,
+      onAct: (m) => this.net?.act(m.a, m),
+    });
+    this.mischief.onChange = (n) => { hud.setMischief(n); this.hud.float('😈 +1', this.merryAnchor(), 'dig'); };
+    this.goHome(0);
     this.packBadge = document.createElement('button');
     this.packBadge.className = 'pill pack-badge hidden';
     hud.root.querySelector('.top-right').prepend(this.packBadge);
@@ -145,7 +153,7 @@ export class TownChapter {
     });
     net.on('leave', (m) => { this.remotes.remove(m.id); this.updateBadge(); });
     net.on('ss', (m) => this.remotes.onStates(m.p, net.id));
-    net.on('act', (m) => this.remotes.onAct(m.id, m.a));
+    net.on('act', (m) => (['tip', 'hole', 'trample'].includes(m.a) ? this.mischief.remote(m) : this.remotes.onAct(m.id, m.a)));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.applyEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => {
       this.remotes.clear();
@@ -220,6 +228,8 @@ export class TownChapter {
     const homes = this.world.homes;
     if (!homes?.length) return;
     const h = homes[slot % homes.length];
+    for (const g of this.world.gardens ?? []) g.own = false;
+    if (h.garden) h.garden.own = true; // your own family is less cross
     this.player.pos.copy(h.pos);
     this.player.heading = h.face;
     this.player.object.rotation.y = h.face;
@@ -336,6 +346,7 @@ export class TownChapter {
     // Other dogs' backs are something to stand on — the co-op boost!
     P.platforms = this.remotes.platforms();
     this.updateBones(dt);
+    if (canAct) this.mischief.update(dt, P);
 
     // Discover places by walking into them.
     for (const p of this.places) {
@@ -363,6 +374,7 @@ export class TownChapter {
       P.digTimer = 0.35;
       sfx.dig();
       this.net?.act('dig');
+      this.mischief.dig(nose.clone().setY(0));
       const back = V(-Math.sin(P.heading), 0, -Math.cos(P.heading));
       this.dirt.burst(5, () => ({
         pos: nose.clone().setY(0.08),
@@ -378,6 +390,7 @@ export class TownChapter {
       P.dog.bark();
       sfx.bark(P.dog.breed.bark);
       this.net?.act('bark');
+      this.mischief.barkAt(pos);
       this.hud.float('WOOF!', this.merryAnchor());
     }
 

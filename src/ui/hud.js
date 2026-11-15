@@ -29,7 +29,8 @@ export class HUD {
     this.muteBtn = el('button', 'pill', isMuted() ? '🔇' : '🔊');
     this.muteBtn.title = 'Sound on/off';
     this.muteBtn.onclick = () => { setMuted(!isMuted()); this.muteBtn.textContent = isMuted() ? '🔇' : '🔊'; };
-    tr.append(this.bookBtn, this.muteBtn);
+    this.mischiefPill = el('div', 'pill mischief hidden');
+    tr.append(this.mischiefPill, this.bookBtn, this.muteBtn);
     this.root.appendChild(tr);
 
     this.book = el('div', 'sniff-book hidden');
@@ -52,6 +53,12 @@ export class HUD {
     this.objective.classList.remove('pulse');
     void this.objective.offsetWidth;
     this.objective.classList.add('pulse');
+  }
+
+  setMischief(n) {
+    this.mischiefPill.classList.toggle('hidden', !n);
+    this.mischiefPill.textContent = `😈 ${n}`;
+    this.mischiefPill.classList.remove('pulse'); void this.mischiefPill.offsetWidth; this.mischiefPill.classList.add('pulse');
   }
 
   setPrompt(text) {

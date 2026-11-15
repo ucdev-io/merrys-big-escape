@@ -105,7 +105,7 @@ export class Player {
     this.pos.x += this.vel.x * dt;
     this.pos.z += this.vel.y * dt;
     if (world && !this.ignoreBounds) {
-      world.colliders.resolve(this.pos, this.radius);
+      world.colliders.resolve(this.pos, this.radius, this.grounded ? 0.3 : 0.06);
       const b = world.bounds;
       if (b && !this.ignoreBounds) {
         this.pos.x = THREE.MathUtils.clamp(this.pos.x, b.x0, b.x1);

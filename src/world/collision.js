@@ -2,14 +2,17 @@
 // height. Below the top it's a wall; at or above the top it's something to stand on.
 export class Colliders {
   constructor() { this.circles = []; this.boxes = []; }
-  circle(x, z, r, top = Infinity, stand = true) { this.circles.push({ x, z, r, top, stand }); }
+  circle(x, z, r, top = Infinity, stand = true) { const c = { x, z, r, top, stand }; this.circles.push(c); return c; }
   box(x0, z0, x1, z1, top = Infinity) {
     this.boxes.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top });
   }
 
-  /** Push a circle (p.x, p.z, radius r) out of everything taller than its feet (p.y). Mutates p. */
-  resolve(p, r) {
-    const feet = (p.y ?? 0) + 0.02;
+  /**
+   * Push a circle (p.x, p.z, radius r) out of everything taller than it can step onto. Mutates p.
+   * stepUp: things no higher than feet + stepUp are walked onto instead of bumped into.
+   */
+  resolve(p, r, stepUp = 0.02) {
+    const feet = (p.y ?? 0) + stepUp + 0.01; // tolerance so 0.6 + 0.3 counts as 0.9
     for (const c of this.circles) {
       if (feet >= c.top) continue;
       const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = c.r + r;
@@ -37,7 +40,7 @@ export class Colliders {
   surfaceAt(x, z, feet, stepUp = 0.3, extra = null, margin = 0.16) {
     // margin: paws reach a little past the dog's centre, so landing on an edge counts.
     let best = 0;
-    const lim = feet + stepUp, m = margin;
+    const lim = feet + stepUp + 0.01, m = margin;
     for (const c of this.circles) {
       if (c.top === Infinity || c.stand === false || c.top > lim || c.top <= best) continue;
       if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) best = c.top;

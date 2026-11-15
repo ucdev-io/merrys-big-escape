@@ -49,6 +49,6 @@ export class NetClient {
     this.send({ t: 's', x: pos.x, z: pos.z, y: pos.y, h: heading, v: speed, f: flags });
   }
 
-  act(a) { this.send({ t: 'act', a }); }
+  act(a, extra = {}) { this.send({ t: 'act', a, id: extra.id, x: extra.x, z: extra.z }); }
   event(ev) { this.send({ t: 'ev', ev }); }
 }
