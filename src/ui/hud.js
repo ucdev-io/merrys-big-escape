@@ -141,7 +141,7 @@ export class HUD {
       <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
         ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
-        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}</div>`,
+        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -224,6 +224,7 @@ export class HUD {
         <li>Knock a <b>bin</b> over and gobble what falls out: 🍕 super speed · 🧀 super jumps · 🍩 endless zoomies · 🌭 everything!</li>
         <li>Every level (and every piece of clothing) makes you a bit faster ⚡ with longer zoomies 💨.</li>
         <li>Flowerbeds, holes and bins are great fun\u2026 but the neighbours will shout.</li>
+        <li><b>🥐 Heists!</b> The baker on the bakery street keeps glancing round: grab a treat off her stall while her back's turned (watch for 👀 over her head) and run it home to your garden. Caught? "Oi! Shoo!" Woof at her door to distract her while a friend sneaks in!</li>
         <li>Water is for paddling. Expect a wet-dog shake.</li>
         <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);

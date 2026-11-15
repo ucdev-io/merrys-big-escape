@@ -25,6 +25,10 @@ COSMETICS.push(
   { id: 'collar-champion', slot: 'collar', name: 'Champion collar', emoji: '🏅', color: 0x7a4fb0, level: 1, friend: 'wins', jobs: 5, hint: 'Win 5 games', boost: { speed: 2, zoomies: 1 } },
   { id: 'bandana-gold', slot: 'neck', name: 'Record breaker bandana', emoji: '🏆', color: 0xe8b830, level: 1, friend: 'records', jobs: 1, hint: 'Set a family record', boost: { speed: 1, zoomies: 2 } },
 );
+// Prizes for cheeky heists (the heists stat: treats pinched and got safely home).
+COSMETICS.push(
+  { id: 'hat-mask', slot: 'hat', name: 'Robber’s mask', emoji: '🦝', color: 0x2b2b38, level: 1, friend: 'heists', jobs: 5, hint: 'Pull off 5 heists', style: 'mask', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

@@ -420,3 +420,13 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
   body.touch-mode .boosts { bottom: calc(11px + var(--sa-b)); }
   body.touch-mode .prompt { bottom: calc(44px + var(--sa-b)); }
 }
+
+/* Heists: what the baker (or butcher, or BBQ cook) is up to, over their head:
+   🎵 busy · ❗ about to look round · 👀 watching · ❓ distracted */
+.lookout { position: absolute; left: 0; top: 0; font-size: 28px; line-height: 1; pointer-events: none; white-space: nowrap;
+  text-shadow: 0 2px 0 var(--paper), 0 -2px 0 var(--paper), 2px 0 0 var(--paper), -2px 0 0 var(--paper); }
+.lookout.busy { font-size: 24px; }
+.lookout.warn { font-size: 38px; animation: lookwarn 0.22s ease-in-out infinite alternate; }
+.lookout.look { font-size: 50px; }
+@keyframes lookwarn { from { margin-top: 0; } to { margin-top: -8px; } }
+.bubble.heist.offscreen::before { content: none; } /* (that 🐱 is for the garden cat) */

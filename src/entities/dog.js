@@ -524,6 +524,18 @@ export class Dog {
         mesh(new THREE.SphereGeometry(0.047, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.55, 1.08]);
         mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.0, 0.024], [0.12, Math.PI, 0], [1, 1, 1.15]);
         mesh(SPHERE, 0x6a5a48, g, [0, 0.022, 0], [0, 0, 0], [0.006, 0.004, 0.006]);
+      } else if (hat.style === 'mask') { // a robber's mask across the eyes, which peep out through white holes
+        const hf = this.dims.HF / this.breed.headW, es = this.breed.eyeSize ?? 1, m = keep(group(this.head));
+        const o = hf * 0.6; // (fluffy faces: on top of the fur)
+        for (const s of [-1, 1]) {
+          const x = s * (0.036 + o), y = 0.026 + hf * 0.2, z = 0.035 + o;
+          mesh(SPHERE, hat.color, m, [x + s * 0.003, y + 0.001, z - 0.003], [0, s * 0.35, s * 0.22], [0.028 * es, 0.019 * es, 0.007]);
+          mesh(SPHERE, 0xf4efe6, m, [x, y, z - 0.0015], [0, s * 0.35, 0], [0.017 * es, 0.018 * es, 0.0095]);
+          mesh(SPHERE, hat.color, m, [s * (0.046 + o), 0.03, 0.002], [0, 0, 0], [0.005, 0.009, 0.032]); // the band round the side
+          mesh(SPHERE, hat.color, m, [s * 0.01, 0.022, -0.062 - o], [0.5, s * 0.6, 0], [0.004, 0.016, 0.006]); // a tail of the knot
+        }
+        mesh(SPHERE, hat.color, m, [0, 0.044 + hf * 0.3, 0.046 + o], [0.45, 0, 0], [0.026, 0.006, 0.012]); // across the bridge of the nose
+        mesh(SPHERE, hat.color, m, [0, 0.034, -0.054 - o], [0, 0, 0], [0.011, 0.01, 0.008]);                // the knot at the back
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);

@@ -9,6 +9,7 @@ import { BREED_IDS } from '../src/entities/breedIds.js';
 import { cleanName, cleanSeed, cleanId, cleanCode, num, cleanLevel, cleanLook, list } from './clean.js';
 import { worldFor, worldByCode, touchWorld, getProfile, addResults } from './store.js';
 import { CHALLENGES } from '../src/game/challenges.js';
+import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
@@ -76,6 +77,7 @@ function enter(p, room, msg) {
     shared: { discovered: [...room.world.discovered], bones: [...room.world.bones] },
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
+  heistJoin(room, p, send); // who's looking, which treats are where
   const g = room.game;
   if (g && !g.over) { g.dogs.set(p.id, dogOf(p)); send(p.ws, { t: 'game', a: 'start', game: publicGame(g) }); } // join in!
 }
@@ -188,6 +190,7 @@ function leave(p) {
   if (!room) return;
   room.players.delete(p.id);
   broadcast(room, { t: 'leave', id: p.id });
+  heistLeave(room, p, send, broadcast);
   const g = room.game;
   if (g && !g.over && room.players.size) {
     if (g.kind === 'tag' && g.it === p.id) { // "it" went home: someone else is it now
@@ -262,6 +265,9 @@ function onMessage(p, msg) {
       if (!room) return;
       if (msg.a === 'start') return startGame(room, p, msg);
       return gameMove(room, p, msg);
+    case 'heist': // 🥐 cheeky food raids (see heists.js)
+      if (room) heistMessage(room, p, msg, send, broadcast);
+      return;
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;
       p.carry = msg.item ? cleanId(msg.item) : null;
@@ -337,6 +343,7 @@ export function attachDogPark(httpServer) {
       const states = [];
       for (const p of room.players.values()) if (p.state) states.push(p.state);
       if (states.length) broadcast(room, { t: 'ss', p: states });
+      heistTick(room, send, broadcast);
     }
   }, TICK_MS);
 

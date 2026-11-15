@@ -12,6 +12,7 @@ import {
   HOUSE_WALLS, HOUSE_ROOFS, DOORS, bench, lamppost, wheelieBin, crate, cardboardBox, puddle, birdbath, mailbox,
   kennel, swingSet, slide, lawnmower, bbq, cafeTable, shop, brickBuilding, car, hedge, pathRibbon,
 } from './townProps.js';
+import { bakeryHeist } from './heistProps.js';
 
 const H = TOWN.BLOCK / 2;          // 15: half block
 const EDGE = H - 0.4;              // where garden fences sit
@@ -50,6 +51,9 @@ function localColliders(col, bx, bz, bones, extra) {
     bone: (x, z, top, friend = false) => bones?.push({ x: x + bx, y: top + 0.18, z: z + bz, need: top - 0.15, friend }),
     // A place pigeons like to land.
     birdSpot: (x, z) => extra?.birdSpots.push(new THREE.Vector3(x + bx, 0, z + bz)),
+    // Heists (heistProps.js): a point in world coordinates, and where things are for the game.
+    at: (x, z) => new THREE.Vector3(x + bx, 0, z + bz),
+    heist: (key, data) => { if (extra) (extra.heist ??= {})[key] = data; },
   };
 }
 
@@ -327,7 +331,7 @@ function bakeryBlock(g, lc, rng) {
     const [px, pz] = T.p(x, 6.5);
     g.add(shop(px, pz, T.ry(0), rng, { w: 8.4, d: 7, h: rng.float(4, 5), sign: names[i] }));
     box(x - 4.3, 3, x + 4.3, 10.1);
-    const [tx, tz] = T.p(x - 1.5, 12.6);
+    const [tx, tz] = i === 0 ? T.p(x + 0.4, 13.3) : T.p(x - 1.5, 12.6); // (the bakery's is out of the way of its stall)
     g.add(cafeTable(tx, tz, rng.pick([0xf2a0b4, 0xf6d06a, 0x8fc4d8])));
     lc.circle(tx, tz, 0.45, 0.74);
     if (i === 1) lc.bone(tx, tz, 0.74);
@@ -349,6 +353,7 @@ function bakeryBlock(g, lc, rng) {
     g.add(tree(tx, tz, rng.float(1, 1.3), rng, lc, { detail: 2, blobs: 4 }));
   }
   g.add(hedge(...T.p(-EDGE, -EDGE), ...T.p(EDGE, -EDGE), rng, lc));
+  bakeryHeist(g, lc, T, -9.5); // the baker's stall of treats (heists!)
 }
 
 function alleyBlock(g, lc, rng) {
@@ -470,6 +475,7 @@ export function buildTown(layout) {
     pigeonFlocks,
     gardens: extra.gardens,
     bins: extra.bins,
+    heist: extra.heist ?? null, // where the bakery street's heists happen
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.
     homes: [{ pos: spawn.clone(), face: spawnFace, garden: extra.gardens.find((gd) => gd.home) }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: { x0: -half, x1: half, z0: -half, z1: half },

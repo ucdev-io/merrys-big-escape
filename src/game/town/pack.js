@@ -75,6 +75,7 @@ export class Pack {
     net.on('look', (m) => this.remotes.setLook(m.id, m.look, m.level));
     net.on('carry', (m) => this.remotes.setCarry(m.id, m.item));
     net.on('game', (m) => this.onGame?.(m));
+    net.on('heist', (m) => this.onHeist?.(m));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
@@ -91,6 +92,9 @@ export class Pack {
 
   /** A move in a pack game (start a race or tag, finish a race, tag someone). */
   sendGame(msg) { if (this.net) this.net.send({ t: 'game', ...msg }); }
+
+  /** A heist move (grab a treat, distract the baker…): the server settles it. */
+  sendHeist(msg) { if (this.net) this.net.send({ t: 'heist', ...msg }); }
 
   /** Tell the pack what my dog is carrying (or null). */
   sendCarry(item) { if (this.net) this.net.send({ t: 'carry', item: item ?? null }); }
