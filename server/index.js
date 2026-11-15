@@ -31,6 +31,9 @@ const server = http.createServer(async (req, res) => {
 });
 
 attachDogPark(server);
+// Any other kind of upgrade (nothing else here uses one): hang up. Left open, a stray connection that
+// later dropped would take the whole server down with it.
+server.on('upgrade', (req, socket) => { if (!req.url?.startsWith('/ws')) socket.destroy(); });
 server.listen(PORT, () => {
   console.log(`\n  🐾 Merry's Big Escape is running!\n`);
   console.log(`  On this computer:  http://localhost:${PORT}`);
