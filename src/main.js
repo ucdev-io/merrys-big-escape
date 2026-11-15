@@ -16,6 +16,8 @@ import { buildTown } from './world/town/builders.js';
 import { loadSave, writeSave } from './core/save.js';
 import { NetClient } from './net/client.js';
 import { showTitle } from './ui/title.js';
+import { packCodeFromUrl } from './net/links.js';
+import { getSettings } from './core/settings.js';
 
 const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
@@ -48,27 +50,33 @@ paintUniforms.uSunIntensity.value = sun.intensity;
 // Which chapter? ?town or ?seed=CODE in the URL jumps straight to the neighbourhood.
 const params = new URLSearchParams(location.search);
 const save = loadSave();
-// Landing page, unless a link already says where to go (?room=, ?town, ?seed=).
-if (!params.has('room') && !params.has('town') && !params.has('seed')) {
+// A pack link (/pack/BONE-42) goes straight into that pack.
+const packCode = packCodeFromUrl();
+
+// Landing page, unless a link already says where to go.
+if (!packCode && !params.has('town') && !params.has('seed')) {
   const choice = await showTitle(save);
   if (choice === 'garden') writeSave({ chapter: 'yard', found: [], escaped: false });
   else if (choice === 'town') writeSave({ chapter: 'town' });
   Object.assign(save, loadSave());
 }
-const inTown = params.has('town') || params.has('seed') || params.has('room') || save.chapter === 'town';
+const inTown = params.has('town') || params.has('seed') || !!packCode || save.chapter === 'town';
 
 // Arriving with ?room=CODE: join that pack first, because the pack decides which town we're in.
 let net = null, welcome = null;
-if (inTown && params.has('room')) {
-  const profile = save.profile ?? { breed: 'merry', name: 'Merry' };
+// First time on this device? Pick a dog first (code pre-filled), then join.
+const prefillCode = packCode && !save.profile ? packCode : null;
+if (packCode && save.profile) {
+  const profile = save.profile;
   try {
     net = new NetClient();
-    welcome = await net.enter('join', { code: params.get('room'), name: profile.name, breed: profile.breed });
+    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed });
     writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
   } catch (e) {
     net = null;
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', '/');
     console.warn('Could not join pack:', e.message);
+    window.__packError = `Couldn\u2019t join pack ${packCode}: ${e.message}`;
   }
 }
 
@@ -108,13 +116,13 @@ pipeline.onTooSlow = () => {
   if (pixelRatio > 1.25) { pixelRatio = Math.max(1.25, pixelRatio - 0.25); resize(); }
 };
 // Storybook is the chosen look; add ?styles to the URL to compare the others.
-if (location.search.includes('styles')) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
+if (location.search.includes('styles') || getSettings().styles) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
 else applyStyle(pipeline, 'storybook');
 // Small screens: the paper texture and border read heavier, so go lighter.
 if (isMobile) Object.assign(pipeline.params, { paper: 0.45, vignette: 0.4, granulation: 0.4 });
 
 // ?debug shows the live quality settings.
-if (location.search.includes('debug')) {
+if (location.search.includes('debug') || getSettings().debug) {
   const d = document.createElement('div');
   d.style.cssText = 'position:fixed;left:8px;bottom:8px;font:12px monospace;background:#fff8;padding:2px 6px;z-index:9;pointer-events:none';
   document.body.appendChild(d);
@@ -130,7 +138,7 @@ if (location.search.includes('debug')) {
 const hud = new HUD(camera);
 createTouchControls(input);
 const chapter = inTown
-  ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome })
+  ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
   : new YardChapter({ scene, world, player, hud, input, follow, pipeline });
 
 // Style tuning panel: add ?tune to the URL.

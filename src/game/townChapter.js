@@ -8,6 +8,7 @@ import { BREEDS } from '../entities/breeds.js';
 import { RemoteDogs } from '../net/remoteDogs.js';
 import { NetClient } from '../net/client.js';
 import { showLobby } from '../ui/lobby.js';
+import { packLink, packPath, fillShareBox } from '../net/links.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -25,7 +26,8 @@ const BLURBS = {
  * All game-state changes go through dispatch(event) so a multiplayer server can relay them later.
  */
 export class TownChapter {
-  constructor({ scene, world, player, hud, input, follow, pipeline, net = null, welcome = null }) {
+  constructor({ scene, world, player, hud, input, follow, pipeline, net = null, welcome = null, prefillCode = null }) {
+    this.prefillCode = prefillCode;
     Object.assign(this, { scene, world, player, hud, input, follow, pipeline, net });
     this.layout = world.layout;
     const save = loadSave();
@@ -83,10 +85,7 @@ export class TownChapter {
           this.net = net;
           lobby.close();
           this.joinPack(w);
-          this.hud.showCard(`
-            <h1>Your pack code: ${w.code}</h1>
-            <p>On another phone or computer on the same Wi-Fi, open<br><b>${location.host}</b><br>then type <b>${w.code}</b> and press <b>Join a pack</b>.</p>`,
-            [['Let\u2019s go! 🐾', () => { this.hud.hideCard(); this.begin(); }]]);
+          this.showInvite(w.code, [['Let\u2019s go! 🐾', () => { this.hud.hideCard(); this.begin(); }]]);
         } catch (e) { lobby.setBusy(false); lobby.setError(e.message); }
       },
       onJoin: async (c, code) => {
@@ -98,7 +97,7 @@ export class TownChapter {
           if (w.seed !== this.layout.seed) {
             // Their town is different: reload into it (we'll rejoin straight away).
             writeSave({ chapter: 'town', town: { seed: w.seed, discovered: w.shared.discovered } });
-            location.href = `${location.pathname}?room=${encodeURIComponent(w.code)}`;
+            location.href = packPath(w.code);
             return;
           }
           this.net = net;
@@ -108,8 +107,9 @@ export class TownChapter {
         } catch (e) { lobby.setBusy(false); lobby.setError(e.message); }
       },
       onNewTown: () => { writeSave({ chapter: 'town', town: { seed: randomSeed(), discovered: [] } }); location.reload(); },
-      onGarden: () => { writeSave({ chapter: 'yard' }); location.href = location.pathname; },
+      onGarden: () => { writeSave({ chapter: 'yard' }); location.href = '/'; },
     });
+    if (this.prefillCode) lobby.prefill(this.prefillCode);
     this.lobby = lobby;
   }
 
@@ -124,7 +124,7 @@ export class TownChapter {
   /** Wire up a pack from the server's welcome message. */
   joinPack(w) {
     const net = this.net;
-    history.replaceState(null, '', `${location.pathname}?room=${encodeURIComponent(w.code)}`);
+    history.replaceState(null, '', packPath(w.code));
     // Shared adventure: the pack's progress is everyone's progress.
     for (const id of w.shared.discovered) if (!this.state.discovered.includes(id)) this.state.discovered.push(id);
     this.hud.setPlaces?.(this.placeList());
@@ -151,12 +151,15 @@ export class TownChapter {
       this.hud.showToastRaw('📡', 'Lost the pack!', 'The connection dropped — you can keep playing on your own.');
     });
     this.updateBadge();
-    this.packBadge.onclick = () => {
-      const code = this.net?.code ?? '';
-      const names = [...this.remotes.dogs.values()].map((r) => `${BREEDS[r.breed]?.emoji ?? '🐕'} ${r.name}`);
-      this.hud.showCard(`<h1>Pack ${code}</h1><p>Friends join at <b>${location.host}</b> with code <b>${code}</b></p><p class="pack-list"></p>`, [['OK', () => this.hud.hideCard()]]);
-      this.hud.card.querySelector('.pack-list').textContent = ['You', ...names].join(' · ');
-    };
+    this.packBadge.onclick = () => this.showInvite(this.net?.code ?? '', [['OK', () => this.hud.hideCard()]]);
+  }
+
+  /** Card with a QR code + link so friends can join with one tap. */
+  async showInvite(code, buttons) {
+    const names = [...this.remotes.dogs.values()].map((r) => `${BREEDS[r.breed]?.emoji ?? '🐕'} ${r.name}`);
+    this.hud.showCard(`<h1>Pack ${code}</h1><p>Friends on the same Wi-Fi can scan this to join:</p><div class="invite"></div><p class="pack-list"></p>`, buttons);
+    this.hud.card.querySelector('.pack-list').textContent = `In the pack: ${['You', ...names].join(' · ')}`;
+    await fillShareBox(this.hud.card.querySelector('.invite'), await packLink(code), { text: `Join my dog pack ${code}!` });
   }
 
   updateBadge() {

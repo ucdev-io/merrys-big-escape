@@ -10,6 +10,7 @@
     "play": "vite build && node server/index.js"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "three": "^0.187.0",
     "ws": "^8.23.0"
   },

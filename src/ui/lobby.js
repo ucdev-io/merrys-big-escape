@@ -57,6 +57,7 @@ export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJ
   for (const i of [nameIn, codeIn]) i.addEventListener('keydown', (e) => e.stopPropagation());
   codeIn.addEventListener('input', () => (codeIn.value = codeIn.value.toUpperCase()));
   select(breed);
+  if (window.__packError) { err.textContent = window.__packError; window.__packError = null; }
 
   const choice = () => ({ breed, name: nameIn.value.trim().slice(0, 14) || BREEDS[breed].dogName });
   wrap.querySelector('.solo').onclick = () => onSolo(choice());
@@ -74,5 +75,13 @@ export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJ
     setError(msg) { err.textContent = msg || ''; },
     setBusy(b) { wrap.querySelectorAll('button').forEach((x) => (x.disabled = b)); wrap.classList.toggle('busy', b); },
     close() { wrap.remove(); },
+    /** Arrived from a pack link: code ready, just pick a dog and press Join. */
+    prefill(code) {
+      codeIn.value = code;
+      wrap.querySelector('.join').classList.add('big');
+      wrap.querySelector('.join').textContent = `Join pack ${code} 🐾`;
+      wrap.querySelector('h1').textContent = 'Pick your dog!';
+      err.textContent = '';
+    },
   };
 }

@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite';
 import { attachDogPark } from './server/rooms.js';
+import { lanInfoHandler } from './server/lan.js';
 
 // Runs the Dog Park multiplayer server inside the Vite dev server (same port, path /ws).
 const dogPark = () => ({
   name: 'dog-park',
-  configureServer(server) { if (server.httpServer) attachDogPark(server.httpServer); },
+  configureServer(server) {
+    if (server.httpServer) attachDogPark(server.httpServer);
+    server.middlewares.use('/api/lan', lanInfoHandler);
+  },
 });
 
 export default defineConfig({

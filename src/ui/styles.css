@@ -204,3 +204,22 @@ body.touch-mode .stamina { bottom: 180px; }
 .title-screen .choices { display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .title-screen .choices .pill { width: min(420px, 100%); }
 .title-screen small { display: block; font-size: 15px; opacity: 0.7; }
+
+/* Share links & QR codes */
+.share-box { display: flex; gap: 14px; align-items: center; justify-content: center; flex-wrap: wrap; text-align: left; }
+.share-box .qr { width: 150px; height: 150px; background: #fffaf0; border-radius: 12px; padding: 6px; border: 2px solid rgba(59, 43, 37, 0.25); }
+.share-box .qr svg { width: 100%; height: 100%; display: block; }
+.share-side { display: flex; flex-direction: column; gap: 8px; min-width: 220px; max-width: 300px; }
+.share-side .hint { font-size: 16px; opacity: 0.8; }
+.share-side .link {
+  font: 15px ui-monospace, monospace; color: var(--ink); background: #fffaf0; border: 2px solid rgba(59, 43, 37, 0.25);
+  border-radius: 10px; padding: 6px 8px; width: 100%; user-select: all; -webkit-user-select: all;
+}
+.share-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.title-screen .extras { margin-top: 18px; font-size: 17px; }
+.title-screen .phone, .title-screen .settings { margin-top: 12px; }
+.title-screen .phone p { margin: 0 0 8px; font-size: 17px; }
+.title-screen .settings { display: flex; flex-direction: column; gap: 6px; align-items: center; font-size: 18px; }
+.title-screen .link { background: none; border: none; cursor: pointer; font-size: 17px; text-decoration: underline; padding: 0; }
+.title-screen { overflow-y: auto; }
+.invite { margin: 10px 0; }

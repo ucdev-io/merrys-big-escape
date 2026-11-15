@@ -97,8 +97,9 @@ export function attachDogPark(httpServer) {
   });
 
   wss.on('connection', (ws) => {
-    const p = { id: nextId++, ws, room: null, name: 'Doggo', breed: 'merry', state: null, dirty: false, alive: true };
-    ws.on('pong', () => (p.alive = true));
+    const p = { id: nextId++, ws, room: null, name: 'Doggo', breed: 'merry', state: null };
+    ws.isAlive = true;
+    ws.on('pong', () => (ws.isAlive = true));
     ws.on('message', (data) => {
       let msg;
       try { msg = JSON.parse(data); } catch { return; }
@@ -117,9 +118,13 @@ export function attachDogPark(httpServer) {
     }
   }, TICK_MS);
 
-  // Drop dogs whose connection silently died.
+  // Drop dogs whose connection silently died (phone went to sleep, Wi-Fi dropped…).
   setInterval(() => {
-    for (const ws of wss.clients) ws.ping();
+    for (const ws of wss.clients) {
+      if (ws.isAlive === false) { ws.terminate(); continue; }
+      ws.isAlive = false;
+      ws.ping();
+    }
   }, 10000);
 
   return wss;
