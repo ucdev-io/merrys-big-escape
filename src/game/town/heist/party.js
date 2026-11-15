@@ -79,7 +79,7 @@ export class BbqParty {
     const pm = puff();
     this.smoke = new THREE.InstancedMesh(pm.geometry, pm.material, PUFFS);
     this.smoke.visible = false;
-    this.smoke.frustumCulled = false;
+    this.smoke.boundingSphere = new THREE.Sphere(V(0, 0, 0), 3.5); // (set over the grill when a party starts)
     H.scene.add(this.smoke);
     this.puffs = Array.from({ length: PUFFS }, (_, i) => ({ p: V(0, 0, 0), t: (i / PUFFS) * SMOKE_LIFE }));
     this.smokeAt = V(0, 0, 0);
@@ -134,6 +134,7 @@ export class BbqParty {
     for (const { mesh } of Object.values(this.food)) { mesh.visible = true; mesh.computeBoundingSphere(); }
     this.smokeAt.set(S.grill.x - 0.32 * c, 0.65, S.grill.z + 0.32 * s); // (from the end of the grill, not in the cook's face)
     for (const q of this.puffs) q.p.set(this.smokeAt.x + q.t * 0.15, 0.65 + q.t * RISE, this.smokeAt.z);
+    this.smoke.boundingSphere.center.set(this.smokeAt.x + 0.4, 2.8, this.smokeAt.z);
     this.smoke.visible = true;
   }
 

@@ -3,7 +3,8 @@ import { Lookout } from './lookout.js';
 import { butcher as butcherPerson } from './people.js';
 import { SausageString, STRING_LENGTH } from './links.js';
 import { heistSfx } from './sounds.js';
-import { mesh } from '../../../world/props.js';
+import { paint } from '../../../render/watercolorMaterial.js';
+import { bakeParts } from '../../../entities/treats.js';
 import { LINKS } from '../../heistRules.js';
 import { BUTCHER, GETAWAY, TUG, SNEAKY, OOPS } from '../../lines/heists.js';
 import { buzz } from '../../../core/haptics.js';
@@ -17,11 +18,13 @@ function crank(c) {
   const g = new THREE.Group();
   g.position.set(c.x, c.y, c.z);
   g.rotation.y = c.ry;
-  const arm = new THREE.Group();
+  const arm = new THREE.Mesh(bakeParts([
+    [new THREE.CylinderGeometry(0.013, 0.013, 0.05, 8), 0x8a8f96, [0.01, 0, 0], [0, 0, Math.PI / 2]],
+    [new THREE.CapsuleGeometry(0.011, 0.11, 4, 8), 0x8a8f96, [0.035, 0.06, 0]],
+    [new THREE.CapsuleGeometry(0.018, 0.04, 4, 10), 0x3a3a3a, [0.065, 0.12, 0], [0, 0, Math.PI / 2]],
+  ]), paint(0xffffff, { vertexColors: true }));
+  arm.castShadow = true;
   g.add(arm);
-  mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.05, 8), 0x8a8f96, arm, [0.01, 0, 0], [0, 0, Math.PI / 2]);
-  mesh(new THREE.CapsuleGeometry(0.011, 0.11, 4, 8), 0x8a8f96, arm, [0.035, 0.06, 0]);
-  mesh(new THREE.CapsuleGeometry(0.018, 0.04, 4, 10), 0x3a3a3a, arm, [0.065, 0.12, 0], [0, 0, Math.PI / 2]);
   g.userData.arm = arm;
   return g;
 }
