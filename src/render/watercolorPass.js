@@ -241,9 +241,10 @@ export class WatercolorPipeline {
     if (this.qualityCooldown > 0 || this.frameTimes.length < 60) return;
     const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
     if (avg > 1 / 45) {
-      if (p.radius > 2) p.radius--;
-      else if (p.renderScale > 0.45) { p.renderScale = Math.max(0.45, p.renderScale - 0.1); this.setSize(this.outW, this.outH); }
-      else if (p.radius > 1) p.radius--;
+      // Cheapest-looking losses first; keep the image sharp as long as possible.
+      if (p.radius > 1) p.radius--;
+      else if (p.renderScale > 0.5) { p.renderScale = Math.max(0.5, p.renderScale - 0.05); this.setSize(this.outW, this.outH); }
+      else this.onTooSlow?.();
       this.frameTimes.length = 0;
       this.qualityCooldown = 2;
     }

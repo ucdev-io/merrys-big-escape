@@ -17,7 +17,8 @@ const isMobile = matchMedia('(pointer: coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-const pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 1.25 : 1.5);
+// Phones have ~3x screens; 2x keeps them crisp. Auto-quality may step this down if the phone struggles.
+let pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 1.5);
 
 const pipeline = new WatercolorPipeline(renderer, { quality: isMobile ? 'low' : 'high' });
 
@@ -58,9 +59,28 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
+pipeline.onTooSlow = () => {
+  if (pixelRatio > 1.25) { pixelRatio = Math.max(1.25, pixelRatio - 0.25); resize(); }
+};
 // Storybook is the chosen look; add ?styles to the URL to compare the others.
 if (location.search.includes('styles')) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
 else applyStyle(pipeline, 'storybook');
+// Small screens: the paper texture and border read heavier, so go lighter.
+if (isMobile) Object.assign(pipeline.params, { paper: 0.45, vignette: 0.4, granulation: 0.4 });
+
+// ?debug shows the live quality settings.
+if (location.search.includes('debug')) {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;left:8px;bottom:8px;font:12px monospace;background:#fff8;padding:2px 6px;z-index:9;pointer-events:none';
+  document.body.appendChild(d);
+  let frames = 0, last = performance.now();
+  setInterval(() => {
+    const now = performance.now(), fps = (frames * 1000) / (now - last); frames = 0; last = now;
+    const p = pipeline.params;
+    d.textContent = `fps ${fps.toFixed(0)} · dpr ${pixelRatio} · paint ${p.renderScale.toFixed(2)} · blobs ${p.radius}`;
+  }, 1000);
+  (function count() { frames++; requestAnimationFrame(count); })();
+}
 
 const hud = new HUD(camera);
 createTouchControls(input);
