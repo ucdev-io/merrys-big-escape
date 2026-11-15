@@ -280,7 +280,7 @@ export class YardChapter {
     if (canAct && input.bark && this.barkCD <= 0) {
       this.barkCD = 0.5;
       P.dog.bark();
-      sfx.bark();
+      sfx.bark(P.dog.breed.bark);
       this.hud.float('WOOF!', this.merryAnchor());
       this.reactToBark();
     }

@@ -350,5 +350,7 @@ export function skyDome(radius = 160) {
   });
   const m = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 16), mat);
   m.renderOrder = -1;
+  m.name = 'sky';
+  m.frustumCulled = false;
   return m;
 }

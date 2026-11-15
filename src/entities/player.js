@@ -6,8 +6,10 @@ const RAMP_TIME = 0.9; // seconds of zoomies to go from trot to full gallop
 
 // Turns input into motion for Merry, relative to the camera's view.
 export class Player {
-  constructor() {
-    this.dog = new Dog();
+  constructor(breedKey = 'merry') {
+    this.dog = new Dog(breedKey);
+    this.breedKey = breedKey;
+    this.mult = this.dog.breed.speed;
     this.object = this.dog.root;
     this.pos = this.object.position;
     this.vel = new THREE.Vector2();
@@ -23,14 +25,28 @@ export class Player {
     this.ignoreBounds = false;
   }
 
+  /** Swap to a different dog (lobby), keeping position and facing. */
+  setBreed(key) {
+    const parent = this.object.parent, pos = this.pos.clone();
+    parent?.remove(this.object);
+    this.dog = new Dog(key);
+    this.breedKey = key;
+    this.mult = this.dog.breed.speed;
+    this.object = this.dog.root;
+    this.pos = this.object.position;
+    this.pos.copy(pos);
+    this.object.rotation.y = this.heading;
+    parent?.add(this.object);
+  }
+
   update(dt, input, cameraYaw, world) {
     let mv = this.frozen ? { x: 0, y: 0 } : input.move();
     const sniffing = !this.frozen && input.sniff;
     let wantRun = !this.frozen && input.sprint && this.stamina > 0.05;
     // Zoomies build up: trot first, then stretch out into a full gallop.
     this.zoom = wantRun && Math.hypot(mv.x, mv.y) > 0.1 ? Math.min(1, this.zoom + dt / RAMP_TIME) : Math.max(0, this.zoom - dt * 2.5);
-    const runSpeed = TROT + (RUN - TROT) * this.zoom * this.zoom;
-    let max = sniffing ? WALK * 0.4 : wantRun ? runSpeed : WALK;
+    const runSpeed = (TROT + (RUN - TROT) * this.zoom * this.zoom) * this.mult;
+    let max = sniffing ? WALK * 0.4 * this.mult : wantRun ? runSpeed : WALK * this.mult;
 
     // Camera-relative direction (camera looks toward -forward).
     const fx = -Math.sin(cameraYaw), fz = -Math.cos(cameraYaw);

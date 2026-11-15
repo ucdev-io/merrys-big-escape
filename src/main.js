@@ -14,6 +14,7 @@ import { TownChapter } from './game/townChapter.js';
 import { generateTown, randomSeed } from './world/town/generator.js';
 import { buildTown } from './world/town/builders.js';
 import { loadSave, writeSave } from './core/save.js';
+import { NetClient } from './net/client.js';
 
 const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
@@ -46,11 +47,27 @@ paintUniforms.uSunIntensity.value = sun.intensity;
 // Which chapter? ?town or ?seed=CODE in the URL jumps straight to the neighbourhood.
 const params = new URLSearchParams(location.search);
 const save = loadSave();
-const inTown = params.has('town') || params.has('seed') || save.chapter === 'town';
+const inTown = params.has('town') || params.has('seed') || params.has('room') || save.chapter === 'town';
+
+// Arriving with ?room=CODE: join that pack first, because the pack decides which town we're in.
+let net = null, welcome = null;
+if (inTown && params.has('room')) {
+  const profile = save.profile ?? { breed: 'merry', name: 'Merry' };
+  try {
+    net = new NetClient();
+    welcome = await net.enter('join', { code: params.get('room'), name: profile.name, breed: profile.breed });
+    writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
+  } catch (e) {
+    net = null;
+    history.replaceState(null, '', location.pathname);
+    console.warn('Could not join pack:', e.message);
+  }
+}
+
 let world;
 if (inTown) {
-  const seed = (params.get('seed') || save.town?.seed || randomSeed()).toUpperCase();
-  if (save.town?.seed !== seed) writeSave({ chapter: 'town', town: { seed, discovered: [] } });
+  const seed = (welcome?.seed || params.get('seed') || loadSave().town?.seed || randomSeed()).toUpperCase();
+  if (loadSave().town?.seed !== seed) writeSave({ chapter: 'town', town: { seed, discovered: [] } });
   world = buildTown(generateTown(seed));
   scene.fog.near = 30;
   scene.fog.far = 120;
@@ -61,7 +78,8 @@ scene.add(world.group);
 world.attach?.(scene);
 
 const input = new Input();
-const player = new Player();
+// In town you can be any dog; the garden chapter is always Merry's story.
+const player = new Player(inTown ? (save.profile?.breed ?? 'merry') : 'merry');
 player.pos.copy(world.spawn);
 if (world.spawnFace !== undefined) { player.heading = world.spawnFace; follow.yaw = world.spawnFace + Math.PI; }
 scene.add(player.object);
@@ -103,7 +121,9 @@ if (location.search.includes('debug')) {
 
 const hud = new HUD(camera);
 createTouchControls(input);
-const chapter = new (inTown ? TownChapter : YardChapter)({ scene, world, player, hud, input, follow, pipeline });
+const chapter = inTown
+  ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome })
+  : new YardChapter({ scene, world, player, hud, input, follow, pipeline });
 
 // Style tuning panel: add ?tune to the URL.
 if (location.search.includes('tune')) {
@@ -145,6 +165,7 @@ if (location.search.includes('tune')) {
   });
 }
 
+const sky = scene.getObjectByName('sky');
 const timer = new THREE.Timer();
 function frame(now) {
   timer.update(now);
@@ -156,6 +177,8 @@ function frame(now) {
   hud.update(dt);
   world.update(t, player.pos);
   follow.update(dt, player.pos, player.heading, player.speed);
+
+  sky?.position.copy(camera.position);
 
   // Keep the shadow camera centred on the dog.
   sun.target.position.copy(player.pos);

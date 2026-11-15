@@ -66,11 +66,11 @@ function noise(dur, vol, type, freq, q = 1, delay = 0, freqEnd) {
 }
 
 export const sfx = {
-  bark() {
-    const p = 0.9 + Math.random() * 0.2;
+  bark(pitch = 1, vol = 1) {
+    const p = (0.9 + Math.random() * 0.2) * pitch;
     for (const [d, f] of [[0, 520], [0.16, 470]]) {
-      tone('sawtooth', f * p, 170 * p, 0.12, 0.28, d, { type: 'lowpass', freq: 1400, q: 4 });
-      noise(0.07, 0.18, 'bandpass', 900, 2, d);
+      tone('sawtooth', f * p, 170 * p, 0.12 / Math.sqrt(pitch), 0.28 * vol, d, { type: 'lowpass', freq: 1400 * pitch, q: 4 });
+      noise(0.07, 0.18 * vol, 'bandpass', 900 * pitch, 2, d);
     }
   },
   sniff() {

@@ -146,3 +146,44 @@ body.touch-mode .stamina { bottom: 180px; }
 .compass .arrow { font-size: 26px; line-height: 1; transition: transform 0.15s linear; color: #c9783a; }
 .compass .label { font-size: 18px; white-space: nowrap; }
 @media (max-width: 600px) { .compass { top: auto; bottom: 200px; } }
+
+/* Lobby: sits to the right so your dog stays visible on the left */
+.lobby { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; padding: 16px; pointer-events: none; }
+.lobby .page { pointer-events: auto; max-width: 470px; margin-right: 4vw; }
+.lobby h1 { font-weight: normal; font-size: 36px; margin: 0; }
+.lobby .sub { margin: 0 0 10px; font-size: 18px; opacity: 0.8; }
+.lobby .breeds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lobby .breed {
+  cursor: pointer; background: #fbf3e2; border: 2px solid rgba(59, 43, 37, 0.2); border-radius: var(--wobbly);
+  padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.lobby .breed.active { border-color: var(--ink); background: var(--accent); }
+.lobby .sw { display: flex; }
+.lobby .sw i { width: 16px; height: 16px; border-radius: 50%; margin: 0 -2px; border: 1.5px solid rgba(59, 43, 37, 0.35); display: inline-block; }
+.lobby .bn { font-size: 20px; }
+.lobby .bb { font-size: 14px; opacity: 0.7; }
+.lobby .blurb { font-size: 17px; min-height: 22px; margin: 8px 0; }
+.lobby .name { font-size: 18px; display: inline-flex; gap: 8px; align-items: center; }
+.lobby input {
+  font: inherit; font-size: 20px; color: var(--ink); background: #fffaf0; border: 2px solid rgba(59, 43, 37, 0.3);
+  border-radius: 12px; padding: 3px 10px; width: 170px; user-select: text; -webkit-user-select: text;
+}
+.lobby .join-row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.lobby .join-row input { width: 210px; text-transform: uppercase; }
+.lobby .err { color: #b4443a; min-height: 20px; margin: 6px 0 0; font-size: 17px; }
+.lobby .small { font-size: 16px; opacity: 0.8; }
+.lobby .link { background: none; border: none; cursor: pointer; font-size: 16px; text-decoration: underline; padding: 0; }
+.lobby.busy .page { opacity: 0.7; }
+@media (max-width: 700px) {
+  .lobby { align-items: flex-end; justify-content: center; padding: 8px; }
+  .lobby .page { margin: 0; max-height: 62vh; padding: 12px 14px; }
+  .lobby h1 { font-size: 28px; }
+  .lobby .bn { font-size: 17px; }
+}
+
+/* Other players */
+.name-tag {
+  position: absolute; left: 0; top: 0; font-size: 16px; padding: 1px 8px; white-space: nowrap;
+  background: rgba(255, 250, 240, 0.85); border: 1.5px solid rgba(59, 43, 37, 0.4); border-radius: 10px;
+}
+.pack-badge { font-size: 17px; }

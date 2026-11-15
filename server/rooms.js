@@ -1,0 +1,126 @@
+// Dog Park multiplayer: rooms ("packs") relay dog positions and share one adventure.
+// Trust model: home Wi-Fi play, so clients own their own dog's position; the server only
+// validates shapes/sizes, relays, and keeps the shared quest state for each pack.
+import { WebSocketServer } from 'ws';
+
+const BREEDS = ['merry', 'pippin', 'teddy', 'waffles', 'bramble', 'dotty'];
+const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
+const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80;
+
+const rooms = new Map();
+let nextId = 1;
+
+const cleanName = (s) => String(s ?? '').replace(/[^A-Za-z0-9 '\-]/g, '').trim().slice(0, 14) || 'Doggo';
+const cleanSeed = (s) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 32);
+const cleanId = (s) => String(s ?? '').replace(/[^a-z0-9_\-]/gi, '').slice(0, 24);
+const num = (v, lim = 1e4) => (Number.isFinite(v) && Math.abs(v) < lim ? Math.round(v * 100) / 100 : 0);
+
+function makeCode() {
+  for (let i = 0; i < 100; i++) {
+    const code = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${10 + Math.floor(Math.random() * 90)}`;
+    if (!rooms.has(code)) return code;
+  }
+  return null;
+}
+
+const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
+const broadcast = (room, msg, except) => { for (const p of room.players.values()) if (p !== except) send(p.ws, msg); };
+const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed });
+
+function welcome(room, p) {
+  send(p.ws, {
+    t: 'welcome', id: p.id, code: room.code, seed: room.seed,
+    players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
+    shared: { discovered: [...room.discovered] },
+  });
+  broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
+}
+
+function leave(p) {
+  const room = p.room;
+  if (!room) return;
+  room.players.delete(p.id);
+  broadcast(room, { t: 'leave', id: p.id });
+  if (room.players.size === 0) rooms.delete(room.code);
+  p.room = null;
+}
+
+function onMessage(p, msg) {
+  if (!msg || typeof msg.t !== 'string') return;
+  const room = p.room;
+  switch (msg.t) {
+    case 'create': {
+      if (room) return;
+      if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
+      const code = makeCode();
+      const seed = cleanSeed(msg.seed);
+      if (!code || !seed) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
+      const r = { code, seed, players: new Map(), discovered: new Set((Array.isArray(msg.discovered) ? msg.discovered : []).slice(0, 20).map(cleanId)) };
+      rooms.set(code, r);
+      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r });
+      r.players.set(p.id, p);
+      return welcome(r, p);
+    }
+    case 'join': {
+      if (room) return;
+      const r = rooms.get(String(msg.code ?? '').toUpperCase().trim());
+      if (!r) return send(p.ws, { t: 'error', msg: 'No pack with that code. Check the code and try again!' });
+      if (r.players.size >= MAX_PLAYERS) return send(p.ws, { t: 'error', msg: 'That pack is full (8 dogs max).' });
+      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r });
+      r.players.set(p.id, p);
+      return welcome(r, p);
+    }
+    case 's': // my dog's state
+      if (!room) return;
+      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 15];
+      p.dirty = true;
+      return;
+    case 'act': // bark / dig — instant, relay to the others
+      if (!room || !['bark', 'dig', 'shake'].includes(msg.a)) return;
+      return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
+    case 'ev': { // shared adventure progress
+      if (!room || !msg.ev || msg.ev.type !== 'discover') return;
+      const id = cleanId(msg.ev.id);
+      if (!id || room.discovered.has(id)) return;
+      room.discovered.add(id);
+      return broadcast(room, { t: 'ev', by: p.id, name: p.name, ev: { type: 'discover', id } });
+    }
+  }
+}
+
+/** Attach the Dog Park to an HTTP server, answering WebSocket upgrades on /ws. */
+export function attachDogPark(httpServer) {
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  httpServer.on('upgrade', (req, socket, head) => {
+    if (!req.url || !req.url.startsWith('/ws')) return; // leave other upgrades (e.g. Vite HMR) alone
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
+  });
+
+  wss.on('connection', (ws) => {
+    const p = { id: nextId++, ws, room: null, name: 'Doggo', breed: 'merry', state: null, dirty: false, alive: true };
+    ws.on('pong', () => (p.alive = true));
+    ws.on('message', (data) => {
+      let msg;
+      try { msg = JSON.parse(data); } catch { return; }
+      onMessage(p, msg);
+    });
+    ws.on('close', () => leave(p));
+    ws.on('error', () => leave(p));
+  });
+
+  // Position snapshots to every pack ~12 times a second.
+  setInterval(() => {
+    for (const room of rooms.values()) {
+      const states = [];
+      for (const p of room.players.values()) if (p.state) states.push(p.state);
+      if (states.length) broadcast(room, { t: 'ss', p: states });
+    }
+  }, TICK_MS);
+
+  // Drop dogs whose connection silently died.
+  setInterval(() => {
+    for (const ws of wss.clients) ws.ping();
+  }, 10000);
+
+  return wss;
+}
