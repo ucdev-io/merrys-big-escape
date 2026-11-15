@@ -12,6 +12,7 @@ import { CHALLENGES } from '../src/game/challenges.js';
 import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
 import { seasonOpen, seasonWelcome, seasonMessage, seasonLeave, seasonTick } from './seasons.js';
 import { cleanDen, DEN_MAX, STICK_GAP_MS } from '../src/game/denRules.js';
+import { farmMessage, farmLeave } from './farm.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
@@ -196,6 +197,7 @@ function leave(p) {
   broadcast(room, { t: 'leave', id: p.id });
   heistLeave(room, p, send, broadcast);
   seasonLeave(room, p, send, broadcast);
+  farmLeave(room, p, send, broadcast);
   const g = room.game;
   if (g && !g.over && room.players.size) {
     if (g.kind === 'tag' && g.it === p.id) { // "it" went home: someone else is it now
@@ -283,6 +285,9 @@ function onMessage(p, msg) {
       room.world.den = Math.min(DEN_MAX, (room.world.den ?? 0) + 1);
       touchWorld(room.world);
       return broadcast(room, { t: 'woods', a: 'den', n: room.world.den, by: p.id, name: p.name });
+    case 'farm': // 🚜 the sheep (run by one dog's game for everyone) and round-ups, kept with the town (see farm.js)
+      if (room) farmMessage(room, p, msg, send, broadcast);
+      return;
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;
       p.carry = msg.item ? cleanId(msg.item) : null;

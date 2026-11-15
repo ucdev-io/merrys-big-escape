@@ -79,6 +79,7 @@ export class Pack {
     net.on('heist', (m) => this.onHeist?.(m));
     net.on('season', (m) => this.onSeason?.(m));
     net.on('woods', (m) => this.onWoods?.(m));
+    net.on('farm', (m) => this.onFarm?.(m));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
