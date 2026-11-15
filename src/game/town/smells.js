@@ -5,6 +5,7 @@ import { blocked } from '../../world/spots.js';
 import { BREEDS } from '../../entities/breeds.js';
 import { LineBag } from '../dialogue.js';
 import { SMELLS, SMELL_WEIGHTS } from '../lines/smells.js';
+import { WOODS_SMELLS, WOODS_SMELL_WEIGHTS } from '../lines/woods.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const H = TOWN.BLOCK / 2;
@@ -12,6 +13,9 @@ const COUNT = 110;               // smells around town at any one time
 const QUIET = [240, 420];        // seconds before a sniffed spot smells of something new
 const DOG_NAMES = Object.values(BREEDS).map((b) => b.dogName);
 const now = () => performance.now() / 1000;
+// Out in the town's areas, spots smell of things from the area's own list (where: the area's kind).
+const AREA_SMELLS = { woods: WOODS_SMELL_WEIGHTS };
+const INFO = { ...SMELLS, ...WOODS_SMELLS };
 
 
 /**
@@ -51,15 +55,18 @@ export class Smells {
         if (rng.chance(0.5)) add(b.x + off, b.z + along, 'any'); else add(b.x + along, b.z + off, 'any');
       } else add(b.x + rng.float(-H + 1, H - 1), b.z + rng.float(-H + 1, H - 1), 'any');
     }
+    // And out in the areas (the woods…): their spots are worked out with the area.
+    for (const a of world.areas ?? []) for (const [x, z] of a.smellSpots ?? []) add(x, z, a.kind);
   }
 
   reroll(s) {
     if (s.where === 'post') s.kind = 'news';
     else if (s.where === 'pond') s.kind = this.rng.pick(['duck', 'frog', 'duck', 'snail', 'flowers']);
     else {
-      const total = Object.values(SMELL_WEIGHTS).reduce((a, b) => a + b, 0);
+      const weights = AREA_SMELLS[s.where] ?? SMELL_WEIGHTS;
+      const total = Object.values(weights).reduce((a, b) => a + b, 0);
       let r = this.rng.float(0, total);
-      for (const [k, w] of Object.entries(SMELL_WEIGHTS)) { r -= w; if (r <= 0) { s.kind = k; break; } }
+      for (const [k, w] of Object.entries(weights)) { r -= w; if (r <= 0) { s.kind = k; break; } }
       s.kind ??= 'chips';
     }
   }
@@ -97,7 +104,7 @@ export class Smells {
       if (!found && d2 < 1.3 * 1.3) found = s;
     }
     if (!found) return null;
-    const info = SMELLS[found.kind];
+    const info = INFO[found.kind];
     this.bags[found.kind] ??= new LineBag(info.lines);
     const others = DOG_NAMES.filter((n) => n !== myName);
     const line = this.bags[found.kind].next().replaceAll('{dog}', others[Math.floor(Math.random() * others.length)]);

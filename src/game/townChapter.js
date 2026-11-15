@@ -22,6 +22,8 @@ import { TownGames } from './town/games.js';
 import { Heists } from './town/heists.js';
 import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
+import { AREA_BLURBS } from '../world/areas/areas.js';
+import { Woods } from './town/woods/index.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -31,6 +33,7 @@ const BLURBS = {
   pond: 'It smells VERY ducky round here.',
   bakery: 'Sausages and warm bread. This must be heaven.',
   alley: 'Bins. Glorious, stinky bins.',
+  ...AREA_BLURBS, // (the Woods…)
 };
 
 /**
@@ -43,7 +46,7 @@ export class TownChapter {
     this.layout = world.layout;
     const save = loadSave();
     const same = save.town?.seed === this.layout.seed;
-    this.state = { seed: this.layout.seed, discovered: same ? save.town.discovered ?? [] : [], bones: same ? save.town.bones ?? [] : [] };
+    this.state = { seed: this.layout.seed, discovered: same ? save.town.discovered ?? [] : [], bones: same ? save.town.bones ?? [] : [], den: same ? save.town.den ?? 0 : 0 };
     this.places = this.layout.places.filter((p) => p.type !== 'home');
     this.time = 0;
 
@@ -93,7 +96,7 @@ export class TownChapter {
       hud, remotes: this.remotes,
       me: () => ({ name: this.profile().name, breed: this.player.breedKey, level: progress.level, look: progress.look, profile: progress.id }),
       seed: () => this.layout.seed,
-      progress: () => ({ discovered: this.state.discovered, bones: this.state.bones }),
+      progress: () => ({ discovered: this.state.discovered, bones: this.state.bones, den: this.state.den }),
       onWelcome: (w, { rejoin }) => this.onWelcome(w, rejoin),
       onEvent: (ev, byName) => this.applyEvent(ev, byName),
       onMischief: (m) => (m.a === 'scatter' ? this.actions.remoteScatter(m.id, m.x) : this.actions.mischief.remote(m)),
@@ -113,6 +116,15 @@ export class TownChapter {
     // Heists: cheeky food raids on the bakery street, on your own or as a team.
     this.heists = new Heists({ scene, world, hud, player, actions: this.actions, pack: this.pack, remotes: this.remotes, dogName: () => this.profile().name });
     this.pack.onHeist = (m) => this.heists.handle(m);
+    // 🌲 The Woods, out past the edge of town: the owl, Brock the badger, big sticks for the den, mud.
+    const woods = world.areas?.find((a) => a.kind === 'woods');
+    if (woods) {
+      this.woods = new Woods({
+        scene, world, area: woods, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
+        dogName: () => this.profile().name, den: this.state.den, onDen: (n) => { this.state.den = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
+      });
+      this.pack.onWoods = (m) => this.woods.handle(m);
+    }
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
     hud.setPlaces?.(this.placeList());
@@ -181,6 +193,7 @@ export class TownChapter {
   onWelcome(w, rejoin) {
     for (const id of w.shared.discovered) if (!this.state.discovered.includes(id)) this.state.discovered.push(id);
     for (const id of w.shared.bones ?? []) if (!this.state.bones.includes(id)) { this.state.bones.push(id); this.bones.hide(id); }
+    if (w.shared.den !== undefined) this.woods?.setDen(w.shared.den, { quiet: true }); // (the pack's den, built by everyone)
     this.hud.setPlaces?.(this.placeList());
     this.refreshObjective();
     if (!rejoin) this.goHome(w.slot ?? 0);
@@ -328,12 +341,13 @@ export class TownChapter {
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? 'dig');
-    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint);
+    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
-    // Discover places by walking into them.
+    // Discover places by walking into them (an area's place: by going in past its gate).
     for (const p of this.places) {
-      if (!this.state.discovered.includes(p.id) && Math.abs(pos.x - p.x) < TOWN.BLOCK / 2 && Math.abs(pos.z - p.z) < TOWN.BLOCK / 2) {
+      const r = p.rect, inside = r ? pos.x > r.x0 && pos.x < r.x1 && pos.z > r.z0 && pos.z < r.z1 : Math.abs(pos.x - p.x) < TOWN.BLOCK / 2 && Math.abs(pos.z - p.z) < TOWN.BLOCK / 2;
+      if (!this.state.discovered.includes(p.id) && inside) {
         this.dispatch({ type: 'discover', id: p.id });
       }
     }
@@ -351,6 +365,7 @@ export class TownChapter {
     const acted = this.actions.update(dt, { canAct, goal, onBark: () => this.friends.onBark(pos) });
     this.life.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
+    if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
     if (this.pond) { // frogs croak as you get near the pond
       const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));
       music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });
@@ -362,7 +377,7 @@ export class TownChapter {
 
     // Compass: toward a game's next target, home with loot, whatever the current job needs, a BBQ party, or the next place to discover.
     // (A job can point the compass somewhere else — near, not on, something to sniff out — or hide it.)
-    const race = this.games.update(dt), loot = this.heists.target(), bbq = this.heists.partyTarget(); // (loot: carrying something home to the stash)
+    const race = this.games.update(dt), loot = this.heists.target() ?? this.woods?.target(), bbq = this.heists.partyTarget(); // (loot: carrying something home to the stash, or a big stick to the den)
     const jc = job && job.compass !== false ? job.compass ?? job.pos : null;
     const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : loot ? { x: loot.pos.x, z: loot.pos.z, label: loot.label }
       : job ? jc && { x: jc.x, z: jc.z, label: job.label ?? job.emoji } : bbq ? { x: bbq.pos.x, z: bbq.pos.z, label: bbq.label }

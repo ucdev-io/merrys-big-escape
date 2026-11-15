@@ -73,6 +73,7 @@ export class RemoteDogs {
       const d = this.getListener().distanceTo(r.dog.root.position);
       if (d < 40) sfx.bark(r.dog.breed.bark, Math.max(0.15, 1 - d / 40));
       this.hud.float('WOOF!', anchor);
+      this.onBark?.(r.dog.root.position); // (an owl in the wood might hear it)
     } else if (a === 'dig') r.digT = 0.35;
     else if (a === 'shake') r.dog.shake();
   }
@@ -123,6 +124,8 @@ export class RemoteDogs {
       if (!inW && r.inW) r.shakeIn = 0.5;
       if (r.shakeIn > 0 && !inW) { r.shakeIn -= dt; if (r.shakeIn <= 0) this.onShake?.(r.dog, root.position); }
       r.inW = inW;
+      const mud = (c.f >> 5) & 3; // how muddy they are (the Woods)
+      if (mud !== (r.mud ?? 0)) { r.mud = mud; this.onMud?.(r.dog, mud); }
 
       // Name tag floats above the dog.
       const s = this.hud.project(root.position.clone().add(new THREE.Vector3(0, 0.9 * r.dog.breed.size, 0)));
