@@ -52,7 +52,10 @@ class Progress {
   }
   get toNext() { return xpForLevel(this.level + 1) - this.xp; }
 
-  isUnlocked(id) { return (COSMETIC[id]?.level ?? 999) <= this.level; }
+  isUnlocked(id) {
+    const c = COSMETIC[id];
+    return !!c && c.level <= this.level && (!c.friend || (this.stats[c.friend] ?? 0) >= c.jobs);
+  }
 
   /** Add XP. Tells listeners { amount, reason, levelUp: newLevel|null, unlocked: [cosmetics] }. */
   award(amount, reason) {

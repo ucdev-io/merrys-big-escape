@@ -4,7 +4,7 @@ import { setMuted, isMuted } from '../core/audio.js';
 import { toggleFullscreen, isFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
 import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { progress } from '../game/progress.js';
-import { COSMETICS, SLOTS } from '../game/cosmetics.js';
+import { COSMETICS, SLOTS, FRIEND_NAMES } from '../game/cosmetics.js';
 import { STATS, levelStats, outfitStats, boostText } from '../game/stats.js';
 import { loadSave } from '../core/save.js';
 import { sfx } from '../core/audio.js';
@@ -146,13 +146,16 @@ export class HUD {
         const items = el('div', 'witems');
         const opt = (text, id, ok, lockLevel, boost) => {
           const b = el('button', `witem${progress.look[slot] === id ? ' on' : ''}`);
-          b.innerHTML = ok ? text : `🔒<small>Lv ${lockLevel}</small><small class="wb">${boostText(boost)}</small>`;
+          b.innerHTML = ok ? text : `🔒<small>${lockLevel}</small><small class="wb">${boostText(boost)}</small>`;
           b.disabled = !ok;
           b.onclick = () => { progress.equip(slot, id); render(); };
           items.appendChild(b);
         };
         opt('🚫<small>None</small>', null, true);
-        for (const c of COSMETICS.filter((q) => q.slot === slot)) opt(`${c.emoji}<small>${c.name}</small><small class="wb">${boostText(c.boost)}</small>`, c.id, progress.isUnlocked(c.id), c.level, c.boost);
+        for (const c of COSMETICS.filter((q) => q.slot === slot)) {
+          const lock = c.friend ? `Help ${FRIEND_NAMES[c.friend]} ×${c.jobs}` : `Lv ${c.level}`;
+          opt(`${c.emoji}<small>${c.name}</small><small class="wb">${boostText(c.boost)}</small>`, c.id, progress.isUnlocked(c.id), lock, c.boost);
+        }
         row.appendChild(items);
         w.appendChild(row);
       }
@@ -190,11 +193,13 @@ export class HUD {
 
   showHelp() {
     const keys = `<h3>⌨️ Keyboard</h3><p class="help-keys"><b>WASD</b> or arrows: walk · <b>Shift</b>: zoomies · <b>Space</b>: jump<br>
-      hold <b>F</b>: sniff · <b>E</b>: dig · <b>Q</b>: woof · drag the mouse to look · scroll to zoom</p>`;
+      hold <b>F</b>: sniff · <b>E</b>: dig / grab / drop · <b>Q</b>: woof · drag the mouse to look · scroll to zoom</p>`;
     const touch = `<h3>📱 Touch</h3><p class="help-keys">Drag on the <b>left</b> to walk (push far for zoomies) · drag on the <b>right</b> to look · pinch to zoom<br>
       🦘 Jump · hold 👃 Sniff · 🐾 Dig · 🗣️ Woof · hold 💨 Zoom</p>`;
     this.showCard(`<h1>How to play</h1>${isTouchDevice() ? touch + keys : keys + touch}
       <h3>🐾 Tips</h3><ul class="help-tips">
+        <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, <b>Duchess</b> at the pond keeps losing her ducklings, and the <b>Lost &amp; Found board</b> by your gate has neighbours' lost things to take home. The compass points the way.</li>
+        <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>
@@ -227,6 +232,14 @@ export class HUD {
     const icon = { speed: '⚡', jump: '🦘', zoomies: '💨' };
     this.boosts.innerHTML = Object.entries(b).filter(([, v]) => v > 0)
       .map(([k, v]) => `<span class="boost${v < 3.5 ? ' ending' : ''}">${icon[k]} ${Math.ceil(v)}</span>`).join('');
+  }
+
+  /** The 🐾 touch button says what it'll do: 'dig' | 'grab' | 'drop'. */
+  setPawAction(act = 'dig') {
+    if (act === this._pawAct) return;
+    this._pawAct = act;
+    const b = document.querySelector('.touch [data-b="dig!"]');
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */

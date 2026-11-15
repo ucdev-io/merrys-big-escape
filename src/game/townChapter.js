@@ -14,6 +14,7 @@ import { Pack } from './town/pack.js';
 import { progress } from './progress.js';
 import { Smells } from './town/smells.js';
 import { Traffic } from '../systems/traffic.js';
+import { Friends } from './town/friends.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -53,6 +54,10 @@ export class TownChapter {
     // Things to sniff out all over town, and cars pottering round the streets.
     this.smells = new Smells(world, this.layout.seed);
     this.traffic = new Traffic(scene, { seed: this.layout.seed, hud, avoid: world.spawn });
+    // Friends who need a hand: Gus in the park, Duchess at the pond, and the Lost & Found board.
+    this.friends = new Friends({ scene, world, hud, actions: this.actions, player, seed: this.layout.seed, dogName: () => this.profile().name });
+    this.friends.onChange = () => this.refreshObjective();
+    this.actions.onCarry = (kind) => { this.pack.sendCarry(kind); this.refreshObjective(); };
 
     // Other players' dogs (paddling, splashing and shaking too).
     this.remotes = new RemoteDogs(scene, hud, () => this.player.pos);
@@ -191,10 +196,12 @@ export class TownChapter {
 
   refreshObjective() {
     const n = this.state.discovered.length, total = this.places.length;
+    const job = this.friends?.objective();
+    if (job) { this.hud.setObjective(job.title, job.sub, { icon: job.icon, short: job.icon }); return; }
     const nb = this.state.bones.length, tb = this.bones?.count ?? 0;
     const bones = tb ? `✨🦴 Golden bones found: <b>${nb}/${tb}</b>` : '';
     if (n < total) this.hud.setObjective(`Explore ${this.layout.name}! Places found <b>${n}/${total}</b>`, bones, { icon: '🗺️', short: `${n}/${total}` });
-    else this.hud.setObjective(`You know every corner of ${this.layout.name}! 🎉`, nb < tb ? `Can you reach all the golden bones? ${nb}/${tb} 🦘` : 'New friends are coming soon…', { icon: '🦴', short: `${nb}/${tb}` });
+    else this.hud.setObjective(`You know every corner of ${this.layout.name}! 🎉`, nb < tb ? `Can you reach all the golden bones? ${nb}/${tb} 🦘` : 'Gus (in the park) and Duchess (at the pond) could use a hand!', { icon: '🦴', short: `${nb}/${tb}` });
   }
 
   onBone(id, byName) {
@@ -270,7 +277,11 @@ export class TownChapter {
     // Golden bones.
     const b = this.bones.update(dt, this.time, pos, this.actions.glow, { onFriend: P.onFriend });
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
-    if (canAct) this.hud.setPrompt(b.hint);
+    // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
+    const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
+    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? 'dig');
+    if (canAct) this.hud.setPrompt(paw?.text ?? b.hint);
+    this.friends.update(dt, P, canAct);
 
     // Discover places by walking into them.
     for (const p of this.places) {
@@ -283,23 +294,28 @@ export class TownChapter {
     // the next place to discover). Then dig, bark, splash, mischief.
     const found = this.smells.update(dt, { nose: this.actions.nose(), sniffing: canAct && this.input.sniff, glow: this.actions.glow, myName: this.profile().name });
     if (found) this.onSmell(found);
-    const smell = this.smells.nearest(pos, 30);
+    // (A job's target counts too: Gus's slipper, a lost duckling… whichever's closest.)
+    const smell = this.smells.nearest(pos, 30), job = this.friends.target();
+    const ds = smell ? Math.hypot(smell.x - pos.x, smell.z - pos.z) : Infinity;
+    const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
-    this.actions.update(dt, { canAct, goal: smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null });
+    const goal = job && (dj <= ds || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
+    this.actions.update(dt, { canAct, goal });
 
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
 
-    // Compass toward the next place.
-    if (next && canAct) {
+    // Compass: toward whatever the current job needs (or else the next place to discover).
+    const aim = job ? { x: job.pos.x, z: job.pos.z, label: job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
+    if (aim && canAct) {
       const yaw = this.follow.yaw;
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
-      const dx = next.place.x - pos.x, dz = next.place.z - pos.z;
+      const dx = aim.x - pos.x, dz = aim.z - pos.z;
       const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
       this.compass.classList.remove('hidden');
       this.compass.firstChild.style.transform = `rotate(${ang - Math.PI / 2}rad)`;
-      this.compass.lastChild.innerHTML = `${PLACE_EMOJI[next.place.type]} ??? · ${Math.round(next.dist)}m`;
+      this.compass.lastChild.innerHTML = `${aim.label} · ${Math.round(Math.hypot(dx, dz))}m`;
     } else this.compass.classList.add('hidden');
   }
 }

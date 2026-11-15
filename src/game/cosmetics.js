@@ -14,6 +14,13 @@ export const COSMETICS = [
   { id: 'collar-pink', slot: 'collar', name: 'Pink collar', emoji: '🩷', color: 0xf2a0b4, level: 14, boost: { speed: 3, zoomies: 1 } },
   { id: 'hat-wizard', slot: 'hat', name: 'Wizard hat', emoji: '🧙', color: 0x5a4a9e, level: 18, boost: { speed: 3, zoomies: 3 } },
 ];
+// Thank-you presents from friends: friend = which friend (a stat counting jobs done for them), jobs = how many.
+COSMETICS.push(
+  { id: 'hat-flatcap', slot: 'hat', name: 'Gus’s flat cap', emoji: '🧢', color: 0x8a7a62, level: 1, friend: 'gus', jobs: 3, boost: { zoomies: 2 } },
+  { id: 'neck-bowtie', slot: 'neck', name: 'Duchess’s bow tie', emoji: '🎀', color: 0x5b86c4, level: 1, friend: 'duchess', jobs: 3, style: 'bowtie', boost: { speed: 2 } },
+  { id: 'collar-star', slot: 'collar', name: 'Good Neighbour collar', emoji: '⭐', color: 0x4aa3a0, level: 1, friend: 'helped', jobs: 5, boost: { speed: 1, zoomies: 1 } },
+);
+export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };
 

@@ -281,6 +281,7 @@ export class Dog {
     });
     this.tongue = mesh(SPHERE, 0xe88a8f, H, [0, -0.032, tip - 0.055], [0.3, 0, 0], [0.016, 0.005, 0.028]);
     this.tongue.visible = false;
+    this.mouth = group(H, [0, -0.025, tip - 0.035]); // where carried things go
 
     // Tail.
     this.tail = group(B, [0, 0.03 * gy, -0.37 * len]);
@@ -397,7 +398,12 @@ export class Dog {
 
     if (c('collar')) keep(this.makeCollar(c('collar').color, 0xf2c14e));
 
-    if (c('neck')) {
+    if (c('neck')?.style === 'bowtie') {
+      // A dapper bow tie under the chin.
+      const g = keep(group(this.neck, [0, 0.04 * this.dims.NL, 0.05 * this.dims.nr + F * 1.3], [0.4, 0, 0]));
+      for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.022, 0.04, 4), c('neck').color, g, [s * 0.02, 0, 0], [0, 0, (s * Math.PI) / 2], [1, 1, 0.5]);
+      mesh(SPHERE, c('neck').color, g, [0, 0, 0.004], [0, 0, 0], [0.009, 0.009, 0.008]);
+    } else if (c('neck')) {
       // Bandana: a soft triangle hanging at the front of the chest.
       const g = keep(group(this.body, [0, 0.035 * gy, 0.255 * len + F * 1.4], [0.25, 0, 0]));
       const cone = new THREE.ConeGeometry(0.075, 0.13, 3, 1);
@@ -431,12 +437,29 @@ export class Dog {
           const a = (i / 7) * Math.PI * 2;
           mesh(SPHERE, petals[i % petals.length], g, [Math.cos(a) * 0.04, 0.012, Math.sin(a) * 0.04], [0, 0, 0], [0.012, 0.009, 0.012]);
         }
+      } else if (hat.id === 'hat-flatcap') {
+        mesh(new THREE.SphereGeometry(0.047, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.55, 1.08]);
+        mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.0, 0.024], [0.12, Math.PI, 0], [1, 1, 1.15]);
+        mesh(SPHERE, 0x6a5a48, g, [0, 0.022, 0], [0, 0, 0], [0.006, 0.004, 0.006]);
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);
         for (let i = 0; i < 4; i++) mesh(SPHERE, 0xf6d06a, g, [Math.cos(i * 1.7) * 0.02, 0.04 + i * 0.022, Math.sin(i * 1.7) * 0.02 + 0.012], [0, 0, 0], [0.005, 0.005, 0.005]);
       }
     }
+  }
+
+  /**
+   * Carry something in the mouth (or nothing: null). `hold` = { pos, rot } in head space (see
+   * carryables.js). It keeps its real size whatever size the dog is.
+   */
+  hold(obj, hold = {}) {
+    for (const c of [...this.mouth.children]) this.mouth.remove(c);
+    if (!obj) return;
+    obj.scale.setScalar(1 / (this.breed.size * this.breed.headW));
+    obj.position.set(...(hold.pos ?? [0, 0, 0]));
+    obj.rotation.set(...(hold.rot ?? [0, 0, 0]));
+    this.mouth.add(obj);
   }
 
   bark() { this.barkT = 0.45; }

@@ -2,6 +2,7 @@ import { CLASSIC } from './breeds/classic.js';
 import { LITTLE } from './breeds/little.js';
 import { MEDIUM } from './breeds/medium.js';
 import { BIG } from './breeds/big.js';
+import { NPCS } from './breeds/npc.js';
 import { BREED_IDS } from './breedIds.js';
 
 /*
@@ -28,8 +29,8 @@ export const BREED_GROUPS = [
   { id: 'big', name: 'Big dogs' },
 ];
 
-/** The breed for a key (unknown keys — e.g. from a newer version of the game — become Merry). */
-export const breedOf = (key) => (Object.hasOwn(BREEDS, key) ? BREEDS[key] : BREEDS.merry);
+/** The breed for a key — or a dog you meet, like Gus (unknown keys, e.g. from a newer version of the game, become Merry). */
+export const breedOf = (key) => (Object.hasOwn(BREEDS, key) ? BREEDS[key] : Object.hasOwn(NPCS, key) ? NPCS[key] : BREEDS.merry);
 
 if (import.meta.env?.DEV) {
   const missing = BREED_KEYS.filter((k) => !BREED_IDS.includes(k));

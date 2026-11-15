@@ -116,6 +116,9 @@ export const sfx = {
   boing() { tone('sine', 180, 720, 0.28, 0.28); tone('triangle', 360, 1440, 0.2, 0.08, 0.02); },
   // A car horn: a friendly two-tone beep-beep (quieter when it's further away).
   honk(vol = 1) { for (const [d, f] of [[0, 415], [0.22, 415]]) { tone('square', f, f * 0.98, 0.16, 0.07 * vol, d, { type: 'lowpass', freq: 1500 }); tone('square', f * 1.26, f * 1.25, 0.16, 0.05 * vol, d, { type: 'lowpass', freq: 1500 }); } },
+  // Duchess: a posh little quack. Ducklings: peep!
+  quack() { tone('sawtooth', 620, 380, 0.14, 0.06, 0, { type: 'bandpass', freq: 900, q: 3 }); tone('sawtooth', 560, 360, 0.12, 0.05, 0.16, { type: 'bandpass', freq: 900, q: 3 }); },
+  peep() { tone('sine', 2300, 2900, 0.07, 0.06); },
   // Power-up running out.
   fizzle() { tone('sine', 600, 200, 0.3, 0.12); },
   hooray() {

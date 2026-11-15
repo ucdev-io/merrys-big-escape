@@ -25,7 +25,7 @@ function makeCode() {
 
 const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
 const broadcast = (room, msg, except) => { for (const p of room.players.values()) if (p !== except) send(p.ws, msg); };
-const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot, level: p.level, look: p.look });
+const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot, level: p.level, look: p.look, carry: p.carry ?? null });
 const liveRoom = (world) => [...rooms.values()].find((r) => r.world === world);
 
 /** Open a saved neighbourhood for play, keeping its own code if it can (old links still work). */
@@ -136,6 +136,10 @@ function onMessage(p, msg) {
       // World changes carry what/where (a bin or flock id, a spot); barks etc. just say who.
       if (['tip', 'hole', 'trample', 'scatter'].includes(msg.a)) return broadcast(room, { t: 'act', by: p.id, a: msg.a, id: cleanId(msg.id), x: num(msg.x), z: num(msg.z) }, p);
       return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
+    case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
+      if (!room) return;
+      p.carry = msg.item ? cleanId(msg.item) : null;
+      return broadcast(room, { t: 'carry', id: p.id, item: p.carry }, p);
     case 'look': // new outfit or level
       if (!room) return;
       p.level = cleanLevel(msg.level);

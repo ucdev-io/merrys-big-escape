@@ -7,6 +7,7 @@ import { sfx } from '../core/audio.js';
 import { Pigeons } from './pigeons.js';
 import { progress } from '../game/progress.js';
 import { Snacks, SNACKS } from './snacks.js';
+import { Carry } from './carry.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -39,6 +40,9 @@ export class DogActions {
       progress.award(2, 'Naughty!');
       this.onMischief?.(n);
     };
+    // Carrying things in your mouth (lost toys, Gus's slipper…).
+    this.carry = new Carry(scene, player, this.glow);
+    this.carry.onChange = (kind) => this.onCarry?.(kind);
     // Snacks from knocked-over bins: gobble one for a power-up.
     this.snacks = new Snacks(scene, world.layout?.seed ?? 'garden', world.bounds);
     this.mischief.onSpill = (bin, dir) => this.snacks.spill(bin, dir);
@@ -85,15 +89,20 @@ export class DogActions {
     this.trail.update(dt, this.sniffAmt, nose, goal);
 
     // Digging: the chapter gets first go (dig spots); otherwise it's mischief in the lawn.
+    // (Next to something you can pick up, or carrying something, 🐾 grabs / drops it instead.)
     let dug = false;
     if (canAct && input.dig) {
-      dug = true;
-      P.digTimer = 0.35;
-      sfx.dig();
-      this.onAct?.('dig');
-      if (!onDig?.(nose)) {
-        this.dirtBurst(nose.clone().setY(Math.max(0, P.pos.y)), 4);
-        this.mischief.dig(nose.clone().setY(0));
+      const c = this.carry.press(nose);
+      if (c !== 'grab' && c !== 'drop') {
+        dug = true;
+        P.digTimer = 0.35;
+        sfx.dig();
+        this.onAct?.('dig');
+        if (c === 'dig') this.dirtBurst(nose.clone().setY(Math.max(0, P.pos.y)), 7);
+        else if (!onDig?.(nose)) {
+          this.dirtBurst(nose.clone().setY(Math.max(0, P.pos.y)), 4);
+          this.mischief.dig(nose.clone().setY(0));
+        }
       }
     }
 
@@ -103,6 +112,7 @@ export class DogActions {
     if (canAct && input.bark && this.barkCD <= 0) {
       barked = true;
       this.barkCD = 0.5;
+      if (this.carry.held) { this.carry.drop(nose); this.hud.float('…oops!', this.anchor().add(V(0, 0.3, 0))); } // mouth full!
       P.dog.bark();
       sfx.bark(P.dog.breed.bark);
       this.hud.float('WOOF!', this.anchor());
@@ -113,6 +123,7 @@ export class DogActions {
     }
 
     if (canAct) this.mischief.update(dt, P);
+    this.carry.update(dt);
     this.updateSnacks(dt, canAct);
     // Double-tap jump: a huge jump (or not, if the zoomies bar is too low).
     if (P.hugeJumped) {

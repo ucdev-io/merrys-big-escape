@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RNG } from '../../core/rng.js';
 import { TOWN } from '../../world/town/generator.js';
-import { waterAt } from '../../world/water.js';
+import { blocked } from '../../world/spots.js';
 import { BREEDS } from '../../entities/breeds.js';
 import { LineBag } from '../dialogue.js';
 import { SMELLS, SMELL_WEIGHTS } from '../lines/smells.js';
@@ -13,13 +13,6 @@ const QUIET = [240, 420];        // seconds before a sniffed spot smells of some
 const DOG_NAMES = Object.values(BREEDS).map((b) => b.dogName);
 const now = () => performance.now() / 1000;
 
-/** Somewhere a smell can sit: not inside a wall, hedge, fence, tree or bin, and not in the pond. */
-function blocked(world, x, z, pad = 0.45) {
-  const col = world.colliders;
-  for (const c of col.circles) if (c.top > 0.25 && (x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + pad) ** 2) return true;
-  for (const b of col.boxes) if (b.top > 0.25 && x > b.x0 - pad && x < b.x1 + pad && z > b.z0 - pad && z < b.z1 + pad) return true;
-  return !!(world.water && waterAt(world.water, x, z));
-}
 
 /**
  * Smells all over the neighbourhood: news on lamp posts, dropped chips, hedgehog trails, lost

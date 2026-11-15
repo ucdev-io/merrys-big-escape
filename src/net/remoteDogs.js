@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Dog } from '../entities/dog.js';
 import { BREEDS } from '../entities/breeds.js';
+import { CARRYABLES } from '../entities/carryables.js';
 import { sfx } from '../core/audio.js';
 
 const DELAY = 150; // ms behind real time, so we can smoothly interpolate between snapshots
@@ -26,6 +27,14 @@ export class RemoteDogs {
     tag.textContent = `${BREEDS[p.breed]?.emoji ?? '🐕'} ${p.name}${p.level ? ` \u00b7 ⭐${p.level}` : ''}`; // textContent: names are untrusted
     this.hud.root.appendChild(tag);
     this.dogs.set(p.id, { ...p, dog, tag, buf: [], heading: 0, digT: 0 });
+    if (p.carry) this.setCarry(p.id, p.carry);
+  }
+
+  /** Another dog picked something up (or put it down). */
+  setCarry(id, kind) {
+    const r = this.dogs.get(id), def = CARRYABLES[kind];
+    if (!r) return;
+    r.dog.hold(def ? def.build() : null, def?.hold);
   }
 
   remove(id) {

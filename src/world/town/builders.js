@@ -190,6 +190,7 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
   const [dx, dz] = at(-1.8 + d / 2 + 0.15);
   const garden = lc.garden(0, 0, qx * H, qz * H, [dx, dz]);
   garden.home = home;
+  garden.front = new THREE.Vector3(f[0], 0, f[1]); // the way the front door faces (for doorstep deliveries)
   const [mx, mz] = at(H / 2 - 0.9, 1.6);
   g.add(mailbox(mx, mz, ry, rng.pick([0xd9534f, 0x5b86c4, 0x6f9a52])));
   lc.circle(mx, mz, 0.2);

@@ -72,6 +72,7 @@ export class Pack {
     net.on('ss', (m) => this.remotes.onStates(m.p, net.id));
     net.on('act', (m) => (WORLD_ACTS.includes(m.a) ? this.onMischief(m) : this.remotes.onAct(m.id, m.a)));
     net.on('look', (m) => this.remotes.setLook(m.id, m.look, m.level));
+    net.on('carry', (m) => this.remotes.setCarry(m.id, m.item));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.onEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => this.onClosed());
     this.updateBadge();
@@ -85,6 +86,9 @@ export class Pack {
   }
 
   act(a, extra) { this.net?.act(a, extra); }
+
+  /** Tell the pack what my dog is carrying (or null). */
+  sendCarry(item) { if (this.net) this.net.send({ t: 'carry', item: item ?? null }); }
 
   /** Tell the pack about a new outfit or level. */
   sendLook() { if (this.net) this.net.send({ t: 'look', look: this.me().look, level: this.me().level }); }
