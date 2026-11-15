@@ -130,9 +130,7 @@ export class TownChapter {
     this.hud.setPlaces?.(this.placeList());
     this.refreshObjective();
     w.players.forEach((p) => this.remotes.add(p));
-    // Spread arrivals out a little so we don't all stand in one spot.
-    this.player.pos.x += (Math.random() - 0.5) * 2.5;
-    this.player.pos.z += (Math.random() - 0.5) * 2.5;
+    this.goHome(w.slot ?? 0);
 
     net.on('join', (m) => {
       this.remotes.add(m.p);
@@ -160,6 +158,24 @@ export class TownChapter {
     this.hud.showCard(`<h1>Pack ${code}</h1><p>Friends on the same Wi-Fi can scan this to join:</p><div class="invite"></div><p class="pack-list"></p>`, buttons);
     this.hud.card.querySelector('.pack-list').textContent = `In the pack: ${['You', ...names].join(' · ')}`;
     await fillShareBox(this.hud.card.querySelector('.invite'), await packLink(code), { text: `Join my dog pack ${code}!` });
+  }
+
+  /** Put this dog at its own garden gate, beside the tunnel it dug to get out. */
+  goHome(slot) {
+    const homes = this.world.homes;
+    if (!homes?.length) return;
+    const h = homes[slot % homes.length];
+    this.player.pos.copy(h.pos);
+    this.player.heading = h.face;
+    this.player.object.rotation.y = h.face;
+    this.follow.snap(this.player.pos);
+    this.follow.yaw = h.face + Math.PI;
+    if (slot > 0) {
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(0.4, 18), this.holeMat ??= new THREE.MeshBasicMaterial({ color: 0x4a3426 }));
+      hole.rotation.x = -Math.PI / 2;
+      hole.position.set(h.pos.x - Math.sin(h.face) * 0.6, 0.06, h.pos.z - Math.cos(h.face) * 0.6);
+      this.scene.add(hole);
+    }
   }
 
   updateBadge() {

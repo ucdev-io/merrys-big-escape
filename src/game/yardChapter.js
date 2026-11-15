@@ -6,15 +6,26 @@ import { Cat } from '../entities/cat.js';
 import { ITEMS } from '../entities/items.js';
 import { sfx } from '../core/audio.js';
 import { loadSave, writeSave, clearSave } from '../core/save.js';
+import { BREEDS } from '../entities/breeds.js';
+import { showLobby } from '../ui/lobby.js';
+import { packPath } from '../net/links.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+// Each treasure has a few possible hiding places, so the garden isn't identical every time.
+const SPOTS = {
+  duck: [V(-5.3, 0, 3.3), V(-7.8, 0, 6.6), V(1.2, 0, 5.4)],
+  sock: [V(-5.0, 0, -1.8), V(-3.6, 0, -5.8), V(-8.3, 0, -5.6)],
+  biscuit: [V(5.5, 0, 3.9), V(8.4, 0, 1.2), V(5.8, 0, -2.6)],
+};
+const pickSpot = (k) => SPOTS[k][Math.floor(Math.random() * SPOTS[k].length)];
 const TREASURES = [
-  { key: 'duck', pos: V(-5.3, 0, 3.3), need: 5 },
-  { key: 'sock', pos: V(-5.0, 0, -1.8), need: 5 },
-  { key: 'biscuit', pos: V(5.5, 0, 3.9), need: 6 },
+  { key: 'duck', pos: pickSpot('duck'), need: 5 },
+  { key: 'sock', pos: pickSpot('sock'), need: 5 },
+  { key: 'biscuit', pos: pickSpot('biscuit'), need: 6 },
 ];
 const TUNNEL = { key: 'tunnel', pos: V(-1.4, 0, 7.55), need: 14 };
 const OUTSIDE = V(-1.4, 0, 9.3);
@@ -27,7 +38,7 @@ const CAT_SPOTS = [
 ];
 
 const LINES = {
-  intro: ['Ha! Stuck in the garden <i>again</i>, Merry?', 'Everyone knows dogs can’t escape. Meow.'],
+  intro: ['Ha! Stuck in the garden <i>again</i>, {name}?', 'Everyone knows dogs can’t escape. Meow.'],
   idle: [
     'Is that a nose or a carrot?',
     'I can see the WHOLE neighbourhood from up here.',
@@ -154,15 +165,41 @@ export class YardChapter {
       : 'Hold <b>Space</b> to sniff, press <b>E</b> to dig';
   }
 
+  get dogName() { return loadSave().profile?.name ?? BREEDS[this.player.breedKey].dogName; }
+
+  /** "Who's escaping today?" — pick a dog over the live garden, then the controls card. */
   showIntro() {
+    const pack = loadSave().pendingPack;
+    this.follow.manualHold = 1e9;
+    this.follow.yaw = this.player.heading + Math.PI * 0.62;
+    this.follow.distance = 3.2;
+    const prev = loadSave().profile ?? { breed: this.player.breedKey, name: BREEDS[this.player.breedKey].dogName };
+    const lobby = showLobby({
+      hud: this.hud,
+      profile: prev,
+      garden: true,
+      title: 'Who\u2019s escaping today?',
+      subtitle: pack ? `Escape your garden, then you\u2019ll join pack <b>${pack}</b>!` : 'Every dog starts in their own back garden\u2026',
+      onBreed: (k) => { if (k !== this.player.breedKey) this.player.setBreed(k); },
+      onSolo: (c) => { writeSave({ profile: c }); lobby.close(); this.showControls(); },
+    });
+  }
+
+  showControls() {
+    this.follow.manualHold = 0;
+    this.follow.distance = 7;
+    this.follow.yaw = this.player.heading + Math.PI;
+    const name = this.dogName;
     const keys = this.isTouch()
       ? 'Drag on the left to walk · Hold 👃 to sniff · Tap 🐾 to dig · 🗣️ to woof · 💨 for zoomies'
       : '<b>WASD</b> walk · hold <b>Shift</b> for zoomies · hold <b>Space</b> to sniff · <b>E</b> dig · <b>Q</b> woof';
     this.hud.showCard(`
-      <h1>Merry's Big Escape</h1>
-      <p>Merry the whippet is bored of the back garden.<br>There must be a way out… and her nose knows it!</p>
+      <h1 class="who"></h1>
+      <p><span class="who2"></span> is bored of the back garden.<br>There must be a way out\u2026 and that nose knows it!</p>
       <p class="keys">${keys}</p>`,
-      [['Let’s go! 🐾', () => this.start()]]);
+      [['Let\u2019s go! 🐾', () => this.start()]]);
+    this.hud.card.querySelector('.who').textContent = `${name}'s Big Escape`;
+    this.hud.card.querySelector('.who2').textContent = name;
   }
 
   start() {
@@ -170,7 +207,7 @@ export class YardChapter {
     this.player.frozen = false;
     this.started = true;
     if (!this.found.length) {
-      this.hud.say(LINES.intro[0], this.catAnchor, 3.5);
+      this.hud.say(LINES.intro[0].replace('{name}', escapeHtml(this.dogName)), this.catAnchor, 3.5);
       sfx.meow();
       this.later(3.8, () => this.hud.say(LINES.intro[1], this.catAnchor, 3.5));
     }
@@ -525,7 +562,7 @@ export class YardChapter {
         this.cutscene = null;
         P.scripted = null;
         this.escaped = true;
-        writeSave({ found: this.found, escaped: true });
+        writeSave({ found: this.found, escaped: true, yardDone: true });
         this.refreshObjective();
         this.showEscapedCard();
       }
@@ -534,11 +571,17 @@ export class YardChapter {
 
   showEscapedCard() {
     this.player.frozen = true;
+    const pack = loadSave().pendingPack;
+    const go = pack
+      ? [`Join pack ${pack} \u2192`, () => { writeSave({ chapter: 'town', pendingPack: null }); location.href = packPath(pack); }]
+      : ['Into the neighbourhood \u2192', () => { writeSave({ chapter: 'town' }); location.href = '/?town'; }];
     this.hud.showCard(`
-      <h1>Merry escaped! 🎉</h1>
-      <p>With a squeaky duck, a smelly sock, an ancient biscuit<br>and a very muddy nose, Merry is free!</p>
-      <p>Beyond the fence lies <b>the Neighbourhood</b> — new smells, new places, new adventures…</p>`,
-      [['Explore the neighbourhood →', () => { writeSave({ chapter: 'town' }); location.reload(); }], ['Play the garden again', () => { clearSave(); location.reload(); }]]);
+      <h1 class="who"></h1>
+      <p>With a squeaky duck, a smelly sock, an ancient biscuit<br>and a very muddy nose, <span class="who2"></span> is free!</p>
+      <p>Beyond the fence lies <b>the Neighbourhood</b> \u2014 your friends, new smells, new adventures\u2026</p>`,
+      [go, ['Play the garden again', () => { writeSave({ found: [], escaped: false, chapter: 'yard' }); location.href = '/'; }]]);
+    this.hud.card.querySelector('.who').textContent = `${this.dogName} escaped! 🎉`;
+    this.hud.card.querySelector('.who2').textContent = this.dogName;
   }
 }
 

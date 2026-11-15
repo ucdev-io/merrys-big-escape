@@ -54,19 +54,23 @@ const save = loadSave();
 const packCode = packCodeFromUrl();
 
 // Landing page, unless a link already says where to go.
+// Pack link on a device that hasn't escaped a garden yet: escape first, then join automatically.
+const yardDone = save.yardDone || save.escaped;
+if (packCode && !yardDone) writeSave({ chapter: 'yard', found: [], escaped: false, pendingPack: packCode });
 if (!packCode && !params.has('town') && !params.has('seed')) {
   const choice = await showTitle(save);
-  if (choice === 'garden') writeSave({ chapter: 'yard', found: [], escaped: false });
+  if (choice === 'garden') writeSave({ chapter: 'yard', found: [], escaped: false, pendingPack: null });
   else if (choice === 'town') writeSave({ chapter: 'town' });
   Object.assign(save, loadSave());
 }
-const inTown = params.has('town') || params.has('seed') || !!packCode || save.chapter === 'town';
+Object.assign(save, loadSave());
+const inTown = params.has('town') || params.has('seed') || (!!packCode && yardDone) || save.chapter === 'town';
 
 // Arriving with ?room=CODE: join that pack first, because the pack decides which town we're in.
 let net = null, welcome = null;
 // First time on this device? Pick a dog first (code pre-filled), then join.
-const prefillCode = packCode && !save.profile ? packCode : null;
-if (packCode && save.profile) {
+const prefillCode = inTown && packCode && !save.profile ? packCode : null;
+if (inTown && packCode && save.profile) {
   const profile = save.profile;
   try {
     net = new NetClient();
@@ -94,8 +98,7 @@ scene.add(world.group);
 world.attach?.(scene);
 
 const input = new Input();
-// In town you can be any dog; the garden chapter is always Merry's story.
-const player = new Player(inTown ? (save.profile?.breed ?? 'merry') : 'merry');
+const player = new Player(save.profile?.breed ?? 'merry');
 player.pos.copy(world.spawn);
 if (world.spawnFace !== undefined) { player.heading = world.spawnFace; follow.yaw = world.spawnFace + Math.PI; }
 scene.add(player.object);

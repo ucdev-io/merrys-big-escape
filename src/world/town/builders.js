@@ -159,7 +159,7 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
     g.add(paddlingPool(px, pz, lc));
     const [gx, gz] = at(3.5, 3.8);
     g.add(gnome(gx, gz, ry));
-    return { gateOutside: at(H / 2 + 1.3), front: f };
+    return { gateOutside: at(H / 2 + 1.3), front: f, home: true };
   }
   const extras = [
     () => { const [x, z] = at(-5.5, 4); g.add(kennel(x, z, ry)); lc.circle(x, z, 0.6); },
@@ -169,20 +169,19 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
     () => { const [x, z] = at(-6.2, 0); g.add(swingSet(x, z, ry + Math.PI / 2)); lc.circle(x, z, 1.4); },
   ];
   rng.shuffle(extras).slice(0, rng.int(1, 2)).forEach((fn) => fn());
-  return null;
+  return { gateOutside: at(H / 2 + 1.3), front: f };
 }
 
 function housesBlock(g, lc, rng, homeLot) {
-  let home = null;
+  const lots = [];
   for (const qx of [-1, 1]) for (const qz of [-1, 1]) {
     const isHome = homeLot && homeLot.qx === qx && homeLot.qz === qz;
-    const r = lot(g, lc, rng, qx, qz, isHome ? homeLot.faceX : rng.chance(0.5), { home: isHome });
-    if (r) home = r;
+    lots.push(lot(g, lc, rng, qx, qz, isHome ? homeLot.faceX : rng.chance(0.5), { home: isHome }));
   }
   // Hedges between gardens, with gaps so a sneaky dog can slip through.
   g.add(hedge(0, -EDGE, 0, EDGE, rng, lc, { skipFrom: 0.4, skipTo: 0.48 }));
   g.add(hedge(-EDGE, 0, EDGE, 0, rng, lc, { skipFrom: 0.55, skipTo: 0.63 }));
-  return home;
+  return lots;
 }
 
 function parkBlock(g, lc, rng) {
@@ -326,6 +325,7 @@ export function buildTown(layout) {
   streets(root, layout, rng, col);
 
   let spawn = new THREE.Vector3(0, 0, 0), spawnFace = 0;
+  const otherHomes = []; // every other garden in town: one per dog in a pack
   for (const b of layout.blocks) {
     const g = new THREE.Group();
     g.position.set(b.x, 0, b.z);
@@ -333,7 +333,9 @@ export function buildTown(layout) {
     const lc = localColliders(col, b.x, b.z);
     const br = new RNG(b.seed);
     if (b.type === 'houses' || b.type === 'home') {
-      const home = housesBlock(g, lc, br, b.type === 'home' ? b.homeLot : null);
+      const lots = housesBlock(g, lc, br, b.type === 'home' ? b.homeLot : null);
+      for (const l of lots) if (!l.home) otherHomes.push({ pos: new THREE.Vector3(b.x + l.gateOutside[0], 0, b.z + l.gateOutside[1]), face: Math.atan2(l.front[0], l.front[1]) });
+      const home = lots.find((l) => l.home);
       if (home) {
         spawn = new THREE.Vector3(b.x + home.gateOutside[0], 0, b.z + home.gateOutside[1]);
         spawnFace = Math.atan2(home.front[0], home.front[1]);
@@ -379,6 +381,8 @@ export function buildTown(layout) {
     occluders,
     spawn,
     spawnFace,
+    // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.
+    homes: [{ pos: spawn.clone(), face: spawnFace }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: { x0: -half, x1: half, z0: -half, z1: half },
     layout,
     props: {},

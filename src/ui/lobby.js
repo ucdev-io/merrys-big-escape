@@ -6,7 +6,7 @@ import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
  *
  * @returns {{ el, setError(msg), setBusy(b), close() }}
  */
-export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJoin, onNewTown, onGarden }) {
+export function showLobby({ hud, profile, townName = '', onBreed, onSolo, onHost, onJoin, onNewTown, onGarden, garden = false, title, subtitle }) {
   const wrap = document.createElement('div');
   wrap.className = 'lobby';
   wrap.innerHTML = `
@@ -36,6 +36,13 @@ export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJ
     </div>`;
   hud.root.appendChild(wrap);
   wrap.querySelector('.town').textContent = townName;
+  if (title) wrap.querySelector('h1').textContent = title;
+  if (subtitle) wrap.querySelector('.sub').innerHTML = subtitle;
+  if (garden) {
+    // Garden mode: just choose a dog and go — packs come after the escape.
+    wrap.querySelectorAll('.host, .join-row, .small').forEach((e) => e.remove());
+    wrap.querySelector('.solo').textContent = 'Let\u2019s go! 🐾';
+  }
 
   const nameIn = wrap.querySelector('.name input');
   const codeIn = wrap.querySelector('.code');
@@ -54,13 +61,14 @@ export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJ
   wrap.querySelectorAll('.breed').forEach((b) => (b.onclick = () => select(b.dataset.k)));
   nameIn.oninput = () => (customName = nameIn.value.trim() !== '' && nameIn.value !== BREEDS[breed].dogName);
   // Typing in the boxes mustn't make the dog run about.
-  for (const i of [nameIn, codeIn]) i.addEventListener('keydown', (e) => e.stopPropagation());
-  codeIn.addEventListener('input', () => (codeIn.value = codeIn.value.toUpperCase()));
+  for (const i of [nameIn, codeIn]) i?.addEventListener('keydown', (e) => e.stopPropagation());
+  codeIn?.addEventListener('input', () => (codeIn.value = codeIn.value.toUpperCase()));
   select(breed);
   if (window.__packError) { err.textContent = window.__packError; window.__packError = null; }
 
   const choice = () => ({ breed, name: nameIn.value.trim().slice(0, 14) || BREEDS[breed].dogName });
   wrap.querySelector('.solo').onclick = () => onSolo(choice());
+  if (garden) return api();
   wrap.querySelector('.host').onclick = () => onHost(choice());
   wrap.querySelector('.join').onclick = () => {
     const code = codeIn.value.trim().toUpperCase();
@@ -69,8 +77,9 @@ export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJ
   };
   wrap.querySelector('.newtown').onclick = onNewTown;
   wrap.querySelector('.garden').onclick = onGarden;
+  return api();
 
-  return {
+  function api() { return {
     el: wrap,
     setError(msg) { err.textContent = msg || ''; },
     setBusy(b) { wrap.querySelectorAll('button').forEach((x) => (x.disabled = b)); wrap.classList.toggle('busy', b); },
@@ -83,5 +92,5 @@ export function showLobby({ hud, profile, townName, onBreed, onSolo, onHost, onJ
       wrap.querySelector('h1').textContent = 'Pick your dog!';
       err.textContent = '';
     },
-  };
+  }; }
 }

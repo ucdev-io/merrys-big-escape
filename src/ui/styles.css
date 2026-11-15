@@ -223,3 +223,4 @@ body.touch-mode .stamina { bottom: 180px; }
 .title-screen .link { background: none; border: none; cursor: pointer; font-size: 17px; text-decoration: underline; padding: 0; }
 .title-screen { overflow-y: auto; }
 .invite { margin: 10px 0; }
+.title-screen .locked { font-size: 17px; opacity: 0.7; max-width: 420px; margin: 0; }

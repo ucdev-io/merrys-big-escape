@@ -12,7 +12,8 @@ export function showTitle(save) {
   return new Promise((resolve) => {
     const el = document.createElement('div');
     el.className = 'title-screen';
-    const where = save.chapter === 'town' ? 'the neighbourhood' : save.found?.length ? 'the garden' : null;
+    const where = save.chapter === 'town' ? 'the neighbourhood' : save.found?.length && !save.escaped ? 'the garden' : null;
+    const done = save.yardDone || save.escaped;
     const s = getSettings();
     el.innerHTML = `
       <div class="page">
@@ -22,8 +23,10 @@ export function showTitle(save) {
         <div class="pack">${BREED_KEYS.map((k) => `<span title="${BREEDS[k].breed}">${BREEDS[k].swatch.map((c) => `<i style="background:${c}"></i>`).join('')}<b>${BREEDS[k].dogName}</b></span>`).join('')}</div>
         <div class="choices">
           ${where ? `<button class="pill big" data-c="continue">▶ Continue in ${where}</button>` : ''}
-          <button class="pill big" data-c="garden">🏡 The Garden <small>Merry's escape story</small></button>
-          <button class="pill big" data-c="town">🏘️ The Neighbourhood <small>pick any dog · play with friends</small></button>
+          <button class="pill big" data-c="garden">🐾 New adventure <small>pick your dog · escape your garden</small></button>
+          ${done
+            ? '<button class="pill big" data-c="town">🏘️ Skip to the neighbourhood <small>play with friends</small></button>'
+            : '<p class="locked">🏘️ The neighbourhood (and playing with friends) opens once you\u2019ve escaped a garden!</p>'}
         </div>
         <div class="extras">
           <button class="link phone-btn">📱 Play on a phone or tablet</button> ·

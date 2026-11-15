@@ -25,11 +25,13 @@ function makeCode() {
 
 const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
 const broadcast = (room, msg, except) => { for (const p of room.players.values()) if (p !== except) send(p.ws, msg); };
-const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed });
+const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot });
+// Each dog gets the lowest free house number (0 = the host's garden).
+const freeSlot = (room) => { const used = new Set([...room.players.values()].map((q) => q.slot)); let i = 0; while (used.has(i)) i++; return i; };
 
 function welcome(room, p) {
   send(p.ws, {
-    t: 'welcome', id: p.id, code: room.code, seed: room.seed,
+    t: 'welcome', id: p.id, slot: p.slot, code: room.code, seed: room.seed,
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
     shared: { discovered: [...room.discovered] },
   });
@@ -57,7 +59,7 @@ function onMessage(p, msg) {
       if (!code || !seed) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
       const r = { code, seed, players: new Map(), discovered: new Set((Array.isArray(msg.discovered) ? msg.discovered : []).slice(0, 20).map(cleanId)) };
       rooms.set(code, r);
-      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r });
+      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: 0 });
       r.players.set(p.id, p);
       return welcome(r, p);
     }
@@ -66,7 +68,7 @@ function onMessage(p, msg) {
       const r = rooms.get(String(msg.code ?? '').toUpperCase().trim());
       if (!r) return send(p.ws, { t: 'error', msg: 'No pack with that code. Check the code and try again!' });
       if (r.players.size >= MAX_PLAYERS) return send(p.ws, { t: 'error', msg: 'That pack is full (8 dogs max).' });
-      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r });
+      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: freeSlot(r) });
       r.players.set(p.id, p);
       return welcome(r, p);
     }
