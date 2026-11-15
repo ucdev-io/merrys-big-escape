@@ -421,6 +421,15 @@ export class Dog {
       // Dogs 2.0: the smooth skin, bound to the bones in this rest pose.
       this.skinBones = [this.body, this.spineF, this.spineR, this.chest, this.neck, this.head, ...this.tailBones, ...this.legs.flatMap((Lg) => [Lg.hip, Lg.knee, Lg.ankle, Lg.foot].filter(Boolean))];
       this.skin = buildSkin(this, br);
+      // Where the front of the chest is, under the neck (a bandana hangs there).
+      const sg = this.skin.geometry;
+      if (sg.userData.chestZ === undefined) {
+        const p = sg.attributes.position, yb = this.bodyY + 0.035 * gy - 0.045;
+        let front = -Infinity;
+        for (let i = 0; i < p.count; i++) if (Math.abs(p.getX(i)) < 0.02 && Math.abs(p.getY(i) - yb) < 0.025) front = Math.max(front, p.getZ(i));
+        sg.userData.chestZ = Number.isFinite(front) ? front : null;
+      }
+      this.dims.chestZ = sg.userData.chestZ;
     }
     this.root.scale.copy(savedScale);
 
@@ -476,8 +485,10 @@ export class Dog {
       for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.022, 0.04, 4), c('neck').color, g, [s * 0.02, 0, 0], [0, 0, (s * Math.PI) / 2], [1, 1, 0.5]);
       mesh(SPHERE, c('neck').color, g, [0, 0, 0.004], [0, 0, 0], [0.009, 0.009, 0.008]);
     } else if (c('neck')) {
-      // Bandana: a soft triangle hanging at the front of the chest.
-      const g = keep(group(this.body, [0, 0.035 * gy, 0.255 * len + F * 1.4], [0.25, 0, 0]));
+      // Bandana: a soft triangle hanging at the front of the chest (smooth dogs: on the skin there).
+      const sp = this.spineF, o = sp === this.body ? [0, 0, 0] : sp.position.toArray();
+      const z = Math.max(0.255 * len + F * 1.4, (this.dims.chestZ ?? -1) + 0.004);
+      const g = keep(group(sp, [-o[0], 0.035 * gy - o[1], z - o[2]], [0.25, 0, 0]));
       const cone = new THREE.ConeGeometry(0.075, 0.13, 3, 1);
       cone.rotateZ(Math.PI); cone.rotateY(Math.PI / 6);
       mesh(cone, c('neck').color, g, [0, -0.045, 0.012], [0, 0, 0], [gx, 1, 0.32]);

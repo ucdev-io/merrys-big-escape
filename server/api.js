@@ -3,8 +3,9 @@
 //   GET  /api/packs     packs playing now + saved neighbourhoods
 //   GET  /api/profiles  saved dogs (for "Who's playing?")
 //   POST /api/profile   { action: 'create' | 'get' | 'sync', ... } → { profile }
+//   GET  /api/records?town=SEED&profile=ID   🏆 family records → { boards, mine }
 import { listPacks, onlineProfiles, liveCodes } from './rooms.js';
-import { listProfiles, createProfile, getProfile, syncProfile, listWorlds } from './store.js';
+import { listProfiles, createProfile, getProfile, syncProfile, listWorlds, getRecords } from './store.js';
 import { lanInfoHandler } from './lan.js';
 
 function json(res, status, body) {
@@ -29,11 +30,12 @@ function readBody(req, limit = 16384) {
 
 /** Answer /api/… requests. Returns false for anything else. */
 export function handleApi(req, res) {
-  const path = (req.url ?? '').split('?')[0];
+  const [path, query = ''] = (req.url ?? '').split('?');
   if (!path.startsWith('/api/')) return false;
   if (path === '/api/lan') lanInfoHandler(req, res);
   else if (path === '/api/packs') json(res, 200, { packs: listPacks(), worlds: listWorlds(liveCodes()) });
   else if (path === '/api/profiles') json(res, 200, { profiles: listProfiles(onlineProfiles()) });
+  else if (path === '/api/records') { const q = new URLSearchParams(query); json(res, 200, getRecords(q.get('town'), q.get('profile'))); }
   else if (path === '/api/profile' && req.method === 'POST') {
     readBody(req).then((b) => {
       const profile = b?.action === 'create' ? createProfile(b)

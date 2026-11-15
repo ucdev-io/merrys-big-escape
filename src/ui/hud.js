@@ -140,7 +140,8 @@ export class HUD {
       }).join('')}</div>
       <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
         ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
-        ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}</div>`,
+        ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
+        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -162,7 +163,7 @@ export class HUD {
         };
         opt('🚫<small>None</small>', null, true);
         for (const c of COSMETICS.filter((q) => q.slot === slot)) {
-          const lock = c.friend ? `Help ${FRIEND_NAMES[c.friend]} ×${c.jobs}` : `Lv ${c.level}`;
+          const lock = c.hint ?? (c.friend ? `Help ${FRIEND_NAMES[c.friend]} ×${c.jobs}` : `Lv ${c.level}`);
           opt(`${c.emoji}<small>${c.name}</small><small class="wb">${boostText(c.boost)}</small>`, c.id, progress.isUnlocked(c.id), lock, c.boost);
         }
         row.appendChild(items);
@@ -215,7 +216,7 @@ export class HUD {
         <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, <b>Duchess</b> at the pond keeps losing her ducklings, and the <b>Lost &amp; Found board</b> by your gate has neighbours' lost things to take home. The compass points the way.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
-        <li><b>🎮 Games</b> (tap 👥 at the top): race to a place, or play tag with friends. On your own, try to beat your best race time.</li>
+        <li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 family records.</li>
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>

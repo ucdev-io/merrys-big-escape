@@ -74,7 +74,21 @@ body.touch-mode .boosts { bottom: 177px; }
 .game-btns .pill small { display: block; font-size: 13px; opacity: 0.75; }
 .game-banner { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--wash); border-radius: var(--wobbly); padding: 4px 16px; font-size: 20px; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); white-space: nowrap; }
 .game-banner.big { top: 30%; font-size: 64px; padding: 8px 28px; }
-.big-card .results { text-align: left; display: inline-block; font-size: 19px; line-height: 1.6; }
+.big-card .results { text-align: left; display: inline-block; font-size: 19px; line-height: 1.6; list-style: none; padding-left: 0; }
+/* Games & challenges, and the 🏆 family records */
+.game-btns.challenges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); max-width: 520px; margin: 0 auto 8px; }
+.game-btns.challenges .pill { padding: 6px 8px; }
+.rec-link { margin: 4px 0 10px; }
+.big-card .records li.me { background: #fbe8a6; border-radius: 8px; padding: 0 6px; }
+.big-card .records li.none { opacity: 0.6; list-style: none; }
+.rec-badge { font-size: 24px; margin: 6px 0; color: #9a6a10; }
+.rec-badge.small { font-size: 19px; }
+.rec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 6px 16px; text-align: left; }
+.rec-grid .rec { background: #fbf3e2; border-radius: 12px; padding: 4px 12px 6px; }
+.rec-grid .rec.focus { box-shadow: 0 0 0 3px #f2c14e; }
+.rec-grid h3 { margin: 4px 0; }
+.rec-grid .records { margin: 0; padding-left: 4px; list-style: none; font-size: 16px; line-height: 1.5; }
+.rec-grid .mine { margin: 2px 0 0; font-size: 14px; opacity: 0.75; }
 
 /* Found toast */
 .toast {

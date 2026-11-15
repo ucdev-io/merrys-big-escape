@@ -1,11 +1,13 @@
-// Saved dogs and neighbourhoods, kept as JSON files in data/ on the computer running the game.
-// A dog's stars, outfit and garden escape follow it from device to device, and a neighbourhood
-// stays as everyone left it (places found, golden bones, whose house is whose).
+// Saved dogs, neighbourhoods and 🏆 family records, kept as JSON files in data/ on the computer
+// running the game. A dog's stars, outfit and garden escape follow it from device to device, a
+// neighbourhood stays as everyone left it (places found, golden bones, whose house is whose), and
+// the best scores in each challenge are there for everyone to try and beat.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { BREED_IDS } from '../src/entities/breedIds.js';
 import { levelForXp } from '../src/game/levels.js';
+import { CHALLENGES, CHALLENGE_IDS, boardKey, better } from '../src/game/challenges.js';
 import { cleanName, cleanId, cleanLook, cleanSeed } from './clean.js';
 
 // Where saves live: $MERRY_DATA, or <project>/data (npm scripts run from the project folder).
@@ -14,12 +16,12 @@ let DIR = null, FILES = null;
 function files() {
   if (!FILES) {
     DIR = path.resolve(process.env.MERRY_DATA || path.join(process.cwd(), 'data'));
-    FILES = { profiles: path.join(DIR, 'profiles.json'), worlds: path.join(DIR, 'worlds.json') };
+    FILES = { profiles: path.join(DIR, 'profiles.json'), worlds: path.join(DIR, 'worlds.json'), records: path.join(DIR, 'records.json') };
   }
   return FILES;
 }
 const MAX_PROFILES = 200, MAX_WORLDS = 100;
-const db = { profiles: {}, worlds: {} };
+const db = { profiles: {}, worlds: {}, records: {} };
 let loaded = false;
 
 const now = () => Date.now();
@@ -38,6 +40,8 @@ function load() {
     const data = readJson(FILES[kind]) ?? readJson(FILES[kind] + '.bak');
     db[kind] = data?.[kind] && typeof data[kind] === 'object' ? data[kind] : {};
   }
+  db.records.boards ??= {}; // board key → best results, best first
+  db.records.bests ??= {};  // dog → board key → its own best
 }
 
 // ---- saving: batched, atomic (write a temp file, then swap it in), with one backup per run ----
@@ -169,6 +173,71 @@ export function worldByCode(code) {
 export function touchWorld(w) {
   w.played = now();
   saveSoon('worlds');
+}
+
+// ---- 🏆 family records ----
+
+const BOARD_MAX = 10;
+
+/**
+ * Put a challenge's results on its board: each dog (or, for a team, each line-up) keeps just its best.
+ * entries: [{ name, breed, profile, score?, ms? }] or, for a team, [{ team: [names], profiles: [ids], score, ms }].
+ * Returns { key, board (the top 5), results: per entry { rank (1 = the record; null = not in the top
+ * ten), record (a new family record), best (a new personal best) } }.
+ */
+export function addResults(kind, town, entries) {
+  load();
+  if (!CHALLENGES[kind]?.rank) return null;
+  const key = boardKey(kind, cleanSeed(town)), R = db.records;
+  const board = (R.boards[key] ??= []);
+  const tidy = entries.map((e) => {
+    const entry = { name: cleanName(e.name ?? e.team?.[0]), breed: BREED_IDS.includes(e.breed) ? e.breed : 'merry', at: now() };
+    if (e.team) entry.team = e.team.slice(0, 8).map(cleanName);
+    if (e.score !== undefined) entry.score = Math.max(0, Math.min(1e6, Math.floor(Number(e.score) || 0)));
+    if (e.ms !== undefined) entry.ms = Math.max(0, Math.min(36e5, Math.floor(Number(e.ms) || 0)));
+    const dogs = (e.profiles ?? [e.profile]).map(cleanId).filter((id) => id && db.profiles[id]);
+    entry.who = entry.team ? `team:${[...entry.team].sort().join(',')}` : dogs[0] ?? `name:${entry.name}`;
+    return { entry, dogs };
+  });
+  // Best first, so only the best of this game can be the new record.
+  const order = tidy.map((t, i) => i).sort((a, b) => (better(kind, tidy[a].entry, tidy[b].entry) ? -1 : better(kind, tidy[b].entry, tidy[a].entry) ? 1 : 0));
+  const results = [];
+  for (const i of order) {
+    const { entry, dogs } = tidy[i];
+    let best = false;
+    for (const id of dogs) {
+      const mine = (R.bests[id] ??= {});
+      if (better(kind, entry, mine[key])) { mine[key] = { score: entry.score, ms: entry.ms }; best = true; }
+    }
+    const old = board.findIndex((b) => b.who === entry.who);
+    let rank = null;
+    if (old < 0 || better(kind, entry, board[old])) {
+      if (old >= 0) board.splice(old, 1);
+      let at = board.findIndex((b) => better(kind, entry, b));
+      if (at < 0) at = board.length;
+      if (at < BOARD_MAX) { board.splice(at, 0, entry); rank = at + 1; }
+      board.length = Math.min(board.length, BOARD_MAX);
+    }
+    results[i] = { rank, record: rank === 1, best };
+  }
+  saveSoon('records');
+  return { key, results, board: board.slice(0, 5).map(publicEntry) };
+}
+
+const publicEntry = ({ who, ...e }) => e;
+
+/** The 🏆 card: every challenge's board (this neighbourhood's own, for course ones), top 5, and a dog's own bests. */
+export function getRecords(town, profile) {
+  load();
+  const R = db.records, t = cleanSeed(town), id = cleanId(profile);
+  const boards = {}, mine = {};
+  for (const kind of CHALLENGE_IDS) {
+    if (!CHALLENGES[kind].rank) continue;
+    const key = boardKey(kind, t);
+    boards[kind] = (R.boards[key] ?? []).slice(0, 5).map(publicEntry);
+    if (id && R.bests[id]?.[key]) mine[kind] = R.bests[id][key];
+  }
+  return { boards, mine };
 }
 
 /** For tests: forget what's in memory and read the files again. */

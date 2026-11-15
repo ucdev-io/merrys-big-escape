@@ -3,6 +3,7 @@ import { NetClient } from '../../net/client.js';
 import { packLink, packPath, fillShareBox } from '../../net/links.js';
 import { watchPacks, renderPackRows } from '../../net/packs.js';
 import { townName } from '../../world/town/generator.js';
+import { CHALLENGES } from '../challenges.js';
 
 const WORLD_ACTS = ['tip', 'hole', 'trample', 'scatter']; // things that change the world, not just a dog
 
@@ -137,8 +138,9 @@ export class Pack {
     this.hud.showCard(`
       <h1>👥 Your pack</h1>
       <p class="pack-list"></p>
-      <h3>🎮 Play a game</h3>
-      <div class="game-btns"><button class="pill big g-race">🏁 Race</button><button class="pill big g-tag">🐾 Tag</button></div>
+      <h3>🎮 Games &amp; challenges</h3>
+      <div class="game-btns challenges"></div>
+      <p class="rec-link"><button class="pill g-records">🏆 Family records</button></p>
       <h3>Other neighbourhoods</h3>
       <div class="list others"><p class="none">No one else is playing right now.</p></div>
       <details class="newphone"><summary>📱 Get the game on another phone or tablet</summary>
@@ -146,13 +148,16 @@ export class Pack {
         <div class="invite"></div></details>`, [['OK', () => this.hud.hideCard()]]);
     const card = this.hud.card;
     card.querySelector('.pack-list').textContent = ['You', ...names].join(' · ') + (code ? `  (pack ${code})` : '');
-    const solo = this.remotes.dogs.size === 0;
-    card.querySelector('.g-race').innerHTML = solo ? '🏁 Race <small>beat your best time</small>' : '🏁 Race <small>first one there wins</small>';
-    card.querySelector('.g-tag').innerHTML = solo ? '🐾 Tag <small>needs a friend</small>' : '🐾 Tag <small>you’re it!</small>';
-    card.querySelector('.g-tag').disabled = solo || !this.net;
-    card.querySelector('.g-race').disabled = !this.net;
-    card.querySelector('.g-race').onclick = () => { this.hud.hideCard(); this.onStartGame?.('race'); };
-    card.querySelector('.g-tag').onclick = () => { this.hud.hideCard(); this.onStartGame?.('tag'); };
+    const dogs = this.remotes.dogs.size + 1, btns = card.querySelector('.challenges');
+    for (const [kind, C] of Object.entries(CHALLENGES)) {
+      const b = document.createElement('button');
+      b.className = 'pill big';
+      b.innerHTML = `${C.emoji} ${C.name}<small>${dogs > 1 ? C.blurb : C.solo}</small>`;
+      b.disabled = !this.net || dogs < (C.min ?? 1);
+      b.onclick = () => { this.hud.hideCard(); this.onStartGame?.(kind); };
+      btns.appendChild(b);
+    }
+    card.querySelector('.g-records').onclick = () => this.onRecords?.();
     const others = card.querySelector('.others');
     const stop = watchPacks((list) => {
       if (card.classList.contains('hidden') || !card.contains(others)) { stop(); return; }

@@ -5,14 +5,16 @@ const SPHERE = new THREE.SphereGeometry(1, 20, 14);
 const group = (parent, pos = [0, 0, 0]) => { const g = new THREE.Group(); g.position.set(...pos); parent.add(g); return g; };
 
 /**
- * A duck: Duchess (white, with a tiny tiara and pearls — she is a duchess, after all) or one of her
- * fluffy yellow ducklings. Faces +Z. Waddles when walking, bobs when paddling, flaps when quacking.
+ * A duck: Duchess (white, with a tiny tiara and pearls — she is a duchess, after all), one of her
+ * fluffy yellow ducklings, or a mallard (brown, with a shiny green head). Faces +Z. Waddles when
+ * walking, bobs when paddling, flaps when quacking.
  */
 export class Duck {
-  constructor({ duchess = false } = {}) {
-    const s = duchess ? 1 : 0.42;
+  constructor({ duchess = false, mallard = false } = {}) {
+    const s = duchess ? 1 : mallard ? 0.9 : 0.42;
     this.size = s;
-    const body = duchess ? 0xf6f1e8 : 0xf6d65a, wing = duchess ? 0xe6dccd : 0xeec64a, bill = 0xf0a040;
+    const body = duchess ? 0xf6f1e8 : mallard ? 0xa8876a : 0xf6d65a, wing = duchess ? 0xe6dccd : mallard ? 0x86684e : 0xeec64a;
+    const bill = mallard ? 0xe8c040 : 0xf0a040, headCol = mallard ? 0x2f7a52 : body;
     this.root = new THREE.Group();
     this.body = group(this.root);
     mesh(SPHERE, body, this.body, [0, 0.13 * s, 0], [0, 0, 0], [0.15 * s, 0.11 * s, 0.22 * s]);
@@ -23,8 +25,9 @@ export class Duck {
       return w;
     });
     this.head = group(this.body, [0, 0.22 * s, 0.13 * s]);
-    mesh(new THREE.CylinderGeometry(0.045 * s, 0.06 * s, 0.1 * s, 12), body, this.head, [0, -0.02 * s, -0.01 * s], [0.3, 0, 0]); // neck
-    mesh(SPHERE, body, this.head, [0, 0.06 * s, 0.02 * s], [0, 0, 0], [0.075 * s, 0.075 * s, 0.08 * s]);
+    mesh(new THREE.CylinderGeometry(0.045 * s, 0.06 * s, 0.1 * s, 12), headCol, this.head, [0, -0.02 * s, -0.01 * s], [0.3, 0, 0]); // neck
+    mesh(SPHERE, headCol, this.head, [0, 0.06 * s, 0.02 * s], [0, 0, 0], [0.075 * s, 0.075 * s, 0.08 * s]);
+    if (mallard) mesh(new THREE.TorusGeometry(0.052 * s, 0.009 * s, 6, 18), 0xf6f1e8, this.head, [0, -0.045 * s, -0.012 * s], [Math.PI / 2 + 0.3, 0, 0]); // white collar
     mesh(SPHERE, bill, this.head, [0, 0.045 * s, 0.11 * s], [0, 0, 0], [0.045 * s, 0.017 * s, 0.06 * s]);
     for (const side of [-1, 1]) {
       mesh(SPHERE, 0x241a17, this.head, [side * 0.05 * s, 0.08 * s, 0.065 * s], [0, 0, 0], [0.011 * s, 0.013 * s, 0.01 * s]);

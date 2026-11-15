@@ -17,6 +17,7 @@ import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
 import { TownLife } from './town/life.js';
 import { TownGames } from './town/games.js';
+import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -84,10 +85,17 @@ export class TownChapter {
       onMischief: (m) => (m.a === 'scatter' ? this.actions.remoteScatter(m.id, m.x) : this.actions.mischief.remote(m)),
     });
 
-    // Games with friends (from the 👥 card): races and tag.
-    this.games = new TownGames({ scene, world, hud, player, pack: this.pack, remotes: this.remotes, layout: this.layout });
+    // Games and challenges (from the 👥 card), and the 🏆 family records.
+    const records = (focus = null) => showRecords(hud, { town: this.layout.seed, townName: this.layout.name, profile: progress.id, focus });
+    this.games = new TownGames({
+      scene, world, hud, player, pack: this.pack, remotes: this.remotes, layout: this.layout,
+      anchor: () => this.actions.anchor(), glow: () => this.actions.glow, pigeons: () => this.actions.pigeons,
+      teleport: (x, z, face) => this.teleport(x, z, face), showRecords: records,
+    });
     this.pack.onGame = (m) => this.games.handle(m);
     this.pack.onStartGame = (kind) => this.games.start(kind);
+    this.pack.onRecords = records;
+    this.actions.onScatter = (flock, n) => this.games.onScatter(n);
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
     hud.setPlaces?.(this.placeList());
@@ -162,6 +170,18 @@ export class TownChapter {
   }
 
   /** Put this dog at its own garden gate, beside the tunnel it dug to get out. */
+  /** Pop the dog somewhere (a start line, say), facing `face`. */
+  teleport(x, z, face) {
+    const P = this.player;
+    P.pos.set(x, 0, z);
+    P.vel.set(0, 0);
+    P.vy = 0;
+    P.heading = face;
+    P.object.rotation.y = face;
+    this.follow.snap(P.pos);
+    this.follow.yaw = face + Math.PI;
+  }
+
   goHome(slot) {
     const homes = this.world.homes;
     if (!homes?.length) return;
@@ -322,9 +342,9 @@ export class TownChapter {
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
 
-    // Compass: toward a race's finish, whatever the current job needs, or the next place to discover.
+    // Compass: toward a game's next target, whatever the current job needs, or the next place to discover.
     const race = this.games.update(dt);
-    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.emoji } : job ? { x: job.pos.x, z: job.pos.z, label: job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
+    const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : job ? { x: job.pos.x, z: job.pos.z, label: job.emoji } : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
     if (aim && canAct) {
       const yaw = this.follow.yaw;
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
