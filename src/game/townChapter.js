@@ -12,6 +12,8 @@ import { DogActions } from '../systems/dogActions.js';
 import { GoldenBones } from './town/bones.js';
 import { Pack } from './town/pack.js';
 import { progress } from './progress.js';
+import { Smells } from './town/smells.js';
+import { Traffic } from '../systems/traffic.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -48,6 +50,9 @@ export class TownChapter {
       onAct: (a, extra) => this.pack.act(a, extra),
     });
     this.bones = new GoldenBones(scene, world.bones ?? [], this.state.bones);
+    // Things to sniff out all over town, and cars pottering round the streets.
+    this.smells = new Smells(world, this.layout.seed);
+    this.traffic = new Traffic(scene, { seed: this.layout.seed, hud, avoid: world.spawn });
 
     // Other players' dogs (paddling, splashing and shaking too).
     this.remotes = new RemoteDogs(scene, hud, () => this.player.pos);
@@ -231,6 +236,16 @@ export class TownChapter {
     }
   }
 
+  /** Sniffed something out: what it is, and a star or few. */
+  onSmell({ emoji, name, line, xp, at }) {
+    progress.stat('smells');
+    progress.award(xp, name);
+    sfx.sniff();
+    sfx.pop?.();
+    this.actions.sparkle(at.clone().setY(0.3), 10);
+    this.hud.say(`${emoji} ${line}`, () => this.actions.anchor().add(V(0, 0.3, 0)), 3.2);
+  }
+
   nextPlace() {
     let best = null, bd = Infinity;
     for (const p of this.places) {
@@ -253,7 +268,7 @@ export class TownChapter {
     P.platforms = this.remotes.platforms(); // other dogs' backs: the co-op boost!
 
     // Golden bones.
-    const b = this.bones.update(dt, this.time, pos, this.actions.glow);
+    const b = this.bones.update(dt, this.time, pos, this.actions.glow, { onFriend: P.onFriend });
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
     if (canAct) this.hud.setPrompt(b.hint);
 
@@ -264,9 +279,17 @@ export class TownChapter {
       }
     }
 
-    // Sniff (trail to the nearest undiscovered place), dig, bark, splash, mischief.
+    // Sniffing: the trail leads to the closest smell (or, if there's nothing to sniff round here,
+    // the next place to discover). Then dig, bark, splash, mischief.
+    const found = this.smells.update(dt, { nose: this.actions.nose(), sniffing: canAct && this.input.sniff, glow: this.actions.glow, myName: this.profile().name });
+    if (found) this.onSmell(found);
+    const smell = this.smells.nearest(pos, 30);
     const next = this.nextPlace();
-    this.actions.update(dt, { canAct, goal: next ? V(next.place.x, 0, next.place.z) : null });
+    this.actions.update(dt, { canAct, goal: smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null });
+
+    // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
+    const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
+    if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
 
     // Compass toward the next place.
     if (next && canAct) {

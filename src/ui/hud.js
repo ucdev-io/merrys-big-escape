@@ -131,7 +131,7 @@ export class HUD {
       }).join('')}</div>
       <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
         ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
-        ${stat('🍕', 'bin snacks', 'snacks')}</div>`,
+        ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -195,8 +195,9 @@ export class HUD {
       🦘 Jump · hold 👃 Sniff · 🐾 Dig · 🗣️ Woof · hold 💨 Zoom</p>`;
     this.showCard(`<h1>How to play</h1>${isTouchDevice() ? touch + keys : keys + touch}
       <h3>🐾 Tips</h3><ul class="help-tips">
-        <li><b>Sniff</b> to see a golden trail to where you're going.</li>
-        <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones need a <b>friend's back</b>!</li>
+        <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
+        <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
+        <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>
         <li><b>Double-tap jump</b> for a huge jump over fences and hedges. It uses some of your zoomies.</li>
         <li>Knock a <b>bin</b> over and gobble what falls out: 🍕 super speed · 🧀 super jumps · 🍩 endless zoomies · 🌭 everything!</li>
         <li>Every level (and every piece of clothing) makes you a bit faster ⚡ with longer zoomies 💨.</li>

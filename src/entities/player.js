@@ -36,6 +36,9 @@ export class Player {
     this.boost = { speed: 0, jump: 0, zoomies: 0 }; // seconds left on snack power-ups
     this.airJump = false; // a huge jump is still available in this jump
     this.jumpY = 0;       // where this jump started
+    // Boosted up by a friend: stood on another dog's back and hasn't been back down to the ground since
+    // (team bones need this, however high a dog can jump on its own).
+    this.onFriend = false;
     this.radius = 0.28;
     this.zoom = 0; // 0..1 how wound-up the zoomies are
     this.speed = 0;
@@ -190,14 +193,17 @@ export class Player {
       impact = Math.max(speed, -this.vy);
       this.vy -= GRAVITY * dt;
       this.pos.y += this.vy * dt;
+      const onDog = !!world?.colliders.onExtra;
       if (this.pos.y <= ground && this.vy <= 0) { // only land on the way down
         if (!this.grounded && this.vy < -2) { this.landed = 0.25; this.dog.land?.(Math.min(1, -this.vy / 6)); if (this.vy < -5) buzz(12); }
         this.pos.y = ground;
         this.vy = 0;
         this.grounded = true;
+        this.onFriend = onDog || (ground > 0.35 && this.onFriend);
       } else if (this.grounded && this.pos.y - ground < 0.3 && this.vy <= 0) {
         this.pos.y = ground; // small step down: stay glued to the surface
         this.vy = 0;
+        this.onFriend = onDog || (ground > 0.35 && this.onFriend);
       } else this.grounded = false;
     }
 

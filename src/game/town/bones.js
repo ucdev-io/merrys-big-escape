@@ -31,7 +31,7 @@ export class GoldenBones {
    * Spin and sparkle; detect the dog reaching one.
    * @returns {{ reached: string|null, hint: string|null }}
    */
-  update(dt, time, pos, glow) {
+  update(dt, time, pos, glow, { onFriend = false } = {}) {
     let reached = null, hint = null;
     for (const b of this.list) {
       if (b.got) continue;
@@ -39,8 +39,10 @@ export class GoldenBones {
       b.mesh.position.y = b.y + Math.sin(time * 2.5 + b.x) * 0.05;
       if (Math.random() < dt * 1.5) glow.spawn({ pos: b.mesh.position.clone(), vel: V(rand(-0.2, 0.2), rand(0.3, 0.6), rand(-0.2, 0.2)), life: 0.9, size: 0.03, color: 0xf6d06a });
       const d = Math.hypot(pos.x - b.x, pos.z - b.z);
-      if (d < 0.6 && pos.y >= b.need) { reached = b.id; this.hide(b.id); continue; }
-      if (d < 1.4 && pos.y < b.need) hint = b.friend ? 'Too high! Stand on a friend’s back 🐾🐾' : 'Too high! Find a way up 🦘';
+      // Pink-ringed bones are team bones: only a dog boosted up by a friend can grab one, however high it jumps.
+      const ok = pos.y >= b.need && (!b.friend || onFriend);
+      if (d < 0.6 && ok) { reached = b.id; this.hide(b.id); continue; }
+      if (d < 1.4 && !ok) hint = b.friend ? 'A team bone! Stand on a friend’s back to grab it 🐾🐾' : 'Too high! Find a way up 🦘';
     }
     return { reached, hint };
   }

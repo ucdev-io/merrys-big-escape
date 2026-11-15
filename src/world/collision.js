@@ -44,6 +44,7 @@ export class Colliders {
     // margin: paws reach a little past the dog's centre, so landing on an edge counts.
     // base: the ground itself (below 0 in deep water, where a dog floats instead of standing).
     let best = base;
+    this.onExtra = false; // was the highest surface one of `extra` (another dog's back)?
     const lim = feet + stepUp + 0.01, m = margin;
     for (const c of this.circles) {
       if (c.top === Infinity || c.stand === false || c.top > lim || c.top <= best) continue;
@@ -55,7 +56,7 @@ export class Colliders {
     }
     if (extra) for (const c of extra) {
       if (c.top > lim || c.top <= best) continue;
-      if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) best = c.top;
+      if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) { best = c.top; this.onExtra = true; }
     }
     return best;
   }

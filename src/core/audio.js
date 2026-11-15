@@ -114,6 +114,8 @@ export const sfx = {
   chomp() { for (let i = 0; i < 3; i++) noise(0.06, 0.22, 'bandpass', 700 + i * 150, 2, i * 0.11); tone('sine', 300, 600, 0.15, 0.15, 0.36); },
   // A huge jump: a big springy boing.
   boing() { tone('sine', 180, 720, 0.28, 0.28); tone('triangle', 360, 1440, 0.2, 0.08, 0.02); },
+  // A car horn: a friendly two-tone beep-beep (quieter when it's further away).
+  honk(vol = 1) { for (const [d, f] of [[0, 415], [0.22, 415]]) { tone('square', f, f * 0.98, 0.16, 0.07 * vol, d, { type: 'lowpass', freq: 1500 }); tone('square', f * 1.26, f * 1.25, 0.16, 0.05 * vol, d, { type: 'lowpass', freq: 1500 }); } },
   // Power-up running out.
   fizzle() { tone('sine', 600, 200, 0.3, 0.12); },
   hooray() {
