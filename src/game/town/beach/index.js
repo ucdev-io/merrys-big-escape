@@ -160,14 +160,30 @@ export class Beach {
     this.look.setLocal('beach', this.mist);
   }
 
-  /** Hide the beach's meshes that are wholly past the fog (like the woods). */
+  /**
+   * Hide the beach's meshes that are wholly past the fog (like the woods), and its moving things (gulls, crabs,
+   * castles, Sandy…) when the whole beach is.
+   */
   cull(camera) {
     const fog = this.scene.fog;
     if (!fog || !camera) return;
+    const far = fog.far * 1.25 + 2, c = camera.position;
     for (const o of this.far) {
       const s = o.geometry.boundingSphere;
-      o.visible = camera.position.distanceTo(s.center) - s.radius < fog.far * 1.25 + 2;
+      o.visible = c.distanceTo(s.center) - s.radius < far;
     }
+    const r = this.area.strip, dx = Math.max(r.x0 - c.x, 0, c.x - r.x1), dz = Math.max(r.z0 - c.z, 0, c.z - r.z1), seen = Math.hypot(dx, dz) < far;
+    if (seen === this.seen) return;
+    this.seen = seen;
+    for (const o of this.movers()) o.visible = seen;
+    this.castles.hidden = !seen;
+    if (this.castles.list.length) this.castles.draw(this.castles.list[0]); // (shows or hides the castles' parts as they should be)
+  }
+
+  /** Everything at the beach that moves about (to hide when the beach is lost in the fog). */
+  movers() {
+    const G = this.gulls, C = this.crabs;
+    return [G.bodyMesh, G.wingMeshR, G.wingMeshL, G.trayMesh, G.chipsMesh, C.bodyMesh, C.clawR, C.clawL, this.treasure.tips, this.prints.mesh, this.sandy.p.root];
   }
 
   /** 🐾 Prints in the sand behind every dog on it (not in the water, and not in the snow: the seasons do those). */

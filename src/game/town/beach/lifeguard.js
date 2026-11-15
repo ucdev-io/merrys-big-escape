@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { Person } from '../../../entities/person.js';
+import { bakedMat } from '../../../entities/shapes.js';
 import { RNG } from '../../../core/rng.js';
 import { sfx } from '../../../core/audio.js';
 import { buzz } from '../../../core/haptics.js';
@@ -15,6 +17,33 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const BALLS = 3, GULLS = 3;
 
 /**
+ * A person's many little meshes baked into a few (one for the body, one per arm, so she can still wave):
+ * a Person is ~17 draw calls (and as many again for its shadow); this is 3.
+ */
+function bakePerson(p) {
+  const bakeUnder = (top, skip = []) => {
+    top.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(top.matrixWorld).invert(), geos = [], meshes = [];
+    top.traverse((o) => {
+      if (!o.isMesh || skip.some((s) => s === o || s.getObjectById(o.id))) return;
+      const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone());
+      for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal') g.deleteAttribute(k);
+      g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      const c = o.material.color, n = g.attributes.position.count, col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) col.set([c.r, c.g, c.b], i * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geos.push(g); meshes.push(o);
+    });
+    for (const m of meshes) m.removeFromParent();
+    const m = new THREE.Mesh(mergeGeometries(geos), bakedMat());
+    m.castShadow = true; m.receiveShadow = true;
+    top.add(m);
+  };
+  for (const a of p.arms) bakeUnder(a);
+  bakeUnder(p.root, p.arms);
+}
+
+/**
  * 🛟 Sandy the lifeguard (she), on duty by her tower whatever the weather. Come and say hello and she'll
  * ask for a hand, three jobs taking turns:
  *   🏐 Beach balls: the wind's blown three out to sea — swim out (not past the buoys!) and bring them back.
@@ -28,6 +57,7 @@ export class Sandy {
     Object.assign(this, { scene, world, area, hud, player, actions, friends, dogName });
     this.carry = actions.carry;
     this.p = new Person({ shirt: 0xd9534f, trousers: 0xf2c94e, skin: 0xe0b48e, hair: 0x6b4a32, cap: { color: 0xf2c94e } });
+    bakePerson(this.p);
     this.pos = this.p.root.position;
     this.pos.copy(area.tower.stand);
     this.sea = area.tower.face; // (out to sea)

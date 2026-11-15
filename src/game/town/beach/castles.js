@@ -102,6 +102,9 @@ export class Castles {
     set(M.towers, was >= 3 ? pop(c.shown[2]) * (c.squash > 0 ? fade : 1) : 0, squash);
     set(M.top, was >= 4 ? pop(c.shown[3]) * (c.squash > 0 ? fade : 1) : 0, squash);
     for (const m of Object.values(M)) m.instanceMatrix.needsUpdate = true;
+    // (Parts nobody's built yet aren't drawn at all; nor is anything while the beach is lost in the fog.)
+    const most = this.hidden ? -1 : Math.max(...this.list.map((q) => Math.max(q.s, q.squash > 0 ? q.squashFrom : 0)));
+    M.mark.visible = most >= 0; M.heap.visible = most >= 1; M.keep.visible = most >= 2; M.towers.visible = most >= 3; M.top.visible = most >= 4;
   }
 
   /** A castle's stage changed: grow it (with a pop) or squash it flat. */
