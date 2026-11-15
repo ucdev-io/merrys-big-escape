@@ -272,9 +272,13 @@ export class Dog {
     this.digging = 0;
     this.barkT = 0;
     this.shakeT = 0;
+    this.air = 0;
+    this.squash = 0;
   }
 
   bark() { this.barkT = 0.45; }
+  jump() { this.squash = -0.25; }
+  land(k = 1) { this.squash = 0.28 * k; }
   shake() { this.shakeT = 1.3; }
 
   /**
@@ -326,16 +330,29 @@ export class Dog {
       }
     });
 
+    // In the air: front legs reach forward, back legs kick out behind, body tilts with the jump.
+    this.air = lerp(this.air, s.air ?? 0, 1 - Math.exp(-dt * 14));
+    if (this.air > 0.01) {
+      const a = this.air;
+      this.legs.forEach((Lg) => {
+        if (Lg.front) { Lg.hip.rotation.x = lerp(Lg.hip.rotation.x, -0.9, a); Lg.knee.rotation.x = lerp(Lg.knee.rotation.x, 1.3, a); }
+        else { Lg.hip.rotation.x = lerp(Lg.hip.rotation.x, 0.5, a); Lg.knee.rotation.x = lerp(Lg.knee.rotation.x, 0.3, a); Lg.ankle.rotation.x = lerp(Lg.ankle.rotation.x, 0.2, a); }
+      });
+    }
+    this.squash = lerp(this.squash, 0, 1 - Math.exp(-dt * 10));
+
     // Body motion: trot bob, gallop rock & stretch, lean into turns, breathing.
     const B = this.body;
     const hk = 0.4 + 0.6 * this.legScale;
     const trotBob = Math.abs(Math.cos(P * 2)) * 0.012 * moving * (1 - g) * hk * (1 + (br.stiff ?? 0));
     const galBob = Math.sin(P + 1.2) * 0.045 * g * hk;
     B.position.y = this.bodyY + trotBob + galBob - this.sniff * 0.03 * hk - this.digging * 0.06 * hk;
-    B.rotation.x = Math.sin(P) * 0.13 * g + this.sniff * 0.08 + this.digging * 0.28;
+    B.rotation.x = Math.sin(P) * 0.13 * g + this.sniff * 0.08 + this.digging * 0.28 - THREE.MathUtils.clamp((s.vy ?? 0) * 0.08, -0.35, 0.35) * this.air;
     B.rotation.z = this.lean + Math.sin(P * 2) * 0.06 * (br.wiggle ?? 0) * moving;
     B.rotation.y = Math.sin(P * 2 + 0.5) * 0.09 * (br.wiggle ?? 0) * moving; // sausage wiggle
-    B.scale.z = 1 + Math.sin(P + 0.5) * 0.07 * g;
+    B.scale.z = 1 + Math.sin(P + 0.5) * 0.07 * g - this.squash * 0.3 + this.air * 0.06;
+    B.scale.y = 1 - this.squash;
+    B.position.y -= this.squash * 0.12 * hk;
     this.chest.scale.x = 1 + Math.sin(t * lerp(2.2, 9, g)) * 0.03;
 
     // Whippet shiver: random little shivers when standing still (they're always cold!).

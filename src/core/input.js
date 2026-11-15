@@ -27,7 +27,8 @@ export class Input {
     const l = Math.hypot(x, y);
     return l > 1 ? { x: x / l, y: y / l } : { x, y };
   }
-  get sniff() { return this.down('Space') || this.touchButtons.has('sniff'); }
+  get sniff() { return this.down('KeyF') || this.touchButtons.has('sniff'); }
+  get jump() { return this.hit('Space') || this.touchButtons.has('jump!'); }
   get sprint() { return this.down('ShiftLeft', 'ShiftRight') || this.touchButtons.has('zoom') || this.touchButtons.has('zoom-stick'); }
   get dig() { return this.hit('KeyE') || this.touchButtons.has('dig!'); }
   get bark() { return this.hit('KeyQ') || this.touchButtons.has('bark!'); }

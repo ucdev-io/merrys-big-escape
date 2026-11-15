@@ -39,11 +39,11 @@ export class RemoteDogs {
 
   onStates(list, myId) {
     const now = performance.now();
-    for (const [id, x, z, h, v, f] of list) {
+    for (const [id, x, z, h, v, f, y = 0] of list) {
       if (id === myId) continue;
       const r = this.dogs.get(id);
       if (!r) continue;
-      r.buf.push({ t: now, x, z, h, v, f });
+      r.buf.push({ t: now, x, z, h, v, f, y });
       if (r.buf.length > 20) r.buf.shift();
     }
   }
@@ -63,6 +63,17 @@ export class RemoteDogs {
 
   get(id) { return this.dogs.get(id); }
 
+  /** Each standing dog's back is a little platform another dog can hop onto. */
+  platforms() {
+    const out = [];
+    for (const r of this.dogs.values()) {
+      if (!r.dog.root.visible) continue;
+      const p = r.dog.root.position, s = r.dog.breed.size;
+      out.push({ x: p.x, z: p.z, r: 0.32 * s, top: p.y + (r.dog.bodyY + 0.08) * s });
+    }
+    return out;
+  }
+
   update(dt) {
     const renderT = performance.now() - DELAY;
     for (const r of this.dogs.values()) {
@@ -73,13 +84,13 @@ export class RemoteDogs {
       const k = c.t > a.t ? THREE.MathUtils.clamp((renderT - a.t) / (c.t - a.t), 0, 1) : 1;
       const root = r.dog.root;
       root.visible = true;
-      root.position.set(a.x + (c.x - a.x) * k, 0, a.z + (c.z - a.z) * k);
+      root.position.set(a.x + (c.x - a.x) * k, a.y + (c.y - a.y) * k, a.z + (c.z - a.z) * k);
       const h = a.h + wrap(c.h - a.h) * k;
       const turn = wrap(h - r.heading) / Math.max(dt, 1e-3);
       r.heading = h;
       root.rotation.y = h;
       r.digT = Math.max(0, r.digT - dt);
-      r.dog.update(dt, { speed: a.v + (c.v - a.v) * k, turnRate: turn, sniff: !!(c.f & 1), dig: r.digT > 0 || !!(c.f & 2), happy: c.v > 2.8 ? 1 : 0.6 });
+      r.dog.update(dt, { speed: a.v + (c.v - a.v) * k, turnRate: turn, sniff: !!(c.f & 1), dig: r.digT > 0 || !!(c.f & 2), happy: c.v > 2.8 ? 1 : 0.6, air: c.f & 4 ? 1 : 0, vy: (c.y - a.y) * 8 });
 
       // Name tag floats above the dog.
       const s = this.hud.project(root.position.clone().add(new THREE.Vector3(0, 0.9 * r.dog.breed.size, 0)));

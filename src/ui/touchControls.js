@@ -6,6 +6,7 @@ export function createTouchControls(input) {
   wrap.innerHTML = `
     <div class="stick"><div class="knob"></div></div>
     <div class="buttons">
+      <button data-b="jump!" class="jump"><span>🦘</span>Jump</button>
       <button data-b="sniff" data-hold="1"><span>👃</span>Sniff</button>
       <button data-b="dig!"><span>🐾</span>Dig</button>
       <button data-b="bark!"><span>🗣️</span>Woof</button>

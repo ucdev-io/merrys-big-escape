@@ -4,6 +4,7 @@ import { PALETTE } from '../render/palette.js';
 import { RNG, fbm3 } from '../core/rng.js';
 import { Colliders } from './collision.js';
 import { mergeStatic, collectOccluders } from './merge.js';
+import { crate, bench } from './town/townProps.js';
 import {
   tree, bush, picketFence, house, shed, gnome, paddlingPool, washingLine,
   flowerBed, steppingStones, grassTufts, skyDome,
@@ -70,7 +71,13 @@ export function buildYard(seed = 'biscuit-yard') {
   group.add(flowerBed(-5, -7.4, 5, 1.3, rng, col));
   group.add(flowerBed(4.6, -7.4, 4.2, 1.3, rng, col));
   group.add(flowerBed(-9.2, -0.5, 1.2, 4.5, rng, col));
-  group.add(paddlingPool(3, 2.2, col));
+  group.add(paddlingPool(3, 2.2, null));
+  col.circle(3, 2.2, 1.15, 0.42);           // stand on the pool's rim
+  // Things to jump up on.
+  group.add(crate(-3.55, -2.85, 0.3, 1.1));  // under the washing line — the way up to the sock
+  col.box(-3.9, -3.2, -3.2, -2.5, 0.55);
+  group.add(bench(4.2, -6.4, 0));
+  col.box(3.4, -6.75, 5.0, -6.05, 0.5);
   const g = gnome(-2.8, 6.6, Math.PI + 0.3);
   g.userData.noMerge = true; // it falls over when barked at
   group.add(g);

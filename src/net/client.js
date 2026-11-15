@@ -46,7 +46,7 @@ export class NetClient {
     this.sendT -= dt;
     if (this.sendT > 0) return;
     this.sendT = 0.08;
-    this.send({ t: 's', x: pos.x, z: pos.z, h: heading, v: speed, f: flags });
+    this.send({ t: 's', x: pos.x, z: pos.z, y: pos.y, h: heading, v: speed, f: flags });
   }
 
   act(a) { this.send({ t: 'act', a }); }

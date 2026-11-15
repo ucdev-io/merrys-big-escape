@@ -11,6 +11,7 @@ import { showLobby } from '../ui/lobby.js';
 import { packPath } from '../net/links.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const hd = (a, b) => Math.hypot(a.x - b.x, a.z - b.z); // distance on the ground, ignoring jumps
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -18,13 +19,13 @@ const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 // Each treasure has a few possible hiding places, so the garden isn't identical every time.
 const SPOTS = {
   duck: [V(-5.3, 0, 3.3), V(-7.8, 0, 6.6), V(1.2, 0, 5.4)],
-  sock: [V(-5.0, 0, -1.8), V(-3.6, 0, -5.8), V(-8.3, 0, -5.6)],
+  sock: [V(-4.1, 0, -3.92)], // hanging on the washing line — too high to reach from the ground!
   biscuit: [V(5.5, 0, 3.9), V(8.4, 0, 1.2), V(5.8, 0, -2.6)],
 };
 const pickSpot = (k) => SPOTS[k][Math.floor(Math.random() * SPOTS[k].length)];
 const TREASURES = [
   { key: 'duck', pos: pickSpot('duck'), need: 5 },
-  { key: 'sock', pos: pickSpot('sock'), need: 5 },
+  { key: 'sock', pos: pickSpot('sock'), need: 5, reach: 0.85 },
   { key: 'biscuit', pos: pickSpot('biscuit'), need: 6 },
 ];
 const TUNNEL = { key: 'tunnel', pos: V(-1.4, 0, 7.55), need: 14 };
@@ -49,6 +50,7 @@ const LINES = {
   ],
   duck: 'A squeaky duck? How… babyish.',
   sock: 'EW! That sock smells worse than you!',
+  sockHint: 'Can\u2019t reach? Try jumping off that crate, genius.',
   biscuit: 'An ancient biscuit. Lovely. Can I go back to sleep now?',
   hint: '…psst. The soil by the fence near that silly gnome smells VERY soft.',
   barkAt: ['HISSSS! Rude!', 'MY EARS!', 'Bark at the gnome, not at me!'],
@@ -124,11 +126,22 @@ export class YardChapter {
     const pile = mesh(blobGeometry(9, 0.3, 2), 0x8a6346, g, [0.45, 0, 0.1], [0, 0, 0], [0.3, 0.14, 0.25]);
     g.visible = false;
     mound.scale.multiplyScalar(0.001);
-    return { ...d, group: g, mound, hole, pile, revealed: false, reveal: 0, progress: 0, done: false };
+    let hang = null;
+    if (d.reach) {
+      // Pegged to the washing line, swaying. Visible from the start — the trick is getting up there.
+      hang = ITEMS[d.key].build();
+      hang.position.set(d.pos.x, 1.38, d.pos.z);
+      hang.rotation.z = Math.PI;
+      hang.scale.setScalar(1.3);
+      this.scene.add(hang);
+      mound.visible = hole.visible = pile.visible = false;
+    }
+    return { ...d, group: g, mound, hole, pile, hang, revealed: !!d.reach, reveal: 0, progress: 0, done: false };
   }
 
   finishSpot(s, silent) {
     s.done = true;
+    if (s.reach) { if (s.hang) s.hang.visible = false; return; }
     s.revealed = true;
     s.reveal = 1;
     s.group.visible = true;
@@ -161,8 +174,8 @@ export class YardChapter {
 
   keysHint() {
     return this.isTouch()
-      ? 'Hold <b>👃 Sniff</b> to smell, tap <b>🐾 Dig</b> to dig'
-      : 'Hold <b>Space</b> to sniff, press <b>E</b> to dig';
+      ? 'Hold <b>👃 Sniff</b> to smell, tap <b>🐾 Dig</b> to dig, <b>🦘</b> to jump'
+      : 'Hold <b>F</b> to sniff, <b>E</b> to dig, <b>Space</b> to jump';
   }
 
   get dogName() { return loadSave().profile?.name ?? BREEDS[this.player.breedKey].dogName; }
@@ -191,8 +204,8 @@ export class YardChapter {
     this.follow.yaw = this.player.heading + Math.PI;
     const name = this.dogName;
     const keys = this.isTouch()
-      ? 'Drag on the left to walk · Hold 👃 to sniff · Tap 🐾 to dig · 🗣️ to woof · 💨 for zoomies'
-      : '<b>WASD</b> walk · hold <b>Shift</b> for zoomies · hold <b>Space</b> to sniff · <b>E</b> dig · <b>Q</b> woof';
+      ? 'Drag on the left to walk · 🦘 to jump · Hold 👃 to sniff · Tap 🐾 to dig · 🗣️ to woof · 💨 for zoomies'
+      : '<b>WASD</b> walk · <b>Space</b> jump · hold <b>Shift</b> for zoomies · hold <b>F</b> to sniff · <b>E</b> dig · <b>Q</b> woof';
     this.hud.showCard(`
       <h1 class="who"></h1>
       <p><span class="who2"></span> is bored of the back garden.<br>There must be a way out\u2026 and that nose knows it!</p>
@@ -259,12 +272,24 @@ export class YardChapter {
     const nose = pos.clone().add(V(Math.sin(P.heading) * 0.42, 0.3, Math.cos(P.heading) * 0.42));
     const active = this.activeSpots();
     let nearest = null, nd = Infinity;
-    for (const s of active) { const d = s.pos.distanceTo(pos); if (d < nd) { nd = d; nearest = s; } }
+    for (const s of active) { const d = hd(s.pos, pos); if (d < nd) { nd = d; nearest = s; } }
     this.updateTrail(dt, nose, nearest);
 
     // Reveal spots by sniffing near them.
+    this.reachPrompt = null;
     for (const s of active) {
-      const d = s.pos.distanceTo(pos);
+      const d = hd(s.pos, pos);
+      if (s.reach) {
+        s.hang.rotation.x = Math.sin(this.time * 1.7) * 0.12;
+        if (Math.random() < dt * 2) this.smellPuff(V(s.pos.x, 1.1, s.pos.z), 0x9ab86a);
+        if (d < 0.8 && pos.y >= s.reach - 0.01) { this.complete(s); continue; }
+        if (d < 1.3 && pos.y < s.reach) {
+          this.reachPrompt = 'Too high! Find something to jump up on 📦';
+          this.stuckT = (this.stuckT ?? 0) + dt;
+          if (this.stuckT > 6 && !this.saidSockHint) { this.saidSockHint = true; this.hud.say(LINES.sockHint, this.catAnchor, 4); }
+        }
+        continue;
+      }
       if (!s.revealed && sniffing && d < 5) {
         s.revealed = true;
         s.group.visible = true;
@@ -287,8 +312,9 @@ export class YardChapter {
     }
 
     // ---- Dig prompt + digging
-    const near = active.find((s) => s.revealed && s.pos.distanceTo(pos) < 1.05);
-    if (canAct && near) {
+    const near = active.find((s) => !s.reach && s.revealed && hd(s.pos, pos) < 1.05 && pos.y < 0.3);
+    if (canAct && this.reachPrompt) this.hud.setPrompt(this.reachPrompt);
+    else if (canAct && near) {
       const bar = near.need > 6 ? '  ' + '▮'.repeat(Math.round((near.progress / near.need) * 10)).padEnd(10, '▯') : '';
       this.hud.setPrompt((this.isTouch() ? 'Tap 🐾 to dig!' : 'Press E to dig!') + bar);
     } else this.hud.setPrompt('');
@@ -409,6 +435,7 @@ export class YardChapter {
     const def = ITEMS[s.key];
     const obj = def.build();
     obj.position.copy(s.pos);
+    if (s.hang) { s.hang.visible = false; this.hud.float('YOINK!', V(s.pos.x, 1.6, s.pos.z)); }
     this.scene.add(obj);
     this.popping = { obj, t: 0, stinky: !!obj.userData.stinky };
     sfx.found();
@@ -519,6 +546,7 @@ export class YardChapter {
     this.hud.setPrompt('');
     sfx.tunnel();
     let t = 0, stage = 0;
+    P.lockY = true;
     const dog = P.dog.root;
     const startY = dog.position.y;
     P.heading = 0; // face the fence

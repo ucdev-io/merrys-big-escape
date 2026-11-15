@@ -1,15 +1,22 @@
-// Tiny 2D collision world on the XZ plane: circles and axis-aligned boxes.
+// Tiny "2.5D" collision world on the XZ plane: circles and axis-aligned boxes, each with a top
+// height. Below the top it's a wall; at or above the top it's something to stand on.
 export class Colliders {
   constructor() { this.circles = []; this.boxes = []; }
-  circle(x, z, r) { this.circles.push({ x, z, r }); }
-  box(x0, z0, x1, z1) { this.boxes.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1) }); }
-  /** Push a circle (p.x, p.z, radius r) out of everything. Mutates p. */
+  circle(x, z, r, top = Infinity, stand = true) { this.circles.push({ x, z, r, top, stand }); }
+  box(x0, z0, x1, z1, top = Infinity) {
+    this.boxes.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), top });
+  }
+
+  /** Push a circle (p.x, p.z, radius r) out of everything taller than its feet (p.y). Mutates p. */
   resolve(p, r) {
+    const feet = (p.y ?? 0) + 0.02;
     for (const c of this.circles) {
+      if (feet >= c.top) continue;
       const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = c.r + r;
       if (d < m && d > 1e-6) { p.x = c.x + (dx / d) * m; p.z = c.z + (dz / d) * m; }
     }
     for (const b of this.boxes) {
+      if (feet >= b.top) continue;
       const cx = Math.max(b.x0, Math.min(p.x, b.x1)), cz = Math.max(b.z0, Math.min(p.z, b.z1));
       const dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz);
       if (d < r) {
@@ -21,5 +28,28 @@ export class Colliders {
         }
       }
     }
+  }
+
+  /**
+   * Height of the highest surface under (x, z) that a dog with feet at `feet` can stand on
+   * (anything no higher than feet + stepUp). `extra` adds moving platforms, e.g. other dogs' backs.
+   */
+  surfaceAt(x, z, feet, stepUp = 0.3, extra = null, margin = 0.16) {
+    // margin: paws reach a little past the dog's centre, so landing on an edge counts.
+    let best = 0;
+    const lim = feet + stepUp, m = margin;
+    for (const c of this.circles) {
+      if (c.top === Infinity || c.stand === false || c.top > lim || c.top <= best) continue;
+      if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) best = c.top;
+    }
+    for (const b of this.boxes) {
+      if (b.top === Infinity || b.top > lim || b.top <= best) continue;
+      if (x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m) best = b.top;
+    }
+    if (extra) for (const c of extra) {
+      if (c.top > lim || c.top <= best) continue;
+      if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) best = c.top;
+    }
+    return best;
   }
 }

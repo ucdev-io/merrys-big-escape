@@ -104,7 +104,9 @@ export function slide(x, z, ry) {
   mesh(RB(0.9, 0.08, 0.9), 0xf6d06a, g, [0, 1.5, -1.0]);
   for (const sx of [-0.4, 0.4]) for (const sz of [-1.4, -0.6]) mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6), 0x5b86c4, g, [sx, 0.75, sz]);
   mesh(RB(0.7, 0.06, 2.2, 0.03), 0xd9534f, g, [0, 0.8, 0.4], [0.6, 0, 0]);
-  for (let i = 0; i < 5; i++) mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.8, 6), 0x5b86c4, g, [0, 0.25 + i * 0.28, -1.5], [0, 0, Math.PI / 2]);
+  // Chunky steps up the back — big enough for a dog.
+  for (let i = 0; i < 3; i++) mesh(RB(0.8, 0.12, 0.34, 0.03), 0xf6d06a, g, [0, 0.34 + i * 0.4, -2.45 + i * 0.35]);
+  for (let i = 0; i < 3; i++) mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.34 + i * 0.4, 6), 0x5b86c4, g, [0.36, (0.34 + i * 0.4) / 2, -2.45 + i * 0.35]);
   return g;
 }
 

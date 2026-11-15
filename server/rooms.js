@@ -33,7 +33,7 @@ function welcome(room, p) {
   send(p.ws, {
     t: 'welcome', id: p.id, slot: p.slot, code: room.code, seed: room.seed,
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
-    shared: { discovered: [...room.discovered] },
+    shared: { discovered: [...room.discovered], bones: [...room.bones] },
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
 }
@@ -57,7 +57,8 @@ function onMessage(p, msg) {
       const code = makeCode();
       const seed = cleanSeed(msg.seed);
       if (!code || !seed) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
-      const r = { code, seed, players: new Map(), discovered: new Set((Array.isArray(msg.discovered) ? msg.discovered : []).slice(0, 20).map(cleanId)) };
+      const list = (v, n) => (Array.isArray(v) ? v : []).slice(0, n).map(cleanId);
+      const r = { code, seed, players: new Map(), discovered: new Set(list(msg.discovered, 20)), bones: new Set(list(msg.bones, 50)) };
       rooms.set(code, r);
       Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: 0 });
       r.players.set(p.id, p);
@@ -74,18 +75,19 @@ function onMessage(p, msg) {
     }
     case 's': // my dog's state
       if (!room) return;
-      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 15];
+      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 15, num(msg.y, 50)];
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
       if (!room || !['bark', 'dig', 'shake'].includes(msg.a)) return;
       return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
     case 'ev': { // shared adventure progress
-      if (!room || !msg.ev || msg.ev.type !== 'discover') return;
-      const id = cleanId(msg.ev.id);
-      if (!id || room.discovered.has(id)) return;
-      room.discovered.add(id);
-      return broadcast(room, { t: 'ev', by: p.id, name: p.name, ev: { type: 'discover', id } });
+      const kinds = { discover: 'discovered', bone: 'bones' };
+      if (!room || !msg.ev || !kinds[msg.ev.type]) return;
+      const id = cleanId(msg.ev.id), set = room[kinds[msg.ev.type]];
+      if (!id || set.has(id) || set.size > 60) return;
+      set.add(id);
+      return broadcast(room, { t: 'ev', by: p.id, name: p.name, ev: { type: msg.ev.type, id } });
     }
   }
 }

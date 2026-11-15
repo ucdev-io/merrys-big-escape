@@ -17,10 +17,12 @@ const H = TOWN.BLOCK / 2;          // 15: half block
 const EDGE = H - 0.4;              // where garden fences sit
 
 /** Colliders in block-local coordinates (blocks are never rotated, only offset). */
-function localColliders(col, bx, bz) {
+function localColliders(col, bx, bz, bones) {
   return {
-    circle: (x, z, r) => col.circle(x + bx, z + bz, r),
-    box: (x0, z0, x1, z1) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz),
+    circle: (x, z, r, top, stand) => col.circle(x + bx, z + bz, r, top, stand),
+    box: (x0, z0, x1, z1, top) => col.box(x0 + bx, z0 + bz, x1 + bx, z1 + bz, top),
+    // A golden bone resting on something `top` high. `friend`: too high to reach alone.
+    bone: (x, z, top, friend = false) => bones?.push({ x: x + bx, y: top + 0.18, z: z + bz, need: top - 0.15, friend }),
   };
 }
 
@@ -55,7 +57,7 @@ function ground() {
   return m;
 }
 
-function streets(g, layout, rng, col) {
+function streets(g, layout, rng, col, bones) {
   const S = TOWN.SIZE;
   // Tarmac under the whole town.
   const tarmac = mesh(new THREE.PlaneGeometry(S + 6, S + 6), 0xb7b2aa, g, [0, 0.01, 0], [-Math.PI / 2, 0, 0]);
@@ -102,8 +104,14 @@ function streets(g, layout, rng, col) {
     const side = rng.pick([-1, 1]) * 3;
     const vertical = rng.chance(0.5);
     const [x, z] = vertical ? [line + side, along] : [along, line + side];
-    g.add(car(x, z, vertical ? (side > 0 ? 0 : Math.PI) : (side > 0 ? Math.PI / 2 : -Math.PI / 2), rng.pick(carCols)));
-    if (vertical) col.box(x - 0.95, z - 1.9, x + 0.95, z + 1.9); else col.box(x - 1.9, z - 0.95, x + 1.9, z + 0.95);
+    const ry = vertical ? (side > 0 ? 0 : Math.PI) : (side > 0 ? Math.PI / 2 : -Math.PI / 2);
+    g.add(car(x, z, ry, rng.pick(carCols)));
+    // Bonnet you can hop onto, then the roof.
+    if (vertical) col.box(x - 0.95, z - 1.9, x + 0.95, z + 1.9, 0.75); else col.box(x - 1.9, z - 0.95, x + 1.9, z + 0.95, 0.75);
+    const cz = -0.2, cx = Math.sin(ry) * cz, czz = Math.cos(ry) * cz;
+    if (vertical) col.box(x + cx - 0.75, z + czz - 1.0, x + cx + 0.75, z + czz + 1.0, 1.33);
+    else col.box(x + cx - 1.0, z + czz - 0.75, x + cx + 1.0, z + czz + 0.75, 1.33);
+    if (i < 3) bones?.push({ x: x + cx, y: 1.33 + 0.18, z: z + czz, need: 1.18, friend: false });
   }
 }
 
@@ -162,9 +170,9 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
     return { gateOutside: at(H / 2 + 1.3), front: f, home: true };
   }
   const extras = [
-    () => { const [x, z] = at(-5.5, 4); g.add(kennel(x, z, ry)); lc.circle(x, z, 0.6); },
+    () => { const [x, z] = at(-5.5, 4); g.add(kennel(x, z, ry)); lc.circle(x, z, 0.6, 1.05); },
     () => { const [x, z] = at(2.5, -4.5); g.add(birdbath(x, z)); lc.circle(x, z, 0.3); },
-    () => { const [x, z] = at(-6, -4); g.add(bench(x, z, ry)); lc.circle(x, z, 0.7); },
+    () => { const [x, z] = at(-6, -4); g.add(bench(x, z, ry)); lc.circle(x, z, 0.75, 0.5); },
     () => { const [x, z] = at(3.8, 4.2); g.add(gnome(x, z, ry)); lc.circle(x, z, 0.2); },
     () => { const [x, z] = at(-6.2, 0); g.add(swingSet(x, z, ry + Math.PI / 2)); lc.circle(x, z, 1.4); },
   ];
@@ -206,15 +214,26 @@ function parkBlock(g, lc, rng) {
     g.add(tree(x, z, rng.float(1.1, 1.6), rng, lc, { detail: 2, blobs: 5 }));
     n++;
   }
-  g.add(birdbath(0, 0)); lc.circle(0, 0, 0.35);
+  g.add(birdbath(0, 0)); lc.circle(0, 0, 0.35, 0.92);
+  lc.bone(0, 0, 1.15, true); // floating above the birdbath: needs a friend's back to reach
   g.add(flowerBed(-2.8, 2.8, 2, 2, rng, lc));
   g.add(flowerBed(2.8, -2.8, 2, 2, rng, lc));
   for (const a of [0.6, 2.4, 4.3]) {
     const x = Math.cos(a) * 10.4, z = Math.sin(a) * 10.4;
-    g.add(bench(x, z, Math.atan2(-x, -z))); lc.circle(x, z, 0.7);
+    g.add(bench(x, z, Math.atan2(-x, -z))); lc.circle(x, z, 0.75, 0.5);
+    if (a === 2.4) lc.bone(x, z, 0.5);
   }
   g.add(swingSet(-10, 6, 0.3)); lc.circle(-10, 6, 1.4);
-  g.add(slide(9.5, -6.5, -0.8)); lc.circle(9.5, -6.5, 1.3);
+  g.add(slide(9.5, -6.5, -0.8));
+  {
+    // Steps (0.4, 0.8, 1.2) up to the platform (1.55): hop, hop, hop!
+    const ry = -0.8, s = Math.sin(ry), c = Math.cos(ry);
+    const at = (lz) => [9.5 + s * lz, -6.5 + c * lz];
+    [[-2.45, 0.4], [-2.1, 0.8], [-1.75, 1.2]].forEach(([lz, top]) => { const [x, z] = at(lz); lc.circle(x, z, 0.24, top); });
+    const [px, pz] = at(-1.0);
+    lc.circle(px, pz, 0.45, 1.55);
+    lc.bone(px, pz, 1.55);
+  }
   const mower = lawnmower(6, 4, -0.6);
   g.add(mower); lc.circle(6, 4, 0.5);
 }
@@ -227,7 +246,7 @@ function pondBlock(g, lc, rng) {
   water.castShadow = false;
   const deep = mesh(new THREE.CircleGeometry(1, 40), 0x78afc8, g, [0.8, 0.08, -0.4], [-Math.PI / 2, 0, 0], [rx * 0.6, rz * 0.55, 1]);
   deep.castShadow = false;
-  for (const [x, r] of [[-6, 4.6], [-2, 6], [2, 6], [6, 4.6]]) lc.circle(x, 0, r);
+  for (const [x, r] of [[-6, 4.6], [-2, 6], [2, 6], [6, 4.6]]) lc.circle(x, 0, r, 0.29, false);
   // Lily pads.
   for (let i = 0; i < 14; i++) {
     const a = rng.float(0, Math.PI * 2), k = rng.float(0.3, 0.85);
@@ -250,6 +269,8 @@ function pondBlock(g, lc, rng) {
   const jx = 0, jz = rz + 1.6;
   for (let i = 0; i < 9; i++) mesh(new RoundedBoxGeometry(1.3, 0.08, 0.32, 1, 0.02), 0xc79b6d, g, [jx, 0.25, jz - i * 0.36]);
   for (const sx of [-0.6, 0.6]) for (const sz of [0, -2.9]) mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 8), 0x9b7452, g, [jx + sx, 0.15, jz + sz]);
+  lc.box(jx - 0.65, jz - 3.05, jx + 0.65, jz + 0.2, 0.3);
+  lc.bone(jx, jz - 2.8, 0.3);
   // Rocks, trees, benches.
   for (let i = 0; i < 8; i++) {
     const a = rng.float(0, Math.PI * 2);
@@ -257,8 +278,8 @@ function pondBlock(g, lc, rng) {
     mesh(blobGeometry(rng.int(0, 20), 0.3, 2), rng.pick([0xb8b0a4, 0xa39b90]), g, [Math.cos(a) * (rx + 1.1), s * 0.3, Math.sin(a) * (rz + 1.1)], [rng.float(0, 3), rng.float(0, 3), 0], [s, s * 0.6, s]);
   }
   for (const [x, z] of [[-12, -11], [12, -11], [-12, 11.5], [12.5, 10]]) g.add(tree(x + rng.float(-1, 1), z + rng.float(-1, 1), rng.float(1.1, 1.5), rng, lc, { detail: 2, blobs: 5 }));
-  g.add(bench(-5, rz + 3.2, Math.PI)); lc.circle(-5, rz + 3.2, 0.7);
-  g.add(bench(5.5, -rz - 3.2, 0)); lc.circle(5.5, -rz - 3.2, 0.7);
+  g.add(bench(-5, rz + 3.2, Math.PI)); lc.circle(-5, rz + 3.2, 0.75, 0.5);
+  g.add(bench(5.5, -rz - 3.2, 0)); lc.circle(5.5, -rz - 3.2, 0.75, 0.5);
 }
 
 function bakeryBlock(g, lc, rng) {
@@ -271,16 +292,18 @@ function bakeryBlock(g, lc, rng) {
     box(x - 4.3, 3, x + 4.3, 10.1);
     const [tx, tz] = T.p(x - 1.5, 12.6);
     g.add(cafeTable(tx, tz, rng.pick([0xf2a0b4, 0xf6d06a, 0x8fc4d8])));
-    lc.circle(tx, tz, 0.9);
+    lc.circle(tx, tz, 0.45, 0.74);
+    if (i === 1) lc.bone(tx, tz, 0.74);
   });
   // Back yard behind the shops: bins, crates and the famous BBQ.
   const [qx, qz] = T.p(4, -2);
   g.add(bbq(qx, qz, T.ry(0))); lc.circle(qx, qz, 0.5);
   for (let i = 0; i < 4; i++) {
     const [x, z] = T.p(-12 + i * 1.2, 1.6);
-    g.add(wheelieBin(x, z, T.ry(Math.PI), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52]))); lc.circle(x, z, 0.4);
+    g.add(wheelieBin(x, z, T.ry(Math.PI), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52]))); lc.circle(x, z, 0.4, 1.05);
+    if (i === 2) lc.bone(x, z, 1.05, true); // on a bin lid: give a friend a boost
   }
-  for (let i = 0; i < 3; i++) { const [x, z] = T.p(10 + rng.float(-1, 1), 1.2 + i * 0.1); g.add(crate(x, z, rng.float(0, 1))); lc.circle(x, z, 0.4); }
+  for (let i = 0; i < 3; i++) { const [x, z] = T.p(10 + rng.float(-1, 1), 1.2 + i * 0.1); g.add(crate(x, z, rng.float(0, 1))); lc.circle(x, z, 0.4, 0.5); }
   for (const [x, z] of [[-9, -9], [0, -11], [9, -8]]) {
     const [tx, tz] = T.p(x + rng.float(-1, 1), z);
     g.add(tree(tx, tz, rng.float(1, 1.3), rng, lc, { detail: 2, blobs: 4 }));
@@ -305,12 +328,19 @@ function alleyBlock(g, lc, rng) {
   }
   spots.forEach(([x, z], k) => {
     if (Math.abs(x) < 3 && Math.abs(z) < 3) return;
+    if (x > 4.5 && x < 8.5 && z < -2) return; // keep the staircase clear
     const r = k % 3;
-    if (r === 0) g.add(wheelieBin(x, z, rng.float(0, 6), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52, 0x9b7452])));
-    else if (r === 1) g.add(crate(x, z, rng.float(0, 1), rng.float(0.8, 1.2)));
-    else g.add(cardboardBox(x, z, rng.float(0, 6)));
-    lc.circle(x, z, 0.4);
+    if (r === 0) { g.add(wheelieBin(x, z, rng.float(0, 6), rng.pick([0x5d8c55, 0x5b86c4, 0x4a4a52, 0x9b7452]))); lc.circle(x, z, 0.4, 1.05); }
+    else if (r === 1) { const s = rng.float(0.8, 1.2); g.add(crate(x, z, rng.float(0, 1), s)); lc.circle(x, z, 0.4, 0.5 * s); }
+    else { g.add(cardboardBox(x, z, rng.float(0, 6))); lc.circle(x, z, 0.35, 0.36); }
   });
+  // Crate staircase against the wall: 1, 2 then 3 crates high.
+  for (let n = 1; n <= 3; n++) {
+    const x = 5.2 + (n - 1) * 0.66, z = -3.55;
+    for (let k = 0; k < n; k++) { const c = crate(x, z, 0); c.position.y = k * 0.5; g.add(c); }
+    lc.box(x - 0.31, z - 0.31, x + 0.31, z + 0.31, n * 0.5);
+  }
+  lc.bone(5.2 + 2 * 0.66, -3.55, 1.5);
   for (let k = 0; k < 5; k++) g.add(puddle(rng.float(-1, 1) * (k % 2 ? 1 : 10), rng.float(-1, 1) * (k % 2 ? 10 : 1), rng.float(0.8, 1.6)));
 }
 
@@ -320,9 +350,10 @@ export function buildTown(layout) {
   const rng = new RNG(`build:${layout.seed}`);
   const root = new THREE.Group();
   const col = new Colliders();
+  const bones = [];
 
   root.add(ground());
-  streets(root, layout, rng, col);
+  streets(root, layout, rng, col, bones);
 
   let spawn = new THREE.Vector3(0, 0, 0), spawnFace = 0;
   const otherHomes = []; // every other garden in town: one per dog in a pack
@@ -330,7 +361,7 @@ export function buildTown(layout) {
     const g = new THREE.Group();
     g.position.set(b.x, 0, b.z);
     root.add(g);
-    const lc = localColliders(col, b.x, b.z);
+    const lc = localColliders(col, b.x, b.z, bones);
     const br = new RNG(b.seed);
     if (b.type === 'houses' || b.type === 'home') {
       const lots = housesBlock(g, lc, br, b.type === 'home' ? b.homeLot : null);
@@ -381,6 +412,7 @@ export function buildTown(layout) {
     occluders,
     spawn,
     spawnFace,
+    bones: bones.map((b, i) => ({ ...b, id: `bone${i}` })),
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.
     homes: [{ pos: spawn.clone(), face: spawnFace }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: { x0: -half, x1: half, z0: -half, z1: half },

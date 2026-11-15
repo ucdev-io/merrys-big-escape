@@ -8,9 +8,11 @@ import { BREEDS } from '../entities/breeds.js';
 import { RemoteDogs } from '../net/remoteDogs.js';
 import { NetClient } from '../net/client.js';
 import { showLobby } from '../ui/lobby.js';
+import { paint } from '../render/watercolorMaterial.js';
 import { packLink, packPath, fillShareBox } from '../net/links.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -31,7 +33,8 @@ export class TownChapter {
     Object.assign(this, { scene, world, player, hud, input, follow, pipeline, net });
     this.layout = world.layout;
     const save = loadSave();
-    this.state = { seed: this.layout.seed, discovered: save.town?.seed === this.layout.seed ? save.town.discovered ?? [] : [] };
+    const same = save.town?.seed === this.layout.seed;
+    this.state = { seed: this.layout.seed, discovered: same ? save.town.discovered ?? [] : [], bones: same ? save.town.bones ?? [] : [] };
     this.places = this.layout.places.filter((p) => p.type !== 'home');
     this.time = 0;
     this.sniffAmt = 0;
@@ -49,6 +52,7 @@ export class TownChapter {
     hud.root.appendChild(this.compass);
 
     this.remotes = new RemoteDogs(scene, hud, () => this.player.pos);
+    this.buildBones();
     this.packBadge = document.createElement('button');
     this.packBadge.className = 'pill pack-badge hidden';
     hud.root.querySelector('.top-right').prepend(this.packBadge);
@@ -81,7 +85,7 @@ export class TownChapter {
         lobby.setBusy(true);
         try {
           const net = this.net ?? new NetClient();
-          const w = await net.enter('create', { seed: this.layout.seed, name: c.name, breed: c.breed, discovered: this.state.discovered });
+          const w = await net.enter('create', { seed: this.layout.seed, name: c.name, breed: c.breed, discovered: this.state.discovered, bones: this.state.bones });
           this.net = net;
           lobby.close();
           this.joinPack(w);
@@ -127,6 +131,7 @@ export class TownChapter {
     history.replaceState(null, '', packPath(w.code));
     // Shared adventure: the pack's progress is everyone's progress.
     for (const id of w.shared.discovered) if (!this.state.discovered.includes(id)) this.state.discovered.push(id);
+    for (const id of w.shared.bones ?? []) if (!this.state.bones.includes(id)) { this.state.bones.push(id); this.hideBone(id); }
     this.hud.setPlaces?.(this.placeList());
     this.refreshObjective();
     w.players.forEach((p) => this.remotes.add(p));
@@ -141,7 +146,7 @@ export class TownChapter {
     net.on('leave', (m) => { this.remotes.remove(m.id); this.updateBadge(); });
     net.on('ss', (m) => this.remotes.onStates(m.p, net.id));
     net.on('act', (m) => this.remotes.onAct(m.id, m.a));
-    net.on('ev', (m) => { this.pending?.delete(m.ev.id); this.applyEvent(m.ev, m.by === net.id ? null : m.name); });
+    net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.applyEvent(m.ev, m.by === net.id ? null : m.name); });
     net.on('close', () => {
       this.remotes.clear();
       this.net = null;
@@ -158,6 +163,56 @@ export class TownChapter {
     this.hud.showCard(`<h1>Pack ${code}</h1><p>Friends on the same Wi-Fi can scan this to join:</p><div class="invite"></div><p class="pack-list"></p>`, buttons);
     this.hud.card.querySelector('.pack-list').textContent = `In the pack: ${['You', ...names].join(' · ')}`;
     await fillShareBox(this.hud.card.querySelector('.invite'), await packLink(code), { text: `Join my dog pack ${code}!` });
+  }
+
+  // ---------- golden bones ----------
+
+  buildBones() {
+
+    this.bones = (this.world.bones ?? []).map((b) => {
+      const g = new THREE.Group();
+      const gold = paint(0xf2c14e, { emissive: 0x6a4a10 });
+      const add = (geom, pos, rot) => { const m = new THREE.Mesh(geom, gold); m.position.set(...pos); if (rot) m.rotation.set(...rot); g.add(m); };
+      add(new THREE.CapsuleGeometry(0.04, 0.2, 4, 10), [0, 0, 0], [0, 0, Math.PI / 2]);
+      for (const x of [-1, 1]) for (const z of [-1, 1]) add(new THREE.SphereGeometry(0.05, 12, 8), [x * 0.14, 0, z * 0.04]);
+      if (b.friend) {
+        // Pink paw-print halo: "you'll need a friend for this one".
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.015, 6, 28), paint(0xf2a0b4, { emissive: 0x5a2030 }));
+        ring.rotation.x = Math.PI / 2;
+        g.add(ring);
+      }
+      g.position.set(b.x, b.y, b.z);
+      this.scene.add(g);
+      return { ...b, mesh: g, got: this.state.bones.includes(b.id) };
+    });
+    this.bones.forEach((b) => (b.mesh.visible = !b.got));
+
+  }
+
+  hideBone(id) { const b = this.bones?.find((q) => q.id === id); if (b) { b.got = true; b.mesh.visible = false; } }
+
+  updateBones(dt) {
+    const P = this.player, pos = P.pos;
+    let hint = null;
+    for (const b of this.bones) {
+      if (b.got) continue;
+      b.mesh.rotation.y += dt * 2;
+      b.mesh.position.y = b.y + Math.sin(this.time * 2.5 + b.x) * 0.05;
+      if (Math.random() < dt * 1.5) this.glow.spawn({ pos: b.mesh.position.clone(), vel: V(rand(-0.2, 0.2), rand(0.3, 0.6), rand(-0.2, 0.2)), life: 0.9, size: 0.03, color: 0xf6d06a });
+      const d = Math.hypot(pos.x - b.x, pos.z - b.z);
+      if (d < 0.6 && pos.y >= b.need) { this.hideBone(b.id); this.dispatch({ type: 'bone', id: b.id }); continue; }
+      if (d < 1.4 && pos.y < b.need) hint = b.friend ? 'Too high! Stand on a friend\u2019s back 🐾🐾' : 'Too high! Find a way up 🦘';
+    }
+    if (!P.frozen) this.hud.setPrompt(hint);
+  }
+
+  onBone(id, byName) {
+    this.hideBone(id);
+    sfx.found();
+    const n = this.state.bones.length, t = this.bones.length;
+    this.hud.showToastRaw('✨🦴', `${byName ? '<span class="who"></span> found' : 'You found'} a golden bone!`, `${n} of ${t} golden bones${n === t ? ' \u2014 every single one! 🎉' : ''}`);
+    if (byName) this.hud.toast.querySelector('.who').textContent = byName;
+    this.refreshObjective();
   }
 
   /** Put this dog at its own garden gate, beside the tunnel it dug to get out. */
@@ -189,14 +244,21 @@ export class TownChapter {
   /** Local player did something that changes the shared adventure. */
   dispatch(ev) {
     if (this.net) {
-      if (this.pending?.has(ev.id)) return;
-      (this.pending ??= new Set()).add(ev.id);
+      const key = `${ev.type}:${ev.id}`;
+      if (this.pending?.has(key)) return;
+      (this.pending ??= new Set()).add(key);
       this.net.event(ev); // the server echoes it to everyone (including us) → applyEvent
     } else this.applyEvent(ev, null);
   }
 
   /** @param byName  another dog's name if they did it, null if it was me */
   applyEvent(ev, byName) {
+    if (ev.type === 'bone' && !this.state.bones.includes(ev.id)) {
+      this.state.bones.push(ev.id);
+      writeSave({ chapter: 'town', town: { ...this.state } });
+      this.onBone(ev.id, byName);
+      return;
+    }
     if (ev.type === 'discover' && !this.state.discovered.includes(ev.id)) {
       this.state.discovered.push(ev.id);
       writeSave({ chapter: 'town', town: { ...this.state } });
@@ -214,9 +276,11 @@ export class TownChapter {
 
   refreshObjective() {
     const n = this.state.discovered.length, total = this.places.length;
-    const hint = this.isTouch() ? 'Hold <b>👃 Sniff</b> to smell the way' : 'Hold <b>Space</b> to smell the way';
-    if (n < total) this.hud.setObjective(`Explore ${this.layout.name}! Places found <b>${n}/${total}</b>`, hint);
-    else this.hud.setObjective(`You know every corner of ${this.layout.name}! 🎉`, 'New friends are coming soon…');
+    const hint = this.isTouch() ? '🦘 Jump · hold <b>👃 Sniff</b> to smell the way' : '<b>Space</b> jump · hold <b>F</b> to sniff the way';
+    const nb = this.state.bones.length, tb = this.world.bones?.length ?? 0;
+    const bones = tb ? ` · ✨🦴 golden bones <b>${nb}/${tb}</b>` : '';
+    if (n < total) this.hud.setObjective(`Explore ${this.layout.name}! Places found <b>${n}/${total}</b>`, hint + bones);
+    else this.hud.setObjective(`You know every corner of ${this.layout.name}! 🎉`, nb < tb ? `Can you reach all the golden bones? ${nb}/${tb} 🦘` : 'New friends are coming soon\u2026');
   }
 
   onDiscovered(id, byName) {
@@ -239,7 +303,7 @@ export class TownChapter {
         sfx.hooray();
         this.hud.showCard(`
           <h1>Top explorer! 🗺️</h1>
-          <p>Merry has sniffed every corner of ${this.layout.name}.</p>
+          <p>${escapeHtml(this.profile().name)} has sniffed every corner of ${this.layout.name}.</p>
           <p>Next time: <b>new friends</b> — a grumpy cat, a worried duck, a sleepy old basset hound and more…</p>`,
           [['Keep exploring', () => this.hud.hideCard()], ['🎲 Try a new town', () => { writeSave({ town: { seed: randomSeed(), discovered: [] } }); location.reload(); }],
             ['Start over', () => { clearSave(); location.reload(); }]]);
@@ -265,10 +329,13 @@ export class TownChapter {
     const canAct = !P.frozen;
 
     if (this.net) {
-      const flags = (input.sniff && canAct ? 1 : 0) | (P.digTimer > 0 ? 2 : 0);
+      const flags = (input.sniff && canAct ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4);
       this.net.sendState(dt, pos, P.heading, P.speed, flags);
     }
     this.remotes.update(dt);
+    // Other dogs' backs are something to stand on — the co-op boost!
+    P.platforms = this.remotes.platforms();
+    this.updateBones(dt);
 
     // Discover places by walking into them.
     for (const p of this.places) {
