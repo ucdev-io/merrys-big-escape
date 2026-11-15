@@ -13,6 +13,9 @@ import {
   kennel, swingSet, slide, lawnmower, bbq, cafeTable, shop, brickBuilding, car, hedge, pathRibbon,
 } from './townProps.js';
 import { bakeryHeist, butcherHeist } from './heistProps.js';
+import { flatOut, hillHeight } from '../areas/terrain.js';
+import { areaBounds, areaAt } from '../areas/areas.js';
+import { layoutAreas, areaFlats, areaGround, buildAreas } from '../areas/build.js';
 
 const H = TOWN.BLOCK / 2;          // 15: half block
 const EDGE = H - 0.4;              // where garden fences sit
@@ -64,21 +67,20 @@ function turn(k) {
 }
 
 // ---------------------------------------------------------------------------------------------
-function ground() {
+/** flats: where the ground is flat (the town, and its areas); hills roll away beyond. tint(x, z, color): area colours. */
+function ground(flats, tint = null) {
   const size = 420, seg = 140;
   const geo = new THREE.PlaneGeometry(size, size, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const p = geo.attributes.position;
   const colors = new Float32Array(p.count * 3);
   const cA = new THREE.Color(PALETTE.grass), cB = new THREE.Color(PALETTE.grassDark), cC = new THREE.Color(PALETTE.grassLight), c = new THREE.Color();
-  const half = TOWN.SIZE / 2 + 6;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i);
-    const out = Math.hypot(Math.max(0, Math.abs(x) - half), Math.max(0, Math.abs(z) - half));
-    const hill = (fbm3(x * 0.03, 0, z * 0.03, 4) - 0.3) * 10 * Math.min(1, out / 25);
-    p.setY(i, out > 0 ? Math.max(0, hill) - 0.05 : -0.05);
+    p.setY(i, hillHeight(x, z, flatOut(flats, x, z)));
     const n = fbm3(x * 0.12, 5, z * 0.12, 3);
     c.copy(cA).lerp(n > 0.5 ? cC : cB, Math.abs(n - 0.5) * 1.6);
+    tint?.(x, z, c);
     colors.set([c.r, c.g, c.b], i * 3);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -404,7 +406,9 @@ export function buildTown(layout) {
   const bones = [];
   const extra = { root, beds: [], gardens: [], bins: [], water: [], birdSpots: [] };
 
-  root.add(ground());
+  // The town's areas (the Woods…) are laid out first, so the ground can be flat and woodland-coloured under them.
+  const areaData = layoutAreas(layout), flats = areaFlats(layout, TOWN.SIZE / 2 + 6);
+  root.add(ground(flats, areaGround(areaData)));
   streets(root, layout, rng, col, bones);
 
   let spawn = new THREE.Vector3(0, 0, 0), spawnFace = 0, park = null;
@@ -444,8 +448,11 @@ export function buildTown(layout) {
   // Countryside around the town.
   for (let i = 0; i < 60; i++) {
     const a = rng.float(0, Math.PI * 2), r = rng.float(TOWN.SIZE / 2 + 12, TOWN.SIZE / 2 + 60);
-    root.add(tree(Math.cos(a) * r, Math.sin(a) * r, rng.float(1.2, 2), rng, null, { detail: 1, blobs: 3 }));
+    const t = tree(Math.cos(a) * r, Math.sin(a) * r, rng.float(1.2, 2), rng, null, { detail: 1, blobs: 3 });
+    if (!areaAt(layout.areas, t.position.x, t.position.z, 3)) root.add(t); // (an area has trees of its own, out of the way of its paths)
   }
+  // The areas themselves: after everything else, so the town's own colliders and dice are just as they were.
+  const areas = buildAreas(root, layout, areaData, col, extra, TOWN.SIZE / 2 + 4, flats);
 
   const sky = skyDome(190);
   root.add(sky);
@@ -456,7 +463,8 @@ export function buildTown(layout) {
   const isLawn = (x, z) => {
     const i = Math.floor((x - origin) / step), j = Math.floor((z - origin) / step);
     const b = byIndex.get(`${i},${j}`);
-    if (!b || b.type === 'alley') return false;
+    if (!b) return areas.lawn(x, z);
+    if (b.type === 'alley') return false;
     const dx = x - b.x, dz = z - b.z;
     if (Math.abs(dx) > H - 0.3 || Math.abs(dz) > H - 0.3) return false;
     if (b.type === 'pond' && (dx / 10.8) ** 2 + (dz / 7.8) ** 2 < 1) return false;
@@ -485,7 +493,8 @@ export function buildTown(layout) {
     heist: extra.heist ?? null, // where the bakery street's heists happen
     // Home 0 is the first dog's garden; each extra dog in a pack gets the next one.
     homes: [{ pos: spawn.clone(), face: spawnFace, garden: extra.gardens.find((gd) => gd.home) }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
-    bounds: { x0: -half, x1: half, z0: -half, z1: half },
+    bounds: areaBounds(layout.areas, half), // (the town, and its areas)
+    areas: areas.list, // what's where in each area (the woods' den, owl, mud…)
     layout,
     props: {},
     grass: null,
