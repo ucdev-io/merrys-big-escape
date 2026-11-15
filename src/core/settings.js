@@ -1,6 +1,6 @@
 // Little player settings (instead of URL options nobody wants to type on a phone).
 const KEY = 'merry.settings';
-const DEFAULTS = { debug: false, styles: false };
+const DEFAULTS = { debug: false, styles: false, autoFullscreen: true, haptics: true };
 
 export function getSettings() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { return { ...DEFAULTS }; }

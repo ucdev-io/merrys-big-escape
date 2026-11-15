@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { paint } from '../render/watercolorMaterial.js';
 import { blobGeometry } from '../world/props.js';
 import { sfx } from '../core/audio.js';
+import { buzz } from '../core/haptics.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -144,6 +145,7 @@ export class Mischief {
     this.tipping.push({ bin, t: 0 });
     if (bin.collider) { bin.collider.top = 0.62; bin.collider.r = 0.45; } // now it's something to stand on!
     sfx.clang?.();
+    if (mine) buzz(40);
     // Rubbish everywhere.
     const dir = V(Math.sin(ang), 0, Math.cos(ang));
     for (let i = 0; i < 6; i++) {
@@ -195,7 +197,7 @@ export class Mischief {
       s.g.position.lerpVectors(s.from, s.to, k);
       s.g.position.y = s.from.y * (1 - k) + s.to.y * k + Math.sin(k * Math.PI) * 1.6;
       if (k < 1) s.g.rotation.x += dt * 12;
-      else if (!s.landed) { s.landed = true; s.g.rotation.set(0, rand(0, 6), 0); sfx.boink?.(); this.hud.float('boink!', s.to.clone().add(V(0, 0.4, 0))); }
+      else if (!s.landed) { s.landed = true; s.g.rotation.set(0, rand(0, 6), 0); sfx.boink?.(); buzz(20); this.hud.float('boink!', s.to.clone().add(V(0, 0.4, 0))); }
       if (s.t > s.life) { this.scene.remove(s.g); return false; }
       return true;
     });

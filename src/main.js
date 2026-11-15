@@ -18,6 +18,10 @@ import { NetClient } from './net/client.js';
 import { showTitle } from './ui/title.js';
 import { packCodeFromUrl } from './net/links.js';
 import { getSettings } from './core/settings.js';
+import { autoFullscreen } from './ui/fullscreen.js';
+
+// Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
+window.addEventListener('click', (e) => { if (e.target.closest?.('.pill.big, .lobby .solo, .lobby .host, .lobby .join')) autoFullscreen(); }, true);
 
 const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
@@ -139,7 +143,7 @@ if (location.search.includes('debug') || getSettings().debug) {
 }
 
 const hud = new HUD(camera);
-createTouchControls(input);
+createTouchControls(input, follow);
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
   : new YardChapter({ scene, world, player, hud, input, follow, pipeline });

@@ -47,6 +47,14 @@ export class FollowCamera {
     }, { passive: true });
   }
 
+  /** Look around by dragging (touch): yaw left/right, pitch up/down. */
+  orbitBy(dx, dy) {
+    this.yaw -= dx * 0.006;
+    this.pitch = clamp(this.pitch + dy * 0.004, 0.15, 1.2);
+    this.manualHold = 2.5;
+  }
+  zoomBy(f) { this.distance = clamp(this.distance * f, 2.5, 14); }
+
   /**
    * @param solid    buildings/sheds: the camera slides in front of these.
    * @param foliage  tree canopies: the camera dips underneath these.

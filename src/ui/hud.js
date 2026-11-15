@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ITEMS } from '../entities/items.js';
 import { setMuted, isMuted } from '../core/audio.js';
+import { toggleFullscreen, isFullscreen, onFullscreenChange, fullscreenButtonUseful } from './fullscreen.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -30,7 +31,12 @@ export class HUD {
     this.muteBtn.title = 'Sound on/off';
     this.muteBtn.onclick = () => { setMuted(!isMuted()); this.muteBtn.textContent = isMuted() ? '🔇' : '🔊'; };
     this.mischiefPill = el('div', 'pill mischief hidden');
-    tr.append(this.mischiefPill, this.bookBtn, this.muteBtn);
+    this.fsBtn = el('button', 'pill fs-btn', '⛶');
+    this.fsBtn.title = 'Full screen';
+    this.fsBtn.onclick = () => toggleFullscreen(this);
+    this.fsBtn.classList.toggle('hidden', !fullscreenButtonUseful());
+    onFullscreenChange(() => { this.fsBtn.classList.toggle('active', isFullscreen()); this.fsBtn.title = isFullscreen() ? 'Leave full screen' : 'Full screen'; });
+    tr.append(this.mischiefPill, this.bookBtn, this.fsBtn, this.muteBtn);
     this.root.appendChild(tr);
 
     this.book = el('div', 'sniff-book hidden');
@@ -89,14 +95,14 @@ export class HUD {
   setFound(list, total) {
     this.found = list;
     this.total = total;
-    this.bookBtn.innerHTML = `📖 Sniff Book <b>${list.filter((k) => k !== 'tunnel').length}/${total}</b>`;
+    this.bookBtn.innerHTML = `📖 <span class="lbl">Sniff Book</span> <b>${list.filter((k) => k !== 'tunnel').length}/${total}</b>`;
     this.renderBook();
   }
 
   setPlaces(list) {
     this.places = list;
     const n = list.filter((p) => p.found).length;
-    this.bookBtn.innerHTML = `📖 Sniff Book <b>${n}/${list.length}</b>`;
+    this.bookBtn.innerHTML = `📖 <span class="lbl">Sniff Book</span> <b>${n}/${list.length}</b>`;
     this.renderBook();
   }
 

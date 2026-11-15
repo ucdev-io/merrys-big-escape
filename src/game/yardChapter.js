@@ -5,6 +5,7 @@ import { Particles } from '../fx/particles.js';
 import { Cat } from '../entities/cat.js';
 import { ITEMS } from '../entities/items.js';
 import { sfx } from '../core/audio.js';
+import { buzz } from '../core/haptics.js';
 import { loadSave, writeSave, clearSave } from '../core/save.js';
 import { BREEDS } from '../entities/breeds.js';
 import { showLobby } from '../ui/lobby.js';
@@ -449,6 +450,7 @@ export class YardChapter {
     this.scene.add(obj);
     this.popping = { obj, t: 0, stinky: !!obj.userData.stinky };
     sfx.found();
+    buzz([25, 40, 25]);
     if (s.key === 'duck') this.later(0.5, () => sfx.squeak());
     this.player.happy = 1;
     this.later(2.5, () => (this.player.happy = 0.5));

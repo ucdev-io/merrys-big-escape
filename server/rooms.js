@@ -54,7 +54,9 @@ function onMessage(p, msg) {
     case 'create': {
       if (room) return;
       if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
-      const code = makeCode();
+      // Reopening a pack after everyone's phone slept keeps its old code, if it's free.
+      const want = String(msg.code ?? '').toUpperCase();
+      const code = /^[A-Z]{4}-\d{2}$/.test(want) && !rooms.has(want) ? want : makeCode();
       const seed = cleanSeed(msg.seed);
       if (!code || !seed) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
       const list = (v, n) => (Array.isArray(v) ? v : []).slice(0, n).map(cleanId);

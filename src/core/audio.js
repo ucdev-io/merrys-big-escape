@@ -24,6 +24,8 @@ export function unlockAudio() {
   if (c && c.state === 'suspended') c.resume();
 }
 ['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.addEventListener(e, unlockAudio, { passive: true }));
+// Switch apps / lock the phone → sounds pause; come back → they resume.
+document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
 
 export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; }
 export function isMuted() { return muted; }

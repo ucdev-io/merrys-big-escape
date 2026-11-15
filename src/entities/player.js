@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Dog } from './dog.js';
+import { buzz } from '../core/haptics.js';
 
 const WALK = 2.2, TROT = 3.0, RUN = 6.2;
 const RAMP_TIME = 0.9; // seconds of zoomies to go from trot to full gallop
@@ -120,7 +121,7 @@ export class Player {
       this.vy -= GRAVITY * dt;
       this.pos.y += this.vy * dt;
       if (this.pos.y <= ground && this.vy <= 0) { // only land on the way down
-        if (!this.grounded && this.vy < -2) { this.landed = 0.25; this.dog.land?.(Math.min(1, -this.vy / 6)); }
+        if (!this.grounded && this.vy < -2) { this.landed = 0.25; this.dog.land?.(Math.min(1, -this.vy / 6)); if (this.vy < -5) buzz(12); }
         this.pos.y = ground;
         this.vy = 0;
         this.grounded = true;

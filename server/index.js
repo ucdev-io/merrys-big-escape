@@ -8,7 +8,7 @@ import { lanAddresses, lanInfoHandler } from './lan.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 const ROOT = resolve(process.cwd(), 'dist');
-const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon' };
+const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 
 const server = http.createServer(async (req, res) => {
   try {

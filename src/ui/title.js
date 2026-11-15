@@ -1,8 +1,27 @@
 import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
 import { lanBase, fillShareBox } from '../net/links.js';
 import { getSettings, setSetting } from '../core/settings.js';
+import { autoFullscreen, toggleFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
+
+// The in-game HUD doesn't exist yet on the title screen, so pop simple cards ourselves.
+const titleCards = {
+  showCard(html, buttons) {
+    const c = document.createElement('div');
+    c.className = 'big-card';
+    c.innerHTML = `<div class="page">${html}<div class="btns"></div></div>`;
+    for (const [label] of buttons) {
+      const b = document.createElement('button');
+      b.className = 'pill big';
+      b.textContent = label;
+      b.onclick = () => c.remove();
+      c.querySelector('.btns').appendChild(b);
+    }
+    document.getElementById('hud').appendChild(c);
+  },
+  hideCard() {},
+};
 
 /**
  * The landing page shown every time the game opens.
@@ -30,16 +49,21 @@ export function showTitle(save) {
         </div>
         <div class="extras">
           <button class="link phone-btn">📱 Play on a phone or tablet</button> ·
+          ${fullscreenButtonUseful() ? '<button class="link fs-link">⛶ Full screen</button> ·' : ''}
           <button class="link settings-btn">⚙️ Settings</button>
         </div>
+        ${isTouchDevice() && innerHeight > innerWidth ? '<p class="tip">📱 Tip: turn your phone sideways for a bigger view!</p>' : ''}
         <div class="phone hidden"><p>On the same Wi-Fi, scan this with the phone's camera:</p><div class="box"></div></div>
         <div class="settings hidden">
           <label><input type="checkbox" data-s="debug" ${s.debug ? 'checked' : ''}> Show speed info (frames per second)</label>
           <label><input type="checkbox" data-s="styles" ${s.styles ? 'checked' : ''}> Show the art style picker</label>
+          <label><input type="checkbox" data-s="autoFullscreen" ${s.autoFullscreen ? 'checked' : ''}> Go full screen when playing (phones &amp; tablets)</label>
+          <label><input type="checkbox" data-s="haptics" ${s.haptics ? 'checked' : ''}> Buzz on phones (vibration)</label>
         </div>
       </div>`;
     document.getElementById('hud').appendChild(el);
-    el.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { el.remove(); resolve(b.dataset.c); }));
+    el.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => { autoFullscreen(); el.remove(); resolve(b.dataset.c); }));
+    el.querySelector('.fs-link')?.addEventListener('click', () => toggleFullscreen(titleCards));
 
     const phone = el.querySelector('.phone'), settings = el.querySelector('.settings');
     const showPhone = async (show) => {

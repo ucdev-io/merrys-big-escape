@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { Particles } from '../fx/particles.js';
 import { ScentTrail } from '../systems/scentTrail.js';
 import { sfx } from '../core/audio.js';
+import { buzz } from '../core/haptics.js';
 import { loadSave, writeSave, clearSave } from '../core/save.js';
 import { TOWN, PLACE_EMOJI, randomSeed } from '../world/town/generator.js';
 import { BREEDS } from '../entities/breeds.js';
@@ -134,7 +135,8 @@ export class TownChapter {
   }
 
   /** Wire up a pack from the server's welcome message. */
-  joinPack(w) {
+  joinPack(w, { rejoin = false } = {}) {
+    this.packCode = w.code;
     const net = this.net;
     history.replaceState(null, '', packPath(w.code));
     // Shared adventure: the pack's progress is everyone's progress.
@@ -142,8 +144,9 @@ export class TownChapter {
     for (const id of w.shared.bones ?? []) if (!this.state.bones.includes(id)) { this.state.bones.push(id); this.hideBone(id); }
     this.hud.setPlaces?.(this.placeList());
     this.refreshObjective();
-    w.players.forEach((p) => this.remotes.add(p));
-    this.goHome(w.slot ?? 0);
+    // Our own old connection may linger on the server for a few seconds after a reconnect: ignore it.
+    w.players.filter((p) => !this.oldIds?.has(p.id)).forEach((p) => this.remotes.add(p));
+    if (!rejoin) this.goHome(w.slot ?? 0);
 
     net.on('join', (m) => {
       this.remotes.add(m.p);
@@ -155,12 +158,7 @@ export class TownChapter {
     net.on('ss', (m) => this.remotes.onStates(m.p, net.id));
     net.on('act', (m) => (['tip', 'hole', 'trample'].includes(m.a) ? this.mischief.remote(m) : this.remotes.onAct(m.id, m.a)));
     net.on('ev', (m) => { this.pending?.delete(`${m.ev.type}:${m.ev.id}`); this.applyEvent(m.ev, m.by === net.id ? null : m.name); });
-    net.on('close', () => {
-      this.remotes.clear();
-      this.net = null;
-      this.updateBadge();
-      this.hud.showToastRaw('📡', 'Lost the pack!', 'The connection dropped — you can keep playing on your own.');
-    });
+    net.on('close', () => this.onNetClosed());
     this.updateBadge();
     this.packBadge.onclick = () => this.showInvite(this.net?.code ?? '', [['OK', () => this.hud.hideCard()]]);
   }
@@ -217,6 +215,7 @@ export class TownChapter {
   onBone(id, byName) {
     this.hideBone(id);
     sfx.found();
+    buzz([25, 40, 25]);
     const n = this.state.bones.length, t = this.bones.length;
     this.hud.showToastRaw('✨🦴', `${byName ? '<span class="who"></span> found' : 'You found'} a golden bone!`, `${n} of ${t} golden bones${n === t ? ' \u2014 every single one! 🎉' : ''}`);
     if (byName) this.hud.toast.querySelector('.who').textContent = byName;
@@ -243,10 +242,52 @@ export class TownChapter {
     }
   }
 
+  /** Phone slept or Wi-Fi blipped: keep playing, and quietly get back into the pack. */
+  onNetClosed() {
+    if (this.reconnecting || !this.packCode) return;
+    (this.oldIds ??= new Set()).add(this.net?.id);
+    this.remotes.clear();
+    this.net = null;
+    this.updateBadge();
+    this.reconnecting = true;
+    this.hud.showToastRaw('📡', 'Reconnecting to the pack\u2026', 'Hang on a sec!');
+    this.tryRejoin(0);
+  }
+
+  async tryRejoin(attempt) {
+    if (document.hidden) { // wait until they're looking at the game again
+      document.addEventListener('visibilitychange', () => this.tryRejoin(attempt), { once: true });
+      return;
+    }
+    const code = this.packCode, me = { name: this.profile().name, breed: this.player.breedKey };
+    try {
+      const net = new NetClient();
+      let w;
+      try { w = await net.enter('join', { code, ...me }); }
+      catch (e) {
+        if (!/No pack/.test(e.message)) throw e;
+        // Everyone's phone slept and the pack closed: open it again with the same code and progress.
+        w = await net.enter('create', { code, seed: this.layout.seed, ...me, discovered: this.state.discovered, bones: this.state.bones });
+      }
+      this.net = net;
+      this.reconnecting = false;
+      this.joinPack(w, { rejoin: true });
+      this.hud.showToastRaw('🐾', 'Back with the pack!', '');
+    } catch {
+      if (attempt >= 5) {
+        this.reconnecting = false;
+        this.hud.showToastRaw('📡', 'Lost the pack!', 'Couldn\u2019t reconnect \u2014 you can keep playing on your own.');
+        return;
+      }
+      setTimeout(() => this.tryRejoin(attempt + 1), 1000 * 2 ** attempt);
+    }
+  }
+
   updateBadge() {
     if (!this.net) { this.packBadge.classList.add('hidden'); return; }
     this.packBadge.classList.remove('hidden');
-    this.packBadge.textContent = `🐾 ${this.net.code} · ${this.remotes.dogs.size + 1} dogs`;
+    const n = this.remotes.dogs.size + 1;
+    this.packBadge.textContent = `🐾 ${this.net.code} · ${n} ${n === 1 ? 'dog' : 'dogs'}`;
   }
 
   // ---------- state & events (multiplayer-friendly) ----------
@@ -297,6 +338,7 @@ export class TownChapter {
     const p = this.places.find((q) => q.id === id);
     if (!p) return;
     sfx.found();
+    buzz([25, 40, 25]);
     this.hud.showToastRaw(PLACE_EMOJI[p.type], `${byName ? '<span class="who"></span> found' : 'Discovered:'} <b>${p.name}</b>!`, BLURBS[p.type]);
     if (byName) this.hud.toast.querySelector('.who').textContent = byName;
     this.hud.setPlaces?.(this.placeList());
