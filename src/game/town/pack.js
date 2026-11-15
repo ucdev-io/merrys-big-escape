@@ -133,7 +133,7 @@ export class Pack {
       if (seen) {
         for (const p of others) {
           if (seen.has(p.code)) continue;
-          this.hud.showToastRaw('🐾', '', '');
+          this.hud.showToastRaw('🐾', '', '', { tip: true });
           this.hud.toast.querySelector('.t-head').textContent = `${p.host} is playing in ${townName(p.seed)}!`;
           this.hud.toast.querySelector('.t-blurb').textContent = 'Tap 👥 at the top to go and join them.';
         }

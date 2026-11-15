@@ -83,7 +83,7 @@ export class Seasons {
       case 'weather': return this.setWeather(m.kind, m.why);
       case 'toy': return this.parts?.toy?.(m, m.by === this.me());
       case 'host': this.host = m.host; this.hostName = m.hostName ?? ''; return undefined;
-      case 'nope': return this.hud.showToastRaw('🌦️', 'Not your pack’s season to pick!', `${m.hostName || 'Whoever opened the pack'} picks the season here. Yours is saved for next time.`);
+      case 'nope': return this.hud.showToastRaw('🌦️', 'Not your pack’s season to pick!', `${m.hostName || 'Whoever opened the pack'} picks it here.`, { tip: true });
     }
     return undefined;
   }

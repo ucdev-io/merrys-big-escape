@@ -24,7 +24,7 @@ export class HUD {
 
     // Current goal: pops open when it changes, then tucks away into a small icon. Tap to see it again.
     this.objective = el('button', 'objective');
-    this.objective.onclick = () => this.expandObjective(this.objective.classList.contains('open') ? 0 : 9000);
+    this.objective.onclick = () => this.expandObjective(this.objective.classList.contains('open') ? 0 : 9000, true);
     this.root.appendChild(this.objective);
 
     this.prompt = el('div', 'prompt');
@@ -35,8 +35,12 @@ export class HUD {
     this.boosts = el('div', 'boosts'); // snack power-ups ticking down
     this.root.appendChild(this.boosts);
 
-    this.toast = el('div', 'toast');
-    this.root.appendChild(this.toast);
+    // News notes: small and see-through, stacked on the left under the goal panel, out of the way. On a phone
+    // only the first line shows (tap a note for the rest).
+    this.toasts = el('div', 'toasts');
+    this.root.appendChild(this.toasts);
+    this.toast = null; // (the newest note: callers can fill in its words just after showToastRaw)
+    window.addEventListener('resize', () => this.placeToasts());
 
     const tr = el('div', 'top-right');
     this.bookBtn = el('button', 'pill book-btn');
@@ -98,14 +102,18 @@ export class HUD {
     if (changed) this.expandObjective(5500);
   }
 
-  expandObjective(ms) {
+  /** Pop the goal panel open for a while (full: tapped open, so the details show on a phone too). */
+  expandObjective(ms, full = false) {
     clearTimeout(this._objT);
-    if (!ms) { this.objective.classList.remove('open'); return; }
+    const close = () => { this.objective.classList.remove('open', 'full'); this.placeToasts(); };
+    if (!ms) { close(); return; }
     this.objective.classList.add('open');
+    this.objective.classList.toggle('full', full);
     this.objective.classList.remove('pulse');
     void this.objective.offsetWidth;
     this.objective.classList.add('pulse');
-    this._objT = setTimeout(() => this.objective.classList.remove('open'), ms);
+    this.placeToasts();
+    this._objT = setTimeout(close, ms);
   }
 
   updateXp() {
@@ -294,13 +302,46 @@ export class HUD {
     this.showToastRaw(it.emoji, `You found: <b>${it.name}</b>!`, it.blurb);
   }
 
-  showToastRaw(emoji, head, blurb) {
-    this.toast.innerHTML = `<div class="emoji">${emoji}</div><div><div class="t-head">${head}</div><div class="t-blurb">${blurb}</div></div>`;
-    this.toast.classList.remove('show');
-    void this.toast.offsetWidth;
-    this.toast.classList.add('show');
-    clearTimeout(this._toastT);
-    this._toastT = setTimeout(() => this.toast.classList.remove('show'), 4200);
+  /**
+   * A news note (newest on top, up to three). On a phone just its first line shows: tap it for the rest,
+   * unless it's a `tip` that's needed right now. Callers may fill in hud.toast's .t-head / .t-blurb just
+   * after (as text: names are untrusted).
+   */
+  showToastRaw(emoji, head, blurb = '', { tip = false } = {}) {
+    const key = `${emoji}|${head}`, top = this.toasts.firstElementChild;
+    if (head && top?.dataset.key === key) { // (the same news again: freshen that note up)
+      top.querySelector('.t-blurb').innerHTML = blurb;
+      this.toast = top;
+      queueMicrotask(() => this.holdToast(top));
+      return;
+    }
+    const t = el('div', `toast${tip ? ' tip' : ''}`, `<span class="emoji">${emoji}</span><span class="t-text"><span class="t-head">${head}</span><span class="t-blurb">${blurb}</span></span>`);
+    t.dataset.key = key;
+    t.onclick = () => { t.classList.toggle('open'); this.holdToast(t, 7000); };
+    this.toasts.prepend(t);
+    while (this.toasts.children.length > 3) this.toasts.lastElementChild.remove();
+    this.toast = t;
+    this.placeToasts();
+    void t.offsetWidth;
+    t.classList.add('show');
+    queueMicrotask(() => this.holdToast(t)); // (once the caller has filled in its words)
+  }
+
+  /** Keep a note up for a while (longer for more words), then let it fade away. */
+  holdToast(t, ms = null) {
+    clearTimeout(t._hideT);
+    if (ms === null) {
+      const b = t.querySelector('.t-blurb');
+      const words = t.querySelector('.t-head').textContent.length + (getComputedStyle(b).display === 'none' ? 0 : b.textContent.length);
+      ms = Math.max(3200, Math.min(6500, 2600 + words * 45));
+    }
+    t._hideT = setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, ms);
+  }
+
+  /** The notes sit just under the goal panel (which grows when it pops open). */
+  placeToasts() {
+    const r = this.objective.getBoundingClientRect();
+    this.toasts.style.top = `${Math.round(r.height ? r.bottom + 6 : 64)}px`;
   }
 
   setFound(list, total) {

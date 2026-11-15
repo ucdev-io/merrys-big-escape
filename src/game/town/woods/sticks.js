@@ -95,7 +95,7 @@ export class BigSticks {
       wsfx.thunk();
       buzz(15);
       this.hud.float(`🪵 ${this.line('bonk')}`, this.actions.anchor());
-      if (!this.tipped) { this.tipped = true; this.tipT = 7; this.hud.showToastRaw('🪵', 'Too wide!', STICK.tip); } // (once: how to get through)
+      if (!this.tipped) { this.tipped = true; this.tipT = 7; this.hud.showToastRaw('🪵', 'Too wide!', STICK.tip, { tip: true }); } // (once: how to get through)
     }
     // A wobble of the stick after a bonk.
     if (this.wig > 0) {

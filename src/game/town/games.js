@@ -43,7 +43,7 @@ export class TownGames {
 
   /** A message from the server about the current game. */
   handle(m) {
-    if (m.a === 'nope') { this.hud.showToastRaw('🐾', m.msg, 'Ask a friend to join your pack first.'); return; }
+    if (m.a === 'nope') { this.hud.showToastRaw('🐾', m.msg, 'Ask a friend to join your pack first.', { tip: true }); return; }
     if (m.a === 'start') return this.begin(m.game);
     const g = this.game;
     if (!g || g.over || (m.game?.id && m.game.id !== g.id)) return;

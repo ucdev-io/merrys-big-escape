@@ -7,6 +7,15 @@ import { sfx } from '../core/audio.js';
 const DELAY = 150; // ms behind real time, so we can smoothly interpolate between snapshots
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
+const _up = new THREE.Vector3();
+
+/** A friend's name tag: breed emoji and name, then their level, smaller (as text: names are untrusted). */
+function nameTag(r) {
+  const lv = document.createElement('small');
+  lv.textContent = r.level ? ` ⭐${r.level}` : '';
+  r.tag.replaceChildren(document.createTextNode(`${BREEDS[r.breed]?.emoji ?? '🐕'} ${r.name}`), lv);
+}
+
 /** Other players' dogs: models, smoothing, name tags, and their barks. */
 export class RemoteDogs {
   constructor(scene, hud, getListener) {
@@ -24,9 +33,10 @@ export class RemoteDogs {
     dog.root.visible = false; // until the first position arrives
     const tag = document.createElement('div');
     tag.className = 'name-tag';
-    tag.textContent = `${BREEDS[p.breed]?.emoji ?? '🐕'} ${p.name}${p.level ? ` \u00b7 ⭐${p.level}` : ''}`; // textContent: names are untrusted
     this.hud.root.appendChild(tag);
-    this.dogs.set(p.id, { ...p, dog, tag, buf: [], heading: 0, digT: 0 });
+    const r = { ...p, dog, tag, buf: [], heading: 0, digT: 0 };
+    nameTag(r);
+    this.dogs.set(p.id, r);
     if (p.carry) this.setCarry(p.id, p.carry);
   }
 
@@ -85,7 +95,7 @@ export class RemoteDogs {
     const r = this.dogs.get(id);
     if (!r) return;
     r.dog.setLook(look ?? {});
-    if (level) { r.level = level; r.tag.textContent = `${BREEDS[r.breed]?.emoji ?? '🐕'} ${r.name} \u00b7 ⭐${level}`; }
+    if (level) { r.level = level; nameTag(r); }
   }
 
   /** Each standing dog's back is a little platform another dog can hop onto. */
@@ -101,6 +111,8 @@ export class RemoteDogs {
 
   update(dt) {
     const renderT = performance.now() - DELAY;
+    // (Where your own dog is on screen: a friend's name tag over it goes see-through.)
+    const mine = this.hud.dogAnchor ? this.hud.project(this.hud.dogAnchor()) : null, cam = this.hud.camera.position;
     for (const r of this.dogs.values()) {
       const b = r.buf;
       if (!b.length) continue;
@@ -127,10 +139,12 @@ export class RemoteDogs {
       const mud = (c.f >> 6) & 3; // how muddy they are (the Woods; 32 is a sledge)
       if (mud !== (r.mud ?? 0)) { r.mud = mud; this.onMud?.(r.dog, mud); }
 
-      // Name tag floats above the dog.
-      const s = this.hud.project(root.position.clone().add(new THREE.Vector3(0, 0.9 * r.dog.breed.size, 0)));
-      r.tag.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
-      r.tag.style.opacity = s.behind ? 0 : 1;
+      // Name tag floats above the dog: smaller further away, and see-through when it's in the way of your own dog.
+      const s = this.hud.project(_up.copy(root.position).setY(root.position.y + 0.9 * r.dog.breed.size));
+      const far = THREE.MathUtils.clamp(1.15 - cam.distanceTo(root.position) / 40, 0.7, 1);
+      const over = mine && !mine.behind && Math.abs(s.x - mine.x) < 80 && s.y > mine.y - 70 && s.y < mine.y + 60;
+      r.tag.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%) scale(${far.toFixed(2)})`;
+      r.tag.style.opacity = s.behind ? 0 : over ? 0.22 : 0.9;
     }
   }
 }

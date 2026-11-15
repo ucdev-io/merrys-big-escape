@@ -90,17 +90,22 @@ body.touch-mode .boosts { bottom: 177px; }
 .rec-grid .records { margin: 0; padding-left: 4px; list-style: none; font-size: 16px; line-height: 1.5; }
 .rec-grid .mine { margin: 2px 0 0; font-size: 14px; opacity: 0.75; }
 
-/* Found toast */
-.toast {
-  position: absolute; left: 50%; top: 18%; transform: translate(-50%, -20px) scale(0.8); opacity: 0;
-  display: flex; gap: 14px; align-items: center; max-width: min(460px, calc(100vw - 32px));
-  background: var(--wash); padding: 12px 20px; border-radius: var(--wobbly); box-shadow: 0 3px 0 rgba(59, 43, 37, 0.2);
-  transition: opacity 0.35s, transform 0.35s cubic-bezier(.3, 1.6, .5, 1);
+/* News notes: small, see-through, stacked on the left under the goal panel (tap one for the rest) */
+.toasts {
+  position: absolute; left: calc(16px + var(--sa-l, 0px)); top: 64px; display: flex; flex-direction: column; align-items: flex-start;
+  gap: 5px; max-width: min(380px, calc(100vw - 28px)); transition: top 0.25s ease;
 }
-.toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
-.toast .emoji { font-size: 48px; }
-.t-head { font-size: 24px; }
-.t-blurb { font-size: 17px; opacity: 0.8; }
+.toast {
+  pointer-events: auto; cursor: pointer; display: flex; gap: 7px; align-items: center; line-height: 1.15;
+  background: rgba(246, 239, 224, 0.7); border: 1.5px solid rgba(59, 43, 37, 0.15); border-radius: 12px; padding: 3px 11px 4px 7px;
+  opacity: 0; transform: translateX(-14px); transition: opacity 0.3s, transform 0.3s ease-out;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast .emoji { font-size: 22px; line-height: 1; flex: none; }
+.toast .t-text { display: flex; flex-direction: column; min-width: 0; }
+.t-head { font-size: 18px; }
+.t-blurb { font-size: 14px; opacity: 0.78; }
+.t-head:empty, .t-blurb:empty { display: none; }
 
 /* Speech bubbles & floaters */
 .bubble {
@@ -414,11 +419,13 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 @media (max-width: 600px) { .xp-pill .bar { width: 30px; } .stats { grid-template-columns: repeat(2, 1fr); } }
 
 /* (Last, so it wins over the safe-area spacing above.) Phones held sideways: the zoomies bar and prompts sit at the bottom middle, between the joystick and
-   the buttons (not floating over the dog). */
+   the buttons (not floating over the dog), and so does the compass (at the top it covered the buttons there). */
 @media (max-height: 520px) {
   body.touch-mode .stamina { bottom: calc(14px + var(--sa-b)); }
   body.touch-mode .boosts { bottom: calc(11px + var(--sa-b)); }
   body.touch-mode .prompt { bottom: calc(44px + var(--sa-b)); }
+  .compass { top: auto; bottom: calc(92px + var(--sa-b)); }
+  .book-btn .lbl { display: none; }
 }
 
 /* 📋 The Lost & Found board: pick a job */
@@ -452,3 +459,37 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .pill.weather-pick { font-size: 22px; padding: 2px 10px; margin: 0 2px; }
 .big-card .page p.season-note { font-size: 17px; background: #fbf3e2; border-radius: var(--wobbly); padding: 6px 10px; }
 @media (max-height: 520px) { .pill.season-pick { font-size: 17px; padding: 3px 8px; } .pill.season-pick small { font-size: 12px; } }
+
+/* ---------- Phones (either way up): compact, see-through overlays, so the world shows through ---------- */
+.levelup { background: rgba(255, 243, 209, 0.86); }
+.bubble { background: rgba(255, 250, 240, 0.9); }
+.bubble.merry { background: rgba(253, 240, 220, 0.9); }
+.bubble.angry { background: rgba(253, 232, 224, 0.9); }
+.name-tag {
+  font-size: 14px; padding: 0 6px 1px; background: rgba(255, 250, 240, 0.6); border: 1px solid rgba(59, 43, 37, 0.22); border-radius: 8px;
+  transform-origin: 50% 100%; transition: opacity 0.2s;
+}
+.name-tag small { font-size: 0.85em; opacity: 0.8; }
+@media (max-width: 700px), (max-height: 520px) {
+  .toasts { max-width: min(300px, 64vw); gap: 4px; }
+  .toast { padding: 2px 9px 3px 6px; border-radius: 10px; }
+  .toast .emoji { font-size: 18px; }
+  .t-head { font-size: 15px; }
+  .t-blurb { font-size: 13px; }
+  .toast:not(.open):not(.tip) .t-head:not(:empty) + .t-blurb { display: none; } /* (just the first line: a tap shows the rest) */
+  .objective { padding: 3px 10px 4px; background: rgba(246, 239, 224, 0.74); }
+  .objective .obj-icon { font-size: 20px; }
+  .objective .obj-short { font-size: 15px; }
+  .objective .obj-text { font-size: 16px; }
+  .objective .obj-sub { font-size: 13px; }
+  .objective.open:not(.full) .obj-sub { display: none; } /* (popped open with news: the headline; tap it for the details) */
+  .levelup { top: 14%; padding: 6px 14px; border-width: 2px; }
+  .levelup .big { font-size: 24px; }
+  .levelup .ttl { font-size: 17px; }
+  .levelup .new { font-size: 14px; margin-top: 3px; }
+  .bubble { font-size: 15px; padding: 3px 9px 4px; max-width: 200px; border-width: 1.5px; }
+  .floater { font-size: 20px; }
+  .floater.xp, .floater.sniff { font-size: 16px; }
+  .floater.dig { font-size: 17px; }
+  .name-tag { font-size: 12px; padding: 0 5px; }
+}

@@ -157,7 +157,7 @@ export class JobBoard {
     const o = run.objective(), key = o.title + o.sub;
     if (key !== this.key) { this.key = key; this.friends.onChange?.(); }
     // A team job, and everyone else has gone home: say so (it can be swapped at the board).
-    if (run.T.team && !this.team && !run.alone) { run.alone = true; this.hud.showToastRaw('🐾🐾', 'Your friend has gone home!', 'This job needs two dogs — you can swap it at the 📋 board.'); }
+    if (run.T.team && !this.team && !run.alone) { run.alone = true; this.hud.showToastRaw('🐾🐾', 'Your friend has gone home!', 'This job needs two dogs — you can swap it at the 📋 board.', { tip: true }); }
     else if (this.team) run.alone = false;
   }
 
