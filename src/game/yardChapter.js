@@ -537,8 +537,8 @@ export class YardChapter {
     this.hud.showCard(`
       <h1>Merry escaped! 🎉</h1>
       <p>With a squeaky duck, a smelly sock, an ancient biscuit<br>and a very muddy nose, Merry is free!</p>
-      <p>Next time: <b>the Neighbourhood</b> — new friends, new smells, new adventures…</p>`,
-      [['Play again', () => { clearSave(); location.reload(); }]]);
+      <p>Beyond the fence lies <b>the Neighbourhood</b> — new smells, new places, new adventures…</p>`,
+      [['Explore the neighbourhood →', () => { writeSave({ chapter: 'town' }); location.reload(); }], ['Play the garden again', () => { clearSave(); location.reload(); }]]);
   }
 }
 

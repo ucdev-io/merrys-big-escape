@@ -43,6 +43,7 @@ export class HUD {
     this.bubbles = [];
     this.floaters = [];
     this.found = [];
+    this.places = null;
     this.renderBook();
   }
 
@@ -66,7 +67,11 @@ export class HUD {
 
   showToast(key) {
     const it = ITEMS[key];
-    this.toast.innerHTML = `<div class="emoji">${it.emoji}</div><div><div class="t-head">You found: <b>${it.name}</b>!</div><div class="t-blurb">${it.blurb}</div></div>`;
+    this.showToastRaw(it.emoji, `You found: <b>${it.name}</b>!`, it.blurb);
+  }
+
+  showToastRaw(emoji, head, blurb) {
+    this.toast.innerHTML = `<div class="emoji">${emoji}</div><div><div class="t-head">${head}</div><div class="t-blurb">${blurb}</div></div>`;
     this.toast.classList.remove('show');
     void this.toast.offsetWidth;
     this.toast.classList.add('show');
@@ -81,7 +86,20 @@ export class HUD {
     this.renderBook();
   }
 
+  setPlaces(list) {
+    this.places = list;
+    const n = list.filter((p) => p.found).length;
+    this.bookBtn.innerHTML = `📖 Sniff Book <b>${n}/${list.length}</b>`;
+    this.renderBook();
+  }
+
   renderBook() {
+    if (this.places) {
+      this.book.innerHTML = `<div class="page"><button class="close pill">✕</button><h2>Merry's Sniff Book</h2>
+        <p class="intro">Places my amazing nose has discovered.</p>
+        <div class="slots">${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div></div>`).join('')}</div></div>`;
+      return;
+    }
     const keys = ['duck', 'sock', 'biscuit', 'tunnel'];
     this.book.innerHTML = `<div class="page"><button class="close pill">✕</button><h2>Merry's Sniff Book</h2>
       <p class="intro">Everything my amazing nose has discovered.</p>

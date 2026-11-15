@@ -10,6 +10,10 @@ import { applyStyle } from './render/stylePresets.js';
 import { HUD } from './ui/hud.js';
 import { createTouchControls } from './ui/touchControls.js';
 import { YardChapter } from './game/yardChapter.js';
+import { TownChapter } from './game/townChapter.js';
+import { generateTown, randomSeed } from './world/town/generator.js';
+import { buildTown } from './world/town/builders.js';
+import { loadSave, writeSave } from './core/save.js';
 
 const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
@@ -39,15 +43,30 @@ sun.shadow.radius = 4;
 scene.add(sun, sun.target);
 paintUniforms.uSunIntensity.value = sun.intensity;
 
-const world = buildYard();
+// Which chapter? ?town or ?seed=CODE in the URL jumps straight to the neighbourhood.
+const params = new URLSearchParams(location.search);
+const save = loadSave();
+const inTown = params.has('town') || params.has('seed') || save.chapter === 'town';
+let world;
+if (inTown) {
+  const seed = (params.get('seed') || save.town?.seed || randomSeed()).toUpperCase();
+  if (save.town?.seed !== seed) writeSave({ chapter: 'town', town: { seed, discovered: [] } });
+  world = buildTown(generateTown(seed));
+  scene.fog.near = 30;
+  scene.fog.far = 120;
+} else {
+  world = buildYard();
+}
 scene.add(world.group);
+world.attach?.(scene);
 
 const input = new Input();
 const player = new Player();
 player.pos.copy(world.spawn);
+if (world.spawnFace !== undefined) { player.heading = world.spawnFace; follow.yaw = world.spawnFace + Math.PI; }
 scene.add(player.object);
 follow.snap(player.pos);
-follow.setOccluders(world.occluders, world.foliage);
+follow.setOccluders(world.occluders);
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
@@ -84,7 +103,7 @@ if (location.search.includes('debug')) {
 
 const hud = new HUD(camera);
 createTouchControls(input);
-const chapter = new YardChapter({ scene, world, player, hud, input, follow, pipeline });
+const chapter = new (inTown ? TownChapter : YardChapter)({ scene, world, player, hud, input, follow, pipeline });
 
 // Style tuning panel: add ?tune to the URL.
 if (location.search.includes('tune')) {
@@ -135,7 +154,7 @@ function frame(now) {
   player.update(dt, input, follow.yaw, world);
   chapter.update(dt);
   hud.update(dt);
-  world.update(t);
+  world.update(t, player.pos);
   follow.update(dt, player.pos, player.heading, player.speed);
 
   // Keep the shadow camera centred on the dog.

@@ -38,7 +38,7 @@ export function blobGeometry(seed = 0, bump = 0.28, detail = 3) {
   return g;
 }
 
-export function tree(x, z, s = 1, rng, col) {
+export function tree(x, z, s = 1, rng, col, { detail = 3, blobs } = {}) {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
   const bend = rng.float(-0.25, 0.25);
@@ -58,12 +58,12 @@ export function tree(x, z, s = 1, rng, col) {
     mesh(new THREE.TubeGeometry(bc, 6, 0.06 * s, 6, false), PALETTE.bark, g);
   }
   const leafCols = [PALETTE.leaf, PALETTE.leafDark, PALETTE.leafLight];
-  const n = rng.int(4, 6);
+  const n = blobs ?? rng.int(4, 6);
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + rng.float(0, 0.6);
     const r = i === 0 ? 0 : rng.float(0.5, 0.85) * s;
     const sz = (i === 0 ? 1.05 : rng.float(0.6, 0.85)) * s;
-    const leaf = mesh(blobGeometry(rng.int(0, 40), 0.3), rng.pick(leafCols), g,
+    const leaf = mesh(blobGeometry(rng.int(0, 40), 0.3, detail), rng.pick(leafCols), g,
       [bend + Math.cos(a) * r, (2.5 + rng.float(-0.25, 0.35)) * s, bend * 0.4 + Math.sin(a) * r], [rng.float(0, 3), rng.float(0, 3), 0], [sz, sz * 0.85, sz]);
     leaf.userData.foliage = true;
   }
@@ -71,14 +71,14 @@ export function tree(x, z, s = 1, rng, col) {
   return g;
 }
 
-export function bush(x, z, s = 1, rng, col, color) {
+export function bush(x, z, s = 1, rng, col, color, detail = 3) {
   const g = new THREE.Group();
   g.position.set(x, 0, z);
   const cols = [PALETTE.leaf, PALETTE.leafDark, PALETTE.leafLight];
   const n = rng.int(2, 3);
   for (let i = 0; i < n; i++) {
     const sz = s * rng.float(0.4, 0.6);
-    mesh(blobGeometry(rng.int(0, 40), 0.3), color ?? rng.pick(cols), g,
+    mesh(blobGeometry(rng.int(0, 40), 0.3, detail), color ?? rng.pick(cols), g,
       [rng.float(-0.35, 0.35) * s, sz * 0.75, rng.float(-0.35, 0.35) * s], [rng.float(0, 3), rng.float(0, 3), 0], [sz, sz * 0.8, sz]);
   }
   col?.circle(x, z, 0.55 * s);
@@ -86,14 +86,15 @@ export function bush(x, z, s = 1, rng, col, color) {
 }
 
 /** Picket fence from (x0,z0) to (x1,z1). Returns a group. */
-export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, height = 1.0, gap = 0.22 } = {}) {
+export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, height = 1.0, gap = 0.22, simple = false } = {}) {
   const g = new THREE.Group();
   const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz);
   const ang = Math.atan2(dx, dz);
   g.position.set(x0, 0, z0);
   g.rotation.y = ang;
   const n = Math.floor(len / gap);
-  const picketGeo = new RoundedBoxGeometry(0.13, height, 0.04, 2, 0.02);
+  // simple: plain boxes (12 triangles instead of ~200) for big towns.
+  const picketGeo = simple ? new THREE.BoxGeometry(0.13, height, 0.04) : new RoundedBoxGeometry(0.13, height, 0.04, 2, 0.02);
   const pickets = new THREE.InstancedMesh(picketGeo, paint(color), n);
   const tipGeo = new THREE.ConeGeometry(0.075, 0.12, 4, 1);
   tipGeo.rotateY(Math.PI / 4);
@@ -115,7 +116,7 @@ export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, h
   }
   g.add(shadowed(pickets), shadowed(tips));
   for (const y of [0.3, height * 0.75]) {
-    mesh(new RoundedBoxGeometry(0.05, 0.08, len, 1, 0.02), PALETTE.wood, g, [-0.05, y, len / 2]);
+    mesh(simple ? new THREE.BoxGeometry(0.05, 0.08, len) : new RoundedBoxGeometry(0.05, 0.08, len, 1, 0.02), PALETTE.wood, g, [-0.05, y, len / 2]);
   }
   col?.box(Math.min(x0, x1) - 0.12, Math.min(z0, z1) - 0.12, Math.max(x0, x1) + 0.12, Math.max(z0, z1) + 0.12);
   return g;
@@ -127,7 +128,7 @@ function gableRoof(w, d, h, overhang, color) {
   shape.lineTo(0, h);
   shape.lineTo(w / 2 + overhang, 0);
   shape.lineTo(-w / 2 - overhang, 0);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: d + overhang * 2, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 3, curveSegments: 1 });
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: d + overhang * 2, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.06, bevelSegments: 2, curveSegments: 1 });
   geo.translate(0, 0, -(d + overhang * 2) / 2);
   return new THREE.Mesh(geo, paint(color));
 }
@@ -138,24 +139,24 @@ export function house(x, z, rotY, rng, col, { w = 6, d = 5, h = 3.2, wall = PALE
   g.userData.occluder = true;
   g.position.set(x, 0, z);
   g.rotation.y = rotY;
-  mesh(new RoundedBoxGeometry(w, h, d, 3, 0.12), wall, g, [0, h / 2, 0]);
+  mesh(new RoundedBoxGeometry(w, h, d, 2, 0.12), wall, g, [0, h / 2, 0]);
   const r = gableRoof(w, d, h * 0.55, 0.35, roof);
   r.position.y = h;
   g.add(r);
-  mesh(new RoundedBoxGeometry(0.6, 1.2, 0.6, 2, 0.08), PALETTE.brick, g, [w * 0.25, h + h * 0.45, -d * 0.15]);
+  mesh(new RoundedBoxGeometry(0.6, 1.2, 0.6, 1, 0.08), PALETTE.brick, g, [w * 0.25, h + h * 0.45, -d * 0.15]);
   // door + step
-  mesh(new RoundedBoxGeometry(0.95, 1.9, 0.12, 2, 0.05), door, g, [0, 0.95, d / 2 + 0.03]);
+  mesh(new RoundedBoxGeometry(0.95, 1.9, 0.12, 1, 0.05), door, g, [0, 0.95, d / 2 + 0.03]);
   mesh(new THREE.SphereGeometry(0.045, 10, 8), 0xe8c66a, g, [0.32, 0.95, d / 2 + 0.11]);
-  mesh(new RoundedBoxGeometry(1.4, 0.16, 0.6, 2, 0.05), PALETTE.path, g, [0, 0.08, d / 2 + 0.3]);
+  mesh(new RoundedBoxGeometry(1.4, 0.16, 0.6, 1, 0.05), PALETTE.path, g, [0, 0.08, d / 2 + 0.3]);
   // windows
   const win = (wx, wy, wz, ry) => {
     const wg = new THREE.Group();
     wg.position.set(wx, wy, wz); wg.rotation.y = ry;
-    mesh(new RoundedBoxGeometry(1.0, 0.95, 0.1, 2, 0.04), PALETTE.fenceWhite, wg);
+    mesh(new RoundedBoxGeometry(1.0, 0.95, 0.1, 1, 0.04), PALETTE.fenceWhite, wg);
     mesh(new RoundedBoxGeometry(0.82, 0.78, 0.06, 1, 0.02), PALETTE.windowBlue, wg, [0, 0, 0.04]);
     mesh(new THREE.BoxGeometry(0.05, 0.78, 0.04), PALETTE.fenceWhite, wg, [0, 0, 0.08]);
     mesh(new THREE.BoxGeometry(0.82, 0.05, 0.04), PALETTE.fenceWhite, wg, [0, 0, 0.08]);
-    mesh(new RoundedBoxGeometry(1.15, 0.18, 0.3, 2, 0.05), rng.pick(PALETTE.flowers), wg, [0, -0.55, 0.15]); // flower box
+    mesh(new RoundedBoxGeometry(1.15, 0.18, 0.3, 1, 0.05), rng.pick(PALETTE.flowers), wg, [0, -0.55, 0.15]); // flower box
     g.add(wg);
   };
   win(-w * 0.3, h * 0.55, d / 2 + 0.02, 0);
@@ -241,8 +242,8 @@ export function flowerBed(x, z, w, d, rng, col) {
   const soil = mesh(blobGeometry(3, 0.08, 3), PALETTE.soil, g, [0, -0.02, 0], [0, 0, 0], [w / 2, 0.12, d / 2]);
   soil.castShadow = false;
   const n = Math.floor(w * d * 7);
-  const stem = new THREE.CylinderGeometry(0.012, 0.015, 1, 5);
-  const head = new THREE.IcosahedronGeometry(1, 1);
+  const stem = new THREE.CylinderGeometry(0.012, 0.015, 1, 3);
+  const head = new THREE.IcosahedronGeometry(1, 0);
   const stems = new THREE.InstancedMesh(stem, paint(PALETTE.leafDark), n);
   const heads = new THREE.InstancedMesh(head, paint(0xffffff), n);
   const m = new THREE.Matrix4(), c = new THREE.Color();
@@ -265,7 +266,7 @@ export function steppingStones(points, rng) {
   const g = new THREE.Group();
   for (const [x, z] of points) {
     const s = rng.float(0.28, 0.4);
-    const m = mesh(blobGeometry(rng.int(0, 20), 0.15, 2), PALETTE.path, g, [x, 0.0, z], [0, rng.float(0, 3), 0], [s, 0.06, s * rng.float(0.8, 1.1)]);
+    const m = mesh(blobGeometry(rng.int(0, 20), 0.15, 1), PALETTE.path, g, [x, 0.0, z], [0, rng.float(0, 3), 0], [s, 0.06, s * rng.float(0.8, 1.1)]);
     m.castShadow = false;
   }
   return g;

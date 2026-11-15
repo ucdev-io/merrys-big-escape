@@ -136,3 +136,13 @@ body.touch-mode .stamina { bottom: 180px; }
 .style-blurb { width: 100%; text-align: center; font-size: 15px; opacity: 0.75; }
 .bubble.offscreen::after { display: none; }
 .bubble.offscreen::before { content: "🐱  "; }
+
+/* Compass toward the next place */
+.compass {
+  position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; padding: 4px 14px 4px 8px;
+  background: var(--wash); border-radius: var(--wobbly); box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
+}
+.compass .arrow { font-size: 26px; line-height: 1; transition: transform 0.15s linear; color: #c9783a; }
+.compass .label { font-size: 18px; white-space: nowrap; }
+@media (max-width: 600px) { .compass { top: auto; bottom: 200px; } }

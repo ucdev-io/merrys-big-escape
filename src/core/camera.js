@@ -23,6 +23,7 @@ export class FollowCamera {
     this.effPitch = this.pitch;  // pitch after dipping under leaves
     this._probe = new THREE.Vector3();
     this._near = [];
+    this._hit = new THREE.Vector3();
     this.manualHold = 0;        // seconds left before auto-follow resumes after a drag
     this.ray = new THREE.Raycaster();
     this._dir = new THREE.Vector3();
@@ -50,22 +51,22 @@ export class FollowCamera {
    * @param solid    buildings/sheds: the camera slides in front of these.
    * @param foliage  tree canopies: the camera dips underneath these.
    */
-  setOccluders(solid, foliage = []) {
-    this.occluders = solid;
-    this.foliage = foliage.map((m) => {
-      m.updateWorldMatrix(true, false);
-      return { m, p: m.getWorldPosition(new THREE.Vector3()) };
-    });
+  setOccluders({ boxes = [], spheres = [] } = {}) {
+    this.occluders = boxes;   // THREE.Box3[] — buildings, trunks
+    this.foliage = spheres;   // THREE.Sphere[] — tree canopies
   }
 
   _dirFor(pitch, out) {
     return out.set(Math.sin(this.yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(this.yaw) * Math.cos(pitch)).normalize();
   }
 
-  _blocked(look, pitch, list, far) {
-    this.ray.set(look, this._dirFor(pitch, this._probe));
-    this.ray.far = far;
-    return this.ray.intersectObjects(list, false).length > 0;
+  _blocked(look, pitch, spheres, far) {
+    const ray = this.ray.ray;
+    ray.set(look, this._dirFor(pitch, this._probe));
+    for (const s of spheres) {
+      if (ray.intersectSphere(s, this._hit) && this._hit.distanceTo(look) < far) return true;
+    }
+    return false;
   }
 
   snap(pos) { this.target.copy(pos); this.smoothTarget.copy(pos); }
@@ -101,7 +102,7 @@ export class FollowCamera {
       near.length = 0;
       const reach = this.distance + 4;
       for (const f of this.foliage) {
-        if (Math.abs(f.p.x - look.x) < reach && Math.abs(f.p.z - look.z) < reach) near.push(f.m);
+        if (Math.abs(f.center.x - look.x) < reach && Math.abs(f.center.z - look.z) < reach) near.push(f);
       }
       if (near.length && this._blocked(look, this.pitch, near, this.distance)) {
         targetPitch = 0.06;
@@ -118,10 +119,16 @@ export class FollowCamera {
     // Occlusion: cast from Merry toward the camera; if a building is in the way, come in front of it.
     let want = this.distance;
     if (this.occluders.length) {
-      this.ray.set(look, dir);
-      this.ray.far = this.distance;
-      const hit = this.ray.intersectObjects(this.occluders, true)[0];
-      if (hit) want = Math.max(1.4, hit.distance - 0.35);
+      const ray = this.ray.ray;
+      ray.set(look, dir);
+      let best = Infinity;
+      const reach = this.distance + 2;
+      for (const b of this.occluders) {
+        if (b.max.x < look.x - reach || b.min.x > look.x + reach || b.max.z < look.z - reach || b.min.z > look.z + reach) continue;
+        if (b.containsPoint(look)) continue;
+        if (ray.intersectBox(b, this._hit)) best = Math.min(best, this._hit.distanceTo(look));
+      }
+      if (best < this.distance) want = Math.max(1.4, best - 0.35);
     }
     // Pull in quickly, ease back out gently.
     const k = want < this.actualDistance ? 14 : 2.5;

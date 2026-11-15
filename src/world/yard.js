@@ -3,6 +3,7 @@ import { paint } from '../render/watercolorMaterial.js';
 import { PALETTE } from '../render/palette.js';
 import { RNG, fbm3 } from '../core/rng.js';
 import { Colliders } from './collision.js';
+import { mergeStatic, collectOccluders } from './merge.js';
 import {
   tree, bush, picketFence, house, shed, gnome, paddlingPool, washingLine,
   flowerBed, steppingStones, grassTufts, skyDome,
@@ -71,9 +72,11 @@ export function buildYard(seed = 'biscuit-yard') {
   group.add(flowerBed(-9.2, -0.5, 1.2, 4.5, rng, col));
   group.add(paddlingPool(3, 2.2, col));
   const g = gnome(-2.8, 6.6, Math.PI + 0.3);
+  g.userData.noMerge = true; // it falls over when barked at
   group.add(g);
   col.circle(-2.8, 6.6, 0.25);
   const line = washingLine(-7.4, -2.6, -2.4, -4.6, rng);
+  line.userData.noMerge = true; // laundry sways
   group.add(line);
   col.circle(-7.4, -2.6, 0.12);
   col.circle(-2.4, -4.6, 0.12);
@@ -100,12 +103,12 @@ export function buildYard(seed = 'biscuit-yard') {
   }));
   group.add(grassTufts(4000, [-40, -40, 40, 40], rng, (x, z) => !inYard(x, z, 0.5) && z > -9));
 
+  const occluders = collectOccluders(group);
   return {
-    group,
+    group: mergeStatic(group),
     colliders: col,
     props: { gnome: g },
-    occluders: (() => { const o = group.children.filter((c) => c.userData.occluder); group.traverse((m) => m.userData.solid && o.push(m)); return o; })(),
-    foliage: (() => { const f = []; group.traverse((o) => o.userData.foliage && f.push(o)); return f; })(),
+    occluders,
     spawn: new THREE.Vector3(0.5, 0, -1),
     bounds: { x0: YARD.x0 + 0.3, x1: YARD.x1 - 0.3, z0: YARD.z0 + 0.3, z1: YARD.z1 - 0.3 },
     update(t) { for (const f of animated) f(t); },
