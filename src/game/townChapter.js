@@ -394,7 +394,8 @@ export class TownChapter {
     const aim = race ? { x: race.pos.x, z: race.pos.z, label: race.label ?? race.emoji } : loot ? { x: loot.pos.x, z: loot.pos.z, label: loot.label }
       : job ? jc && { x: jc.x, z: jc.z, label: job.label ?? job.emoji } : bbq ? { x: bbq.pos.x, z: bbq.pos.z, label: bbq.label }
       : next ? { x: next.place.x, z: next.place.z, label: `${PLACE_EMOJI[next.place.type]} ???` } : null;
-    if (aim && canAct) {
+    const covered = !this.hud.card.classList.contains('hidden') || !this.hud.book.classList.contains('hidden'); // (on a phone it sits over a card)
+    if (aim && canAct && !covered) {
       const yaw = this.follow.yaw;
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
       const dx = aim.x - pos.x, dz = aim.z - pos.z;
