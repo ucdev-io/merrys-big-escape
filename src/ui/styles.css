@@ -430,3 +430,9 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .lookout.look { font-size: 50px; }
 @keyframes lookwarn { from { margin-top: 0; } to { margin-top: -8px; } }
 .bubble.heist.offscreen::before { content: none; } /* (that 🐱 is for the garden cat) */
+/* Heists: a tug of war over the butcher's sausages (your side fills from the left) */
+.tug-meter { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--wash); border-radius: var(--wobbly);
+  padding: 4px 14px 8px; text-align: center; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); }
+.tug-meter .tug-text { font-size: 18px; white-space: nowrap; }
+.tug-bar { width: min(260px, 70vw); height: 14px; margin-top: 4px; border-radius: 7px; background: #c4786c; overflow: hidden; border: 2px solid rgba(59, 43, 37, 0.3); }
+.tug-bar i { display: block; height: 100%; width: 50%; background: #e0b04a; border-radius: 6px; transition: width 0.2s; }

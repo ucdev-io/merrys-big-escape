@@ -66,6 +66,14 @@ const PARTS = {
   },
   // The knot at the end of a string of sausages (the rest trails behind: see heist/links.js).
   links() { return [[SPHERE, 0xc9806e, [0, 0.016, 0], [0, 0, 0], [0.018, 0.016, 0.018]]]; },
+  // A few raw sausages, still linked, folded up in a heap (for the stash bowl).
+  coil() {
+    const S = new THREE.CapsuleGeometry(0.032, 0.13, 6, 12);
+    return [
+      [S, 0xd98f84, [0, 0.032, -0.055], [0, 0, Math.PI / 2]], [S, 0xd98f84, [0.1, 0.032, 0], [Math.PI / 2, 0, 0]], [S, 0xd98f84, [0, 0.032, 0.055], [0, 0, Math.PI / 2]],
+      [SPHERE, 0xc4786c, [0.085, 0.032, -0.05], [0, 0, 0], [0.02, 0.02, 0.02]], [SPHERE, 0xc4786c, [0.085, 0.032, 0.05], [0, 0, 0], [0.02, 0.02, 0.02]],
+    ];
+  },
 };
 
 const GEO = {};
@@ -88,4 +96,5 @@ export const TREATS = {
   sausage: { name: 'sausage', emoji: '🌭' },
   burger: { name: 'burger', emoji: '🍔' },
   links: { name: 'string of sausages', emoji: '🌭' },
+  coil: { name: 'sausages', emoji: '🌭' },
 };

@@ -61,9 +61,13 @@ export class Carry {
     return best;
   }
 
-  /** 🐾 pressed: drop, grab or dig something up. Returns 'drop' | 'grab' | 'dig' | null (nothing here). */
+  /** 🐾 pressed: drop, grab or dig something up. Returns 'drop' | 'grab' | 'dig' | 'tug' | null (nothing here). */
   press(nose) {
-    if (this.held) { this.drop(nose); return 'drop'; }
+    if (this.held) {
+      if (this.held.onPress?.()) return 'tug'; // (e.g. one end of a string of sausages in a tug of war: 🐾 pulls)
+      this.drop(nose);
+      return 'drop';
+    }
     const it = this.nearby(nose);
     if (!it) return null;
     if (it.buried > 0) {
@@ -119,7 +123,7 @@ export class Carry {
 
   /** What 🐾 would do right now, for the prompt and the button label: { act, text } or null. */
   hint(nose) {
-    if (this.held) return { act: 'drop', text: `Carrying the ${this.held.def.name} ${this.held.def.emoji} · 🐾 drops it` };
+    if (this.held) return { act: this.held.pulls?.() ? 'pull' : 'drop', text: `Carrying the ${this.held.def.name} ${this.held.def.emoji} · 🐾 drops it` };
     const it = this.nearby(nose);
     if (!it) return null;
     if (it.buried) return { act: 'dig', text: 'Something’s buried here! Dig dig dig! 🐾' };

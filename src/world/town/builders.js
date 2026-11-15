@@ -12,7 +12,7 @@ import {
   HOUSE_WALLS, HOUSE_ROOFS, DOORS, bench, lamppost, wheelieBin, crate, cardboardBox, puddle, birdbath, mailbox,
   kennel, swingSet, slide, lawnmower, bbq, cafeTable, shop, brickBuilding, car, hedge, pathRibbon,
 } from './townProps.js';
-import { bakeryHeist } from './heistProps.js';
+import { bakeryHeist, butcherHeist } from './heistProps.js';
 
 const H = TOWN.BLOCK / 2;          // 15: half block
 const EDGE = H - 0.4;              // where garden fences sit
@@ -328,10 +328,13 @@ function bakeryBlock(g, lc, rng) {
   const box = (x0, z0, x1, z1) => { const [a, b] = T.p(x0, z0), [c, d] = T.p(x1, z1); lc.box(Math.min(a, c), Math.min(b, d), Math.max(a, c), Math.max(b, d)); };
   const names = [0xd9534f, 0x5b86c4, 0xe0b04a];
   [-9.5, 0, 9.5].forEach((x, i) => {
-    const [px, pz] = T.p(x, 6.5);
-    g.add(shop(px, pz, T.ry(0), rng, { w: 8.4, d: 7, h: rng.float(4, 5), sign: names[i] }));
+    const [px, pz] = T.p(x, 6.5), h = rng.float(4, 5);
+    // The butcher's (the last shop) gets a red-and-white awning (rolling the same dice shop() would, so nothing else moves).
+    let look = {};
+    if (i === 2) { const wall = rng.pick(HOUSE_WALLS); rng.next(); look = { wall, awning: 0xd9534f }; }
+    g.add(shop(px, pz, T.ry(0), rng, { w: 8.4, d: 7, h, sign: names[i], ...look }));
     box(x - 4.3, 3, x + 4.3, 10.1);
-    const [tx, tz] = i === 0 ? T.p(x + 0.4, 13.3) : T.p(x - 1.5, 12.6); // (the bakery's is out of the way of its stall)
+    const [tx, tz] = T.p(...[[x + 0.4, 13.3], [x - 1.5, 12.6], [x - 2.6, 13.3]][i]); // (out of the way of the bakery's stall and the butcher's rail)
     g.add(cafeTable(tx, tz, rng.pick([0xf2a0b4, 0xf6d06a, 0x8fc4d8])));
     lc.circle(tx, tz, 0.45, 0.74);
     if (i === 1) lc.bone(tx, tz, 0.74);
@@ -354,6 +357,7 @@ function bakeryBlock(g, lc, rng) {
   }
   g.add(hedge(...T.p(-EDGE, -EDGE), ...T.p(EDGE, -EDGE), rng, lc));
   bakeryHeist(g, lc, T, -9.5); // the baker's stall of treats (heists!)
+  butcherHeist(g, lc, T, 9.5);  // and the butcher's string of sausages
 }
 
 function alleyBlock(g, lc, rng) {

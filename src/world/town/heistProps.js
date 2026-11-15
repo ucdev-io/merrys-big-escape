@@ -10,6 +10,7 @@ import { treatGeometry } from '../../entities/treats.js';
 const G = (x = 0, z = 0, ry = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; return g; };
 const RB = (w, h, d, r = 0.03, s = 2) => new RoundedBoxGeometry(w, h, d, s, r);
 const WOOD = 0xc79b6d, DARK_WOOD = 0x8a6346;
+export const SAUSAGE = 0xd98f84, SAUSAGE_TWIST = 0xc4786c; // raw pork bangers, pink
 
 /** Where the treats sit on the stall's two trays (stall space): 6 croissants, then 6 iced buns. */
 export const STALL_SLOTS = [];
@@ -57,12 +58,17 @@ export function bakersWorktop(x, z, ry) {
   return g;
 }
 
-/** A big golden croissant hanging from a bracket over the bakery door: you can spot it from the end of the street. */
-export function croissantSign(x, z, ry, y = 3.0) {
-  const g = G(x, z, ry);
+/** An iron bracket sticking out of a shop wall, for a hanging sign (two little chains at z 0.34 and 0.86). */
+function bracket(g, y) {
   mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 8), 0x3f4a55, g, [0, y, 0.45], [Math.PI / 2, 0, 0]);
   mesh(new THREE.SphereGeometry(0.06, 10, 8), 0xe0b04a, g, [0, y, 0.92]);
   for (const s of [-1, 1]) mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.26, 6), 0x3f4a55, g, [0, y - 0.13, 0.6 + s * 0.26]);
+}
+
+/** A big golden croissant hanging from a bracket over the bakery door: you can spot it from the end of the street. */
+export function croissantSign(x, z, ry, y = 3.0) {
+  const g = G(x, z, ry);
+  bracket(g, y);
   // Hung side-on to the street (so people walking along see it), arched like a rainbow.
   const c = new THREE.Mesh(treatGeometry('croissant'), paint(0xffffff, { vertexColors: true }));
   c.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0)));
@@ -70,6 +76,46 @@ export function croissantSign(x, z, ry, y = 3.0) {
   c.scale.setScalar(4.2);
   c.castShadow = true;
   g.add(c);
+  return g;
+}
+
+/** A string of three giant sausages hanging over the butcher's door. */
+export function sausageSign(x, z, ry, y = 3.0) {
+  const g = G(x, z, ry);
+  bracket(g, y);
+  const geo = new THREE.CapsuleGeometry(0.11, 0.3, 8, 16);
+  [[0.25, -0.36, 0.5], [0.6, -0.5, 0], [0.95, -0.36, -0.5]].forEach(([z0, dy, a]) => mesh(geo, SAUSAGE, g, [0, y + dy, z0], [a + Math.PI / 2, 0, 0]));
+  for (const [z0, dy] of [[0.42, -0.45], [0.78, -0.45]]) mesh(new THREE.SphereGeometry(0.06, 10, 8), SAUSAGE_TWIST, g, [0, y + dy, z0]);
+  return g;
+}
+
+/** Where the sausages hang on the butcher's rail (rail space, right to left), and how high. */
+export const RAIL_HOOKS = [0.7, 0.3, -0.1, -0.5];
+export const RAIL_Y = 1.74;
+
+/** The butcher's rail: two posts and a steel bar with hooks, for a long string of sausages. */
+export function sausageRail(x, z, ry) {
+  const g = G(x, z, ry);
+  for (const sx of [-0.95, 0.95]) {
+    mesh(new THREE.CylinderGeometry(0.045, 0.055, 1.85, 10), DARK_WOOD, g, [sx, 0.925, 0]);
+    mesh(new THREE.SphereGeometry(0.07, 12, 8), DARK_WOOD, g, [sx, 1.86, 0]);
+    mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.06, 14), DARK_WOOD, g, [sx, 0.03, 0]);
+  }
+  mesh(new THREE.CylinderGeometry(0.028, 0.028, 1.9, 10), 0xb8b2a8, g, [0, 1.8, 0], [0, 0, Math.PI / 2]);
+  for (const hx of RAIL_HOOKS) mesh(new THREE.TorusGeometry(0.03, 0.007, 6, 12, Math.PI * 1.4), 0x8a8f96, g, [hx, RAIL_Y + 0.03, 0], [0, Math.PI / 2, Math.PI * 0.8]);
+  return g;
+}
+
+/** A big log chopping block with a red sausage machine on top (its handle is added by the game, so it can turn). */
+export function choppingBlock(x, z, ry) {
+  const g = G(x, z, ry);
+  mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.72, 20), 0xa87a52, g, [0, 0.36, 0]);
+  mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.012, 20), 0xd8b48a, g, [0, 0.726, 0]);
+  for (const r of [0.18, 0.09]) mesh(new THREE.TorusGeometry(r, 0.005, 4, 20), 0xc49a6c, g, [0, 0.733, 0], [Math.PI / 2, 0, 0]); // tree rings
+  mesh(RB(0.16, 0.18, 0.22, 0.05), 0xd9534f, g, [0, 0.82, 0]);
+  mesh(new THREE.CylinderGeometry(0.1, 0.045, 0.12, 14, 1, true), 0xd9534f, g, [0, 0.97, 0], [0, 0, 0], [1, 1, 1], { side: THREE.DoubleSide });
+  mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 12), 0xb8b2a8, g, [0, 0.8, -0.14], [Math.PI / 2, 0, 0]); // the nozzle: sausages come out here
+  [[-0.06, -0.2, 0.3], [0.05, -0.17, -0.5], [0.14, -0.08, 1.2]].forEach(([sx, sz, a]) => mesh(new THREE.CapsuleGeometry(0.03, 0.09, 4, 10), SAUSAGE, g, [sx, 0.76, sz], [Math.PI / 2, 0, a]));
   return g;
 }
 
@@ -96,5 +142,26 @@ export function bakeryHeist(g, lc, T, x0) {
   lc.heist('bakery', {
     slots: STALL_SLOTS.map(([sx, sy, sz]) => { const w = W(stall[0] + sx, stall[1] + sz); return { x: w.x, y: sy, z: w.z, ry }; }),
     baker: W(...baker), busy: T.ry(Math.PI), look: ry, door: W(...door), zone: { ...W(...stall), r: 6 },
+  });
+}
+
+/**
+ * The butcher's (the last shop on the street, centred on x0, its front wall at z = 10): the rail of
+ * sausages, the chopping block and sausage machine, the sausage sign, and where it all is for the heist.
+ */
+export function butcherHeist(g, lc, T, x0) {
+  const ry = T.ry(0);
+  const rail = [x0 - 0.6, 10.95], block = [x0 + 1.3, 10.32], butcher = [x0 + 1.3, 10.86], door = [x0 + 2.52, 11.3];
+  g.add(sausageRail(...T.p(...rail), ry));
+  for (const sx of [-0.95, 0.95]) lc.circle(...T.p(rail[0] + sx, rail[1]), 0.08);
+  g.add(choppingBlock(...T.p(...block), ry));
+  lc.circle(...T.p(...block), 0.33, 0.75);
+  g.add(sausageSign(...T.p(x0 + 3.6, 10.0), ry, 3.6));
+  lc.circle(...T.p(...butcher), 0.3); // he stands just here
+  const W = (x, z) => lc.at(...T.p(x, z));
+  lc.heist('butcher', {
+    butcher: W(...butcher), busy: T.ry(Math.PI), look: ry, door: W(...door), zone: { ...W(rail[0], rail[1] + 0.3), r: 6 },
+    hooks: RAIL_HOOKS.map((hx) => W(rail[0] + hx, rail[1]).setY(RAIL_Y)),
+    crank: { ...W(block[0] + 0.09, block[1]), y: 0.84, ry },
   });
 }

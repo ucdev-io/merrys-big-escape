@@ -101,4 +101,5 @@ export const CARRYABLES = {
   // Pinched from the bakery street (heists: see treats.js).
   croissant: { name: 'croissant', emoji: '🥐', build: () => treatMesh('croissant'), hold: { pos: [0, -0.03, 0.035], rot: [0, 0, 0] } },
   bun: { name: 'iced bun', emoji: '🧁', build: () => treatMesh('bun'), hold: { pos: [0, -0.06, 0.045], rot: [0.3, 0, 0] } },
+  links: { name: 'string of sausages', emoji: '🌭', build: () => treatMesh('links'), hold: { pos: [0, -0.02, 0.03], rot: [0, 0, 0] } }, // (the end of one: the rest trails behind)
 };
