@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ITEMS } from '../entities/items.js';
 import { setMuted, isMuted } from '../core/audio.js';
+import { music } from '../core/music.js';
 import { toggleFullscreen, isFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
 import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { progress } from '../game/progress.js';
@@ -174,6 +175,11 @@ export class HUD {
       setMuted(!isMuted());
       setSetting('muted', isMuted());
       sound.textContent = isMuted() ? '🔇 Sound: off' : '🔊 Sound: on';
+    });
+    const mus = item(getSettings().music ? '🎵 Music: on' : '🎵 Music: off', () => {
+      setSetting('music', !getSettings().music);
+      music.setEnabled(getSettings().music);
+      mus.textContent = getSettings().music ? '🎵 Music: on' : '🎵 Music: off';
     });
     if (navigator.vibrate) {
       const vib = item(getSettings().haptics ? '📳 Vibration: on' : '📴 Vibration: off', () => {

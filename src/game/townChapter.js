@@ -15,6 +15,8 @@ import { progress } from './progress.js';
 import { Smells } from './town/smells.js';
 import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
+import { TownLife } from './town/life.js';
+import { music } from '../core/music.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -58,6 +60,10 @@ export class TownChapter {
     this.friends = new Friends({ scene, world, hud, actions: this.actions, player, seed: this.layout.seed, dogName: () => this.profile().name });
     this.friends.onChange = () => this.refreshObjective();
     this.actions.onCarry = (kind) => { this.pack.sendCarry(kind); this.refreshObjective(); };
+    // People out and about (the postman, dog walkers), and ice creams from the van.
+    this.life = new TownLife({ scene, world, hud, player, seed: this.layout.seed, dogName: () => this.profile().name });
+    this.traffic.onServe = (at) => this.actions.snacks.drop('icecream', at.x, at.z);
+    this.pond = world.water?.find((w) => w.kind === 'pond');
 
     // Other players' dogs (paddling, splashing and shaking too).
     this.remotes = new RemoteDogs(scene, hud, () => this.player.pos);
@@ -300,7 +306,12 @@ export class TownChapter {
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    this.actions.update(dt, { canAct, goal });
+    const acted = this.actions.update(dt, { canAct, goal });
+    this.life.update(dt, { barked: acted.barked, canAct });
+    if (this.pond) { // frogs croak as you get near the pond
+      const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));
+      music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });
+    }
 
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);

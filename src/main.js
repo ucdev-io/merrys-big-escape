@@ -20,6 +20,7 @@ import { packCodeFromUrl, packPath } from './net/links.js';
 import { getSettings, TEXTURE_LEVELS } from './core/settings.js';
 import { progress } from './game/progress.js';
 import { statsFor } from './game/stats.js';
+import { music } from './core/music.js';
 import { autoFullscreen } from './ui/fullscreen.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
@@ -65,6 +66,8 @@ const yardDone = save.yardDone || save.escaped;
 
 // Landing page, unless a link already says where to go.
 if (!packCode && !params.has('town') && !params.has('seed')) {
+  music.setEnabled(getSettings().music);
+  music.play('title'); // starts with the first tap or key press
   const choice = await showTitle(save);
   if (choice?.pack) {
     // Tapped a friend in "Friends playing now": join them (no page reload, so fullscreen stays).
@@ -166,6 +169,10 @@ createTouchControls(input, follow);
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
   : new YardChapter({ scene, world, player, hud, input, follow, pipeline });
+// Music for this chapter, and birds singing.
+music.setEnabled(getSettings().music);
+music.play(inTown ? 'town' : 'garden');
+music.setAmbient({ birds: 1 });
 
 // Style tuning panel: add ?tune to the URL.
 if (location.search.includes('tune')) {

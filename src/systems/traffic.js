@@ -3,8 +3,12 @@ import { RNG } from '../core/rng.js';
 import { TOWN } from '../world/town/generator.js';
 import { car } from '../world/town/townProps.js';
 import { mergeStatic } from '../world/merge.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { sfx } from '../core/audio.js';
 import { buzz } from '../core/haptics.js';
+import { music } from '../core/music.js';
+import { mesh } from '../world/props.js';
+import { ICECREAM } from '../game/lines/life.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const LANE = 1.25;           // drive on the left, this far from the centre line
@@ -15,6 +19,23 @@ const SAY = ['Beep beep!', 'Out of the road, pup!', 'Shoo, doggy!', 'Silly dog! 
 const SORRY = ['Oops! Sorry, pup!', 'Whoa! You OK, little one?', 'Careful, doggy!', 'Bonk! Sorry!'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
+/** The ice-cream van: cream and pink, a serving hatch on the pavement side, a giant cone on the roof. */
+function iceCreamVan() {
+  const g = new THREE.Group();
+  const RB = (w, h, d, r = 0.15) => new RoundedBoxGeometry(w, h, d, 3, r);
+  mesh(RB(1.8, 1.45, 3.8, 0.25), 0xf6f1e8, g, [0, 1.05, 0]);
+  mesh(RB(1.84, 0.4, 3.84, 0.15), 0xf2a0b4, g, [0, 0.5, 0]);
+  mesh(RB(1.5, 0.55, 0.06, 0.04), 0x9ab8cf, g, [0, 1.35, 1.9], [-0.15, 0, 0]);          // windscreen
+  mesh(RB(0.06, 0.6, 1.5, 0.03), 0x5a4a44, g, [0.92, 1.25, -0.3]);                       // serving hatch (left side)
+  for (let i = 0; i < 6; i++) mesh(new THREE.BoxGeometry(0.4, 0.04, 0.26), i % 2 ? 0xf2a0b4 : 0xffffff, g, [1.1, 1.62, -0.95 + i * 0.26], [0, 0, -0.35]); // stripy awning
+  for (const sx of [-0.8, 0.8]) for (const sz of [-1.2, 1.2]) mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.22, 14), 0x2b2b2b, g, [sx, 0.32, sz], [0, 0, Math.PI / 2]);
+  const cone = new THREE.Group(); cone.position.set(0, 1.85, 0.4); g.add(cone);
+  mesh(new THREE.ConeGeometry(0.28, 0.75, 14), 0xd9a066, cone, [0, 0.35, 0], [Math.PI, 0, 0]);
+  mesh(new THREE.SphereGeometry(0.33, 16, 12), 0xf2a0b4, cone, [0, 0.8, 0]);
+  mesh(new THREE.SphereGeometry(0.07, 10, 8), 0xd9534f, cone, [0, 1.13, 0]);
+  return g;
+}
+
 /**
  * Cars pottering round the neighbourhood's streets. They stop and honk when a dog's in the way;
  * a dog who runs into one gets a gentle bonk and loses a bit of puff — nobody ever gets hurt.
@@ -23,6 +44,7 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 export class Traffic {
   constructor(scene, { seed, hud, count = 7, avoid = null }) {
     this.hud = hud;
+    this.onServe = null; // (where) → an ice cream for the dog
     const S = TOWN.SIZE, step = TOWN.BLOCK + TOWN.ROAD;
     this.lines = Array.from({ length: TOWN.N + 1 }, (_, k) => -S / 2 + TOWN.ROAD / 2 + k * step);
     const rng = new RNG(`traffic:${seed}`);
@@ -37,10 +59,11 @@ export class Traffic {
       if (avoid && pos.distanceTo(avoid) < 25) continue;
       if (this.cars.some((c) => c.pos.distanceTo(pos) < 12)) continue;
       const g = new THREE.Group();
-      g.add(mergeStatic(car(0, 0, 0, COLORS[id % COLORS.length])));
+      const iceCream = id === 0; // the first one's the ice-cream van
+      g.add(mergeStatic(iceCream ? iceCreamVan() : car(0, 0, 0, COLORS[id % COLORS.length])));
       g.position.copy(pos);
       scene.add(g);
-      const c = { id: id++, g, pos: g.position, heading: Math.atan2(dir.x, dir.z), speed: CRUISE * 0.6, from, to, phase: 'approach', honkCD: rng.float(0, 2), stuck: 0, bumpCD: 0, wait: 0 };
+      const c = { id: id++, g, pos: g.position, heading: Math.atan2(dir.x, dir.z), speed: CRUISE * 0.6, from, to, phase: 'approach', honkCD: rng.float(0, 2), stuck: 0, bumpCD: 0, wait: 0, iceCream, parkIn: 25, parked: 0, jingleT: 0, serveCD: 0 };
       this.aim(c);
       this.cars.push(c);
     }
@@ -101,6 +124,7 @@ export class Traffic {
         // (oncoming cars are in the other lane: nothing to do)
       }
       if (c.wait > 0) target = 0;
+      if (c.iceCream) target = Math.min(target, this.iceCream(c, dt, player, f, l, dist)) ;
       c.speed += THREE.MathUtils.clamp(target - c.speed, -BRAKE * dt, ACCEL * dt);
       c.stuck = dogAhead && c.speed < 0.6 ? c.stuck + dt : 0;
       if (dogAhead && c.honkCD <= 0 && (c.stuck > 0.5 || c.pos.distanceTo(dogAhead) < 3.2)) {
@@ -134,6 +158,26 @@ export class Traffic {
       }
     }
     return { bonked };
+  }
+
+  /** The ice-cream van's day: potter about playing its tune, park now and then, hand dogs a cone. Returns a speed limit. */
+  iceCream(c, dt, player, f, l, toWaypoint) {
+    c.jingleT -= dt; c.serveCD -= dt; c.parkIn -= dt;
+    const d = c.pos.distanceTo(player.pos);
+    if (c.jingleT <= 0 && d < 30) { c.jingleT = 4.6; music.jingle(1 - d / 30); }
+    if (c.parked <= 0 && c.parkIn <= 0 && c.phase === 'approach' && toWaypoint > 9) { c.parked = 12; c.parkIn = 35 + Math.random() * 20; }
+    if (c.parked > 0) {
+      c.parked -= dt;
+      // A dog at the hatch (the pavement side) gets an ice cream.
+      const hatch = c.pos.clone().addScaledVector(l, 1.5);
+      if (c.speed < 0.3 && c.serveCD <= 0 && player.pos.distanceTo(hatch) < 1.8) {
+        c.serveCD = 40;
+        this.hud.say(`🍦 ${pick(ICECREAM.serve)}`, () => c.pos.clone().setY(2.6), 2.6);
+        this.onServe?.(c.pos.clone().addScaledVector(l, 1.6));
+      }
+      return 0;
+    }
+    return CRUISE * 0.7;
   }
 
   honk(c, listener, line, beep = true) {

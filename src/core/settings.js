@@ -1,6 +1,6 @@
 // Little player settings (instead of URL options nobody wants to type on a phone).
 const KEY = 'merry.settings';
-const DEFAULTS = { debug: false, styles: false, autoFullscreen: true, haptics: true, texture: 'light' };
+const DEFAULTS = { debug: false, styles: false, autoFullscreen: true, haptics: true, texture: 'light', music: true };
 
 // Paint texture strength levels (see WatercolorPipeline.texture).
 export const TEXTURE_LEVELS = { off: 0, light: 0.4, medium: 0.7, strong: 1 };

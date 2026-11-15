@@ -28,6 +28,8 @@ export function unlockAudio() {
 document.addEventListener('visibilitychange', () => { if (!ctx) return; if (document.hidden) ctx.suspend(); else ctx.resume(); });
 
 export function setMuted(m) { muted = m; if (master) master.gain.value = m ? 0 : 0.5; }
+/** The shared audio context and output (for music.js) — null until the player has tapped or pressed a key. */
+export function getAudio() { return ctx && master ? { ctx, master, noiseBuf } : null; }
 export function isMuted() { return muted; }
 
 function env(g, t, a, peak, d) {

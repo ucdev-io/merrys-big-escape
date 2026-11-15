@@ -10,6 +10,7 @@ export const SNACKS = {
   cheese: { emoji: '🧀', name: 'Stinky cheese', power: ['jump'], blurb: 'Super jumps! Double-tap to fly over fences and hedges.', secs: 20 },
   donut: { emoji: '🍩', name: 'Old doughnut', power: ['zoomies'], blurb: 'Sugar rush! Endless zoomies.', secs: 15 },
   sausage: { emoji: '🌭', name: 'Half a sausage', power: ['speed', 'jump', 'zoomies'], blurb: 'SUPER DOG! Everything at once!', secs: 12 },
+  icecream: { emoji: '🍦', name: 'Doggy ice cream', power: ['speed', 'zoomies'], blurb: 'Brain freeze! Super speed and endless zoomies!', secs: 15 }, // from the van
 };
 const KINDS = ['pizza', 'cheese', 'donut', 'pizza', 'cheese', 'donut', 'cheese', 'sausage']; // sausages are rare
 
@@ -33,6 +34,10 @@ function snackModel(kind) {
     add(new THREE.TorusGeometry(0.075, 0.038, 10, 20), 0xd9a066, [0, 0, 0], [Math.PI / 2, 0, 0]);
     add(new THREE.TorusGeometry(0.075, 0.03, 8, 20), 0xf2a0b4, [0, 0.018, 0], [Math.PI / 2, 0, 0], [1, 1, 0.7]); // icing
     for (let i = 0; i < 6; i++) add(new THREE.SphereGeometry(0.008, 6, 4), [0xffffff, 0x6fb1d9, 0xf6d06a][i % 3], [Math.cos(i) * 0.075, 0.042, Math.sin(i) * 0.075]);
+  } else if (kind === 'icecream') {
+    add(new THREE.ConeGeometry(0.05, 0.14, 12), 0xd9a066, [0, 0.0, 0], [Math.PI, 0, 0]);
+    add(new THREE.SphereGeometry(0.06, 12, 10), 0xfbf3e2, [0, 0.09, 0]);
+    add(new THREE.SphereGeometry(0.014, 6, 4), 0xd9534f, [0, 0.15, 0]);
   } else {
     add(new THREE.CapsuleGeometry(0.035, 0.15, 6, 12), 0xb5562f, [0, 0, 0], [0, 0, Math.PI / 2]);
     add(new THREE.SphereGeometry(0.012, 6, 4), 0xf6d06a, [0.05, 0.03, 0]); // a dab of mustard
@@ -73,6 +78,16 @@ export class Snacks {
       this.scene.add(g);
       this.items.push({ kind, g, pos, phase: rng.float(0, 6), age: 0 });
     }
+  }
+
+  /** A snack handed out somewhere (the ice-cream van). */
+  drop(kind, x, z) {
+    const g = snackModel(kind);
+    const pos = V(x, 0, z);
+    g.position.copy(pos);
+    g.scale.setScalar(0.01);
+    this.scene.add(g);
+    this.items.push({ kind, g, pos, phase: Math.random() * 6, age: 0 });
   }
 
   /**

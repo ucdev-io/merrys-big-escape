@@ -1,4 +1,5 @@
 import { BREEDS, BREED_KEYS } from '../entities/breeds.js';
+import { music } from '../core/music.js';
 import { lanBase, fillShareBox } from '../net/links.js';
 import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { autoFullscreen, toggleFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
@@ -64,6 +65,7 @@ export function showTitle(save) {
           <label><input type="checkbox" data-s="styles" ${s.styles ? 'checked' : ''}> Show the art style picker</label>
           <label><input type="checkbox" data-s="autoFullscreen" ${s.autoFullscreen ? 'checked' : ''}> Go full screen when playing (phones &amp; tablets)</label>
           <label><input type="checkbox" data-s="haptics" ${s.haptics ? 'checked' : ''}> Buzz on phones (vibration)</label>
+          <label><input type="checkbox" data-s="music" ${s.music ? 'checked' : ''}> Music</label>
           <label>Paint texture <select class="tex">${Object.entries(TEXTURE_NAMES).map(([k, n]) => `<option value="${k}" ${s.texture === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
         </div>
       </div>`;
@@ -89,7 +91,7 @@ export function showTitle(save) {
     };
     el.querySelector('.phone-btn').onclick = () => showPhone(phone.classList.contains('hidden'));
     el.querySelector('.settings-btn').onclick = () => settings.classList.toggle('hidden');
-    el.querySelectorAll('[data-s]').forEach((c) => (c.onchange = () => setSetting(c.dataset.s, c.checked)));
+    el.querySelectorAll('[data-s]').forEach((c) => (c.onchange = () => { setSetting(c.dataset.s, c.checked); if (c.dataset.s === 'music') music.setEnabled(c.checked); }));
     el.querySelector('.tex').onchange = (e) => setSetting('texture', e.target.value);
     // On the computer, show the phone QR straight away — that's what you'd want to hand round.
     if (!isPhone()) showPhone(true);
