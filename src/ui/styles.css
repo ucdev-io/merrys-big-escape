@@ -187,3 +187,20 @@ body.touch-mode .stamina { bottom: 180px; }
   background: rgba(255, 250, 240, 0.85); border: 1.5px solid rgba(59, 43, 37, 0.4); border-radius: 10px;
 }
 .pack-badge { font-size: 17px; }
+
+/* Landing page */
+.title-screen {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px;
+  pointer-events: auto; background: radial-gradient(ellipse at 50% 40%, #fbf6ea 0%, #efe4cc 70%, #e2d3b4 100%);
+}
+.title-screen .page { max-width: 620px; background: transparent; box-shadow: none; }
+.title-screen .paws { font-size: 26px; opacity: 0.5; letter-spacing: 10px; }
+.title-screen h1 { font-weight: normal; font-size: clamp(40px, 9vw, 72px); margin: 4px 0 0; line-height: 1; }
+.title-screen .tag { font-size: 20px; opacity: 0.75; margin: 8px 0 18px; }
+.title-screen .pack { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 16px; margin-bottom: 22px; }
+.title-screen .pack span { display: flex; align-items: center; gap: 6px; font-size: 18px; }
+.title-screen .pack i { width: 14px; height: 14px; border-radius: 50%; margin-right: -4px; border: 1.5px solid rgba(59, 43, 37, 0.35); display: inline-block; }
+.title-screen .pack b { font-weight: normal; margin-left: 6px; }
+.title-screen .choices { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.title-screen .choices .pill { width: min(420px, 100%); }
+.title-screen small { display: block; font-size: 15px; opacity: 0.7; }

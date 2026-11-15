@@ -15,6 +15,7 @@ import { generateTown, randomSeed } from './world/town/generator.js';
 import { buildTown } from './world/town/builders.js';
 import { loadSave, writeSave } from './core/save.js';
 import { NetClient } from './net/client.js';
+import { showTitle } from './ui/title.js';
 
 const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
@@ -47,6 +48,13 @@ paintUniforms.uSunIntensity.value = sun.intensity;
 // Which chapter? ?town or ?seed=CODE in the URL jumps straight to the neighbourhood.
 const params = new URLSearchParams(location.search);
 const save = loadSave();
+// Landing page, unless a link already says where to go (?room=, ?town, ?seed=).
+if (!params.has('room') && !params.has('town') && !params.has('seed')) {
+  const choice = await showTitle(save);
+  if (choice === 'garden') writeSave({ chapter: 'yard', found: [], escaped: false });
+  else if (choice === 'town') writeSave({ chapter: 'town' });
+  Object.assign(save, loadSave());
+}
 const inTown = params.has('town') || params.has('seed') || params.has('room') || save.chapter === 'town';
 
 // Arriving with ?room=CODE: join that pack first, because the pack decides which town we're in.
