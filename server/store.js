@@ -141,7 +141,7 @@ function apply(p, s, importing) {
 // ---- neighbourhoods ----
 
 function publicWorld(w, live) {
-  return { seed: w.seed, code: w.code, places: w.discovered.length, bones: w.bones.length, played: w.played, owner: db.profiles[w.owner]?.name ?? null, live: !!live?.has(w.code) };
+  return { seed: w.seed, code: w.code, places: w.discovered.length, bones: w.bones.length, den: w.den ?? 0, played: w.played, owner: db.profiles[w.owner]?.name ?? null, live: !!live?.has(w.code) };
 }
 
 /** Saved neighbourhoods, most recently played first. `live`: codes of packs playing right now. */
@@ -158,7 +158,7 @@ export function worldFor(seed, owner = null) {
   if (!w) {
     const all = Object.values(db.worlds);
     if (all.length >= MAX_WORLDS) delete db.worlds[all.sort((a, b) => a.played - b.played)[0].seed]; // forget the oldest
-    w = db.worlds[seed] = { seed, code: null, discovered: [], bones: [], houses: {}, owner: owner ?? null, created: now(), played: now() };
+    w = db.worlds[seed] = { seed, code: null, discovered: [], bones: [], houses: {}, den: 0, owner: owner ?? null, created: now(), played: now() };
     if (owner) w.houses[owner] = 0; // the first house is theirs
   }
   return w;

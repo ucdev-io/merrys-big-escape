@@ -10,6 +10,7 @@ import { cleanName, cleanSeed, cleanId, cleanCode, num, cleanLevel, cleanLook, l
 import { worldFor, worldByCode, touchWorld, getProfile, addResults } from './store.js';
 import { CHALLENGES } from '../src/game/challenges.js';
 import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
+import { cleanDen, DEN_MAX, STICK_GAP_MS } from '../src/game/denRules.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
@@ -74,7 +75,7 @@ function enter(p, room, msg) {
   send(p.ws, {
     t: 'welcome', id: p.id, slot: p.slot, code: room.code, seed: room.seed,
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
-    shared: { discovered: [...room.world.discovered], bones: [...room.world.bones] },
+    shared: { discovered: [...room.world.discovered], bones: [...room.world.bones], den: room.world.den ?? 0 },
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
   heistJoin(room, p, send); // who's looking, which treats are where
@@ -216,6 +217,7 @@ function mergeFinds(world, msg) {
   for (const [key, n] of [['discovered', 20], ['bones', 50]]) {
     for (const id of list(msg[key], n)) if (!world[key].includes(id) && world[key].length < MAX_FINDS) world[key].push(id);
   }
+  if (msg.den !== undefined) world.den = Math.max(world.den ?? 0, cleanDen(msg.den)); // (a den built alone counts too)
 }
 
 function onMessage(p, msg) {
@@ -252,7 +254,7 @@ function onMessage(p, msg) {
     }
     case 's': // my dog's state
       if (!room) return;
-      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 31, num(msg.y, 50)];
+      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 127, num(msg.y, 50)]; // (f: sniffing, digging… and how muddy)
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
@@ -268,6 +270,12 @@ function onMessage(p, msg) {
     case 'heist': // 🥐 cheeky food raids (see heists.js)
       if (room) heistMessage(room, p, msg, send, broadcast);
       return;
+    case 'woods': // 🌲 a big stick for the den: the den belongs to the whole town, and is saved with it
+      if (!room || msg.a !== 'stick' || Date.now() - (p.stickAt ?? 0) < STICK_GAP_MS) return;
+      p.stickAt = Date.now();
+      room.world.den = Math.min(DEN_MAX, (room.world.den ?? 0) + 1);
+      touchWorld(room.world);
+      return broadcast(room, { t: 'woods', a: 'den', n: room.world.den, by: p.id, name: p.name });
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;
       p.carry = msg.item ? cleanId(msg.item) : null;
