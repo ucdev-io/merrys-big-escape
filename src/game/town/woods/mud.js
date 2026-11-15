@@ -116,9 +116,10 @@ class Prints {
     this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler(); this._s = new THREE.Vector3(); this._p = new THREE.Vector3();
   }
 
+  /** y: the height of the ground you see there (just above it, like seasons.surfaceY gives). */
   add(x, y, z, heading, size) {
     if (this.list.length >= PRINTS) this.list.shift();
-    this.list.push({ x, y: y + 0.055, z, h: heading, s: size, age: 0 });
+    this.list.push({ x, y: y + 0.004, z, h: heading, s: size, age: 0 }); // (a hair above any prints in the snow)
   }
 
   update(dt) {
@@ -139,8 +140,10 @@ class Prints {
 /** Your dog's mud (and your friends' muddy coats). */
 export class Mud {
   /** zones: [{ x, z, rx, rz, big }] (world). */
-  constructor({ scene, hud, player, actions, zones }) {
+  /** surfaceY(x, z): just above the ground you see there, in town or out in the woods (for the prints). */
+  constructor({ scene, hud, player, actions, zones, surfaceY = null }) {
     Object.assign(this, { scene, hud, player, actions, zones });
+    this.surfaceY = surfaceY ?? (() => 0.051);
     this.mud = 0;        // 0..3 (the level is how much)
     this.level = 0;
     this.coat = null;
@@ -209,8 +212,8 @@ export class Mud {
       if (this.travel > gap) {
         this.travel = 0;
         this.side = -this.side;
-        const s = 0.07 * P.dog.breed.size, hx = Math.sin(P.heading), hz = Math.cos(P.heading);
-        this.prints.add(pos.x + hz * s * this.side, pos.y, pos.z - hx * s * this.side, P.heading, P.dog.breed.size * (0.8 + level * 0.1));
+        const s = 0.07 * P.dog.breed.size, hx = Math.sin(P.heading), hz = Math.cos(P.heading), px = pos.x + hz * s * this.side, pz = pos.z - hx * s * this.side;
+        this.prints.add(px, pos.y > 0.12 ? pos.y + 0.01 : this.surfaceY(px, pz), pz, P.heading, P.dog.breed.size * (0.8 + level * 0.1)); // (up on a log: on the log)
       }
     }
     this.prints.update(dt);

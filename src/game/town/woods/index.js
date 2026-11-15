@@ -12,6 +12,7 @@ import { BigSticks } from './sticks.js';
 import { DenModel } from './den.js';
 import { Mud } from './mud.js';
 import { wsfx } from './sounds.js';
+import { season } from '../../season.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -29,9 +30,11 @@ export class Woods {
    * @param o.area   the woods' world data (world.areas, from world/areas/woodsBuild.js)
    * @param o.den    how many sticks the den has (from this device's save, until the pack says)
    * @param o.onDen  (n) → remember the den's new size (the chapter saves it)
+   * @param o.surfaceY (x, z) → just above the ground you see (the seasons': ice, snowy hills… and the wood's own paths)
+   * @param o.look   the seasons' look (render/seasonLook.js), which owns the fog: the wood's own goes on top
    */
-  constructor({ scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, den = 0, onDen = null }) {
-    Object.assign(this, { scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, onDen });
+  constructor({ scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, den = 0, onDen = null, surfaceY = null, look = null }) {
+    Object.assign(this, { scene, world, area, hud, player, input, actions, friends, pack, remotes, dogName, onDen, look });
     this.carry = actions.carry;
     this.bags = new Map();
     this.t = 0;
@@ -53,12 +56,13 @@ export class Woods {
     this.model.set(this.den);
     this.flying = [];
     // 🟤 Mud.
-    this.mud = new Mud({ scene, hud, player, actions, zones: area.mud });
+    this.mud = new Mud({ scene, hud, player, actions, zones: area.mud, surfaceY });
     remotes.onMud = (dog, level) => this.mud.setRemote(dog, level);
     remotes.onBark = (pos) => this.onBark(pos, false);
 
     this.fogK = 0;
     this.fogBase = null;
+    this.localFog = { k: 0, near: 13, far: 68, color: WOODS_FOG, mix: 0.7 }; // (for the seasons' look: see fog())
     this.ambT = 8;
     this.moteT = 0;
     // The wood's own baked meshes (out in the strip): skipped when they're beyond the fog anyway (from town).
@@ -207,8 +211,18 @@ export class Woods {
     }
   }
 
-  /** Thicker fog in the wood (k: how far in). Whatever the fog is outside (weather…) is what it goes back to. */
+  /**
+   * Thicker fog in the wood (k: how far in). The seasons' look owns the fog (the season's, the weather's), so
+   * the wood just tells it how far in we are and it adds its own on top. (Without one: from whatever's outside.)
+   */
   fog(k) {
+    if (this.look) {
+      const L = this.localFog;
+      L.k = k;
+      L.mix = season.is('winter') ? 0.35 : 0.7; // (snowy woods: whiter)
+      this.look.local = k > 0.001 ? L : null;
+      return;
+    }
     const fog = this.scene.fog;
     if (!fog) return;
     if (k <= 0.001) {

@@ -130,6 +130,7 @@ export class TownChapter {
       this.woods = new Woods({
         scene, world, area: woods, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
         dogName: () => this.profile().name, den: this.state.den, onDen: (n) => { this.state.den = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
+        surfaceY: (x, z) => this.seasons.surfaceY(x, z), look: this.seasons.look, // (prints on the ground you see; the fog under the trees)
       });
       this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
       this.pack.onWoods = (m) => this.woods.handle(m);

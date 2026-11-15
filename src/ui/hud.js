@@ -142,7 +142,8 @@ export class HUD {
         ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
         ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
-        ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}</div>`,
+        ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}
+        ${stat('🪵', 'sticks for the den', 'den')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -240,6 +241,7 @@ export class HUD {
         <li><b>🌭 The butcher's sausages:</b> grab the dangling end and run! A friend can grab the other end for a <b>tug of war</b>: run away or mash 🐾 to pull. Pull too hard and SNAP: half each.</li>
         <li><b>🍔 BBQ parties!</b> Now and then someone has a barbecue in their garden (follow the smoke). The cook keeps turning round to chat… that's your chance.</li>
         <li>Water is for paddling. Expect a wet-dog shake.</li>
+        <li><b>🌲 The Woods!</b> Follow the lane out past the edge of town. Woof to wake the owl, help Brock the badger, and carry BIG sticks to the den (go straight at gaps!): the whole pack builds it. Mud is glorious; a paddle in the stream washes it off.</li>
         <li><b>🌦️ Seasons!</b> The town follows the real calendar (or pick one in ☰ → Seasons): snowmen, sledging and a frozen pond in winter, leaf piles and conkers in autumn, an egg hunt in spring, paddling pools in summer.</li>
         <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);

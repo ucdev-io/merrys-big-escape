@@ -5,7 +5,7 @@ import { PALETTE } from '../../render/palette.js';
 import { RNG, fbm3 } from '../../core/rng.js';
 import { tree, mesh, blobGeometry } from '../props.js';
 import { groundAt } from './terrain.js';
-import { inRect } from './areas.js';
+import { inRect, toLocal } from './areas.js';
 import { ribbon, fenceWithGate, fingerpost } from './areaProps.js';
 
 /*
@@ -13,7 +13,8 @@ import { ribbon, fenceWithGate, fingerpost } from './areaProps.js';
  * paths, mud, the den's clearing, the owl's oak, Brock's sett and all the bits lying about. Everything's
  * built in the area's (u, v) frame inside one turned group and baked into the town's merged meshes by
  * mergeStatic, so a whole wood is a handful of draw calls. Leaves on broadleaf trees are foliage (they
- * turn with the seasons); pines are evergreen.
+ * turn with the seasons); pines are evergreen (snow on them, but no autumn colours or frosty greens).
+ * The stream and the mud never get snow on them; the lane and the paths go slushy (see SEASON_KINDS).
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -100,6 +101,7 @@ function pine(u, v, s, rng, y = 0) {
     const r = (0.98 - i * 0.25) * s, h = (1.35 - i * 0.18) * s;
     mesh(tier(), i === 1 ? rng.pick(EVERGREEN) : c, g, [rng.float(-0.04, 0.04), (1.45 + i * 0.8) * s - 0.2 * s, rng.float(-0.04, 0.04)], [0, rng.float(0, 3), 0], [r, h, r]);
   }
+  g.userData.season = 'world'; // (evergreen: snow on the branches, but they stay green)
   return g;
 }
 
@@ -170,13 +172,14 @@ export function buildWoods(g, d, { C, extra, flats }) {
   g.add(fingerpost(d.gateU - 1.8, vF - 0.6, 0, C));
 
   // ---- paths, the lane, the stream ----
-  g.add(ribbon(d.lane, 3.0, 0xcdb994, 0.058, { seed: 1 }));
+  const tag = (m, kind) => { m.userData.season = kind; return m; };
+  g.add(tag(ribbon(d.lane, 3.0, 0xcdb994, 0.058, { seed: 1 }), 'road')); // (trodden: slushy in the snow)
   g.add(ribbon(d.lane.slice(4), 0.45, PALETTE.grassDark, 0.062, { seed: 2, wobble: 0.3 })); // grass up the middle
-  d.paths.forEach((p, i) => g.add(ribbon(p, 2.0, PATH, 0.05 + i * 0.001, { seed: 3 + i, wobble: 0.16 })));
+  d.paths.forEach((p, i) => g.add(tag(ribbon(p, 2.0, PATH, 0.05 + i * 0.001, { seed: 3 + i, wobble: 0.16 }), 'road')));
   const S = d.stream;
   g.add(ribbon(S.pts, (S.w + 0.95) * 2, BANK, 0.06, { seed: 9, wobble: 0.08 }));
-  g.add(ribbon(S.pts, S.w * 2, PALETTE.water, 0.075, { seed: 10, wobble: 0.04 }));
-  g.add(ribbon(S.pts, S.w * 0.85, DEEP, 0.08, { seed: 11, wobble: 0.15 }));
+  g.add(tag(ribbon(S.pts, S.w * 2, PALETTE.water, 0.075, { seed: 10, wobble: 0.04 }), 'none')); // (running water: no snow settles on it)
+  g.add(tag(ribbon(S.pts, S.w * 0.85, DEEP, 0.08, { seed: 11, wobble: 0.15 }), 'none'));
   const W = d.W, worldPts = S.pts.map(([u, v]) => W(u, v));
   const box = worldPts.reduce((b, [x, z]) => ({ x0: Math.min(b.x0, x - S.w), z0: Math.min(b.z0, z - S.w), x1: Math.max(b.x1, x + S.w), z1: Math.max(b.z1, z + S.w) }), { x0: Infinity, z0: Infinity, x1: -Infinity, z1: -Infinity });
   const stream = { kind: 'stream', pts: worldPts, w: S.w, surface: 0.075, box };
@@ -209,9 +212,12 @@ export function buildWoods(g, d, { C, extra, flats }) {
   // ---- mud: dark, wet and glorious ----
   const mud = d.mud.map((m) => {
     const wob = rng.float(0, 6);
-    mesh(splodge(rng.int(0, 9)), MUD, g, [m.u, 0.062, m.v], [0, wob, 0], [m.ru * 1.06, 1, m.rv * 1.06]).castShadow = false;
-    mesh(splodge(rng.int(0, 9), 0.25), MUD_DARK, g, [m.u + rng.float(-0.2, 0.2), 0.066, m.v + rng.float(-0.2, 0.2)], [0, wob + 1, 0], [m.ru * 0.58, 1, m.rv * 0.52]).castShadow = false;
-    for (let k = 0; k < (m.big ? 4 : 2); k++) mesh(splodge(rng.int(0, 9), 0.3), MUD_WET, g, [m.u + rng.float(-0.45, 0.45) * m.ru, 0.07, m.v + rng.float(-0.45, 0.45) * m.rv], [0, rng.float(0, 3), 0], [rng.float(0.1, 0.22), 1, rng.float(0.06, 0.13)]).castShadow = false;
+    const mg = new THREE.Group(); // (mud stays mud: churned up and brown, even in the snow)
+    mg.userData.season = 'none';
+    g.add(mg);
+    mesh(splodge(rng.int(0, 9)), MUD, mg, [m.u, 0.062, m.v], [0, wob, 0], [m.ru * 1.06, 1, m.rv * 1.06]).castShadow = false;
+    mesh(splodge(rng.int(0, 9), 0.25), MUD_DARK, mg, [m.u + rng.float(-0.2, 0.2), 0.066, m.v + rng.float(-0.2, 0.2)], [0, wob + 1, 0], [m.ru * 0.58, 1, m.rv * 0.52]).castShadow = false;
+    for (let k = 0; k < (m.big ? 4 : 2); k++) mesh(splodge(rng.int(0, 9), 0.3), MUD_WET, mg, [m.u + rng.float(-0.45, 0.45) * m.ru, 0.07, m.v + rng.float(-0.45, 0.45) * m.rv], [0, rng.float(0, 3), 0], [rng.float(0.1, 0.22), 1, rng.float(0.06, 0.13)]).castShadow = false;
     const [x, z] = W(m.u, m.v), across = Math.abs(a.across[0]) > 0.5;
     return { x, z, rx: across ? m.ru : m.rv, rz: across ? m.rv : m.ru, big: !!m.big };
   });
@@ -319,6 +325,22 @@ export function buildWoods(g, d, { C, extra, flats }) {
     g.add(ferns);
   }
 
+  // ---- how high the ground looks (for things laid on it: paw prints in the snow or the mud) ----
+  const surfaces = [
+    { pts: d.lane, half: 1.5, y: 0.058 },
+    ...d.paths.map((p, i) => ({ pts: p, half: 1.0, y: 0.05 + i * 0.001 })),
+    { pts: S.pts, half: S.w + 0.95, y: 0.06 },
+  ];
+  const lineDist = (pts, u, v) => {
+    let best = Infinity;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [au, av] = pts[i], du = pts[i + 1][0] - au, dv = pts[i + 1][1] - av, l2 = du * du + dv * dv;
+      const t = l2 > 0 ? Math.max(0, Math.min(1, ((u - au) * du + (v - av) * dv) / l2)) : 0;
+      best = Math.min(best, (u - au - du * t) ** 2 + (v - av - dv * t) ** 2);
+    }
+    return Math.sqrt(best);
+  };
+
   // ---- where the game's things go (world coordinates) ----
   const turn = a.turn, at = (u, v, y = 0) => { const [x, z] = W(u, v); return V(x, y, z); };
   const [gx, gz] = W(d.gateU, vF);
@@ -340,5 +362,13 @@ export function buildWoods(g, d, { C, extra, flats }) {
       return Math.max(0, Math.min(1, (v - vF + 2) / 14, (u - uL + 6) / 10, (uR + 6 - u) / 10));
     },
     inWood: (x, z) => inRect(a.rect, x, z),
+    /** The height of the ground you see at (x, z) in this area's strip: the woodland floor, a path, the den's clearing, mud. */
+    surfaceY(x, z) {
+      const [u, v] = toLocal(a, x, z), dd = Math.hypot(u - d.den.u, v - d.den.v);
+      let y = dd < 1.9 ? 0.045 : dd < d.den.r - 0.6 ? 0.035 : -0.05;
+      for (const s of surfaces) if (s.y > y && lineDist(s.pts, u, v) < s.half) y = s.y;
+      for (const m of mud) if (((x - m.x) / m.rx) ** 2 + ((z - m.z) / m.rz) ** 2 < 1) y = Math.max(y, 0.066);
+      return y;
+    },
   };
 }

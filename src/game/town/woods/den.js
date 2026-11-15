@@ -3,6 +3,7 @@ import { SPHERE, bake, bakedMat } from '../../../entities/shapes.js';
 import { paint } from '../../../render/watercolorMaterial.js';
 import { PALETTE } from '../../../render/palette.js';
 import { RNG } from '../../../core/rng.js';
+import { dressSeason } from '../../../world/merge.js';
 import { DEN_DONE, DEN_FULL, DEN_STAGES, denStage } from '../../denRules.js';
 
 /*
@@ -114,7 +115,12 @@ export class DenModel {
     this.n = n;
     for (const c of [...this.group.children]) { c.removeFromParent(); c.geometry?.dispose(); }
     const m = buildDen(n);
-    for (const k of ['wood', 'leaves', 'deco']) if (m[k]) this.group.add(m[k]);
+    this.group.updateMatrixWorld(true);
+    for (const k of ['wood', 'leaves', 'deco']) {
+      if (!m[k]) continue;
+      this.group.add(m[k]);
+      dressSeason(m[k], k === 'leaves' ? 'foliage' : 'world'); // (snow on the sticks in winter; the leafy roof turns in autumn)
+    }
     // Walls up: dogs go round (or in through the door).
     if (n >= 8 && !this.walls) {
       this.walls = [];

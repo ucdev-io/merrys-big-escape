@@ -49,6 +49,9 @@ export class SeasonLook {
     this.cols = { top: new THREE.Color(), horizon: new THREE.Color(), fog: new THREE.Color(), cloud: new THREE.Color(), light: new THREE.Color(), shadow: new THREE.Color() };
     this._a = new THREE.Color(); this._b = new THREE.Color();
     this.first = true;
+    // A place with a fog of its own, on top of the season's and the weather's (under the trees in the woods):
+    // { k: 0..1 how far in, near, far, color, mix } or null.
+    this.local = null;
   }
 
   set(season, weather) {
@@ -94,6 +97,13 @@ export class SeasonLook {
       fog.color.copy(C.fog);
       fog.near = this.base.near * M.fog;
       fog.far = this.base.far * (0.3 + 0.7 * M.fog);
+      const z = this.local;
+      if (z && z.k > 0.001) { // (closer, never further than the weather's, and tinted)
+        const e = z.k * z.k * (3 - 2 * z.k);
+        fog.near += (Math.min(fog.near, z.near) - fog.near) * e;
+        fog.far += (Math.min(fog.far, z.far) - fog.far) * e;
+        fog.color.lerp(z.color, e * z.mix);
+      }
     }
     // Light: the season's tint (relative to the style's own), dimmer under cloud.
     const L = ratio(S.light, STORYBOOK_LIGHT), H = ratio(S.shadow, STORYBOOK_SHADOW);

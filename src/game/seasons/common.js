@@ -25,11 +25,16 @@ export function blockAt(world, x, z) {
   return Math.abs(dx) <= H + 2 && Math.abs(dz) <= H + 2 ? { b, dx, dz, lawn: Math.abs(dx) <= H && Math.abs(dz) <= H } : null;
 }
 
-/** How high the ground's surface is to the eye (lawns and pavements are a few centimetres up). */
+/** How high the ground's surface is to the eye (lawns and pavements are a few centimetres up; out in the woods, its own). */
 export function groundY(world, x, z) {
   if (!world.layout?.blocks) return 0.012; // (the garden: the lawn is the ground)
   const at = blockAt(world, x, z);
-  return !at ? 0.014 : at.lawn ? 0.064 : 0.049;
+  if (at) return at.lawn ? 0.064 : 0.049;
+  for (const a of world.areas ?? []) {
+    const r = a.strip;
+    if (a.surfaceY && x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1) return a.surfaceY(x, z) + 0.012;
+  }
+  return 0.014;
 }
 
 /** Somewhere free for a seasonal thing: not in a wall, hedge, tree, bin or the water, nor a flowerbed. */
