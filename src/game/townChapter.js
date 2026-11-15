@@ -20,6 +20,7 @@ import { Pepper } from './town/pepper.js';
 import { TownLife } from './town/life.js';
 import { TownGames } from './town/games.js';
 import { Heists } from './town/heists.js';
+import { Seasons } from './seasons/seasons.js';
 import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
 
@@ -113,6 +114,13 @@ export class TownChapter {
     // Heists: cheeky food raids on the bakery street, on your own or as a team.
     this.heists = new Heists({ scene, world, hud, player, actions: this.actions, pack: this.pack, remotes: this.remotes, dogName: () => this.profile().name });
     this.pack.onHeist = (m) => this.heists.handle(m);
+    // 🍂❄️🌸☀️ Seasons and weather (the pack's, or the calendar's): snow, falling leaves, showers, and things to do in each.
+    this.seasons = new Seasons({
+      scene, world, player, hud, input, actions: this.actions, pipeline, follow, chapter: 'town', seed: this.layout.seed, welcome,
+      pack: this.pack, remotes: this.remotes, traffic: this.traffic, heists: this.heists, friends: this.friends,
+    });
+    this.pack.onSeason = (m) => this.seasons.handle(m);
+    hud.onSeasons = () => this.seasons.showCard();
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
     hud.setPlaces?.(this.placeList());
@@ -179,6 +187,7 @@ export class TownChapter {
 
   /** Joined a pack: the pack's progress becomes ours (shared adventure). */
   onWelcome(w, rejoin) {
+    if (w.season) this.seasons?.handle(w.season); // (the pack's season and weather)
     for (const id of w.shared.discovered) if (!this.state.discovered.includes(id)) this.state.discovered.push(id);
     for (const id of w.shared.bones ?? []) if (!this.state.bones.includes(id)) { this.state.bones.push(id); this.bones.hide(id); }
     this.hud.setPlaces?.(this.placeList());
@@ -327,8 +336,8 @@ export class TownChapter {
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
-    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? 'dig');
-    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint);
+    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? this.seasons.pawAct ?? 'dig');
+    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.seasons.prompt);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
     // Discover places by walking into them.
@@ -348,13 +357,14 @@ export class TownChapter {
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    const acted = this.actions.update(dt, { canAct, goal, onBark: () => this.friends.onBark(pos) });
+    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.pond) { // frogs croak as you get near the pond
       const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));
       music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });
     }
+    this.seasons.update(dt, { canAct, barked: acted.barked }); // (after the frogs: a frozen pond hushes them)
 
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);

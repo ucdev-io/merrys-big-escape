@@ -60,8 +60,8 @@ export class DuckRoundUp {
         dh = Math.atan2(Math.sin(dh), Math.cos(dh));
         d.duck.root.rotation.y += dh * k;
       }
-      const swim = this.inPond(d.pos.x, d.pos.z, 1);
-      d.duck.root.position.y = swim ? -0.06 : 0;
+      const wet = this.inPond(d.pos.x, d.pos.z, 1), ice = wet && !!this.pond?.frozen, swim = wet && !ice; // (a frozen pond: they skate)
+      d.duck.root.position.y = ice ? (this.pond.iceTop ?? 0.1) - 0.01 : swim ? -0.06 : 0;
       d.duck.update(dt, { moving: Math.min(1, d.speed / 1.5), swim });
     }
     if (this.host && live) {

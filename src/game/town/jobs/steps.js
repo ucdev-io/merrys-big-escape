@@ -242,7 +242,8 @@ const pickup = {
     }
     r.item = r.rt.carry.add(r.spec.item, at.x, at.z, { job: 'board' });
     const f = r.rt.jw.people[r.spec.from];
-    r.fromName = r.spec.from === 'postman' ? 'next to the postman' : r.spec.from === 'paperboy' ? 'by the board' : r.spec.from === 'baker' ? 'at the bakery' : `on ${f.whose} doorstep (number ${f.number})`;
+    r.fromName = r.spec.from === 'postman' ? 'next to the postman' : r.spec.from === 'paperboy' ? 'by the board' : r.spec.from === 'baker' ? 'at the bakery'
+      : r.spec.from === 'tree' ? r.rt.world.seasonal?.tree?.name ?? 'under the big tree in the park' : `on ${f.whose} doorstep (number ${f.number})`;
   },
   update(r) { if (r.holding) r.picked = true; },
   objective(r) {

@@ -45,6 +45,7 @@ export class Traffic {
   constructor(scene, { seed, hud, count = 7, avoid = null }) {
     this.hud = hud;
     this.onServe = null; // (where) → an ice cream for the dog
+    this.van = { stay: 12, gap: [35, 55], cool: 40 }; // the ice-cream van: parks this long, this often, serves this often (summer: more!)
     const S = TOWN.SIZE, step = TOWN.BLOCK + TOWN.ROAD;
     this.lines = Array.from({ length: TOWN.N + 1 }, (_, k) => -S / 2 + TOWN.ROAD / 2 + k * step);
     const rng = new RNG(`traffic:${seed}`);
@@ -165,13 +166,14 @@ export class Traffic {
     c.jingleT -= dt; c.serveCD -= dt; c.parkIn -= dt;
     const d = c.pos.distanceTo(player.pos);
     if (c.jingleT <= 0 && d < 30) { c.jingleT = 4.6; music.jingle(1 - d / 30); }
-    if (c.parked <= 0 && c.parkIn <= 0 && c.phase === 'approach' && toWaypoint > 9) { c.parked = 12; c.parkIn = 35 + Math.random() * 20; }
+    const van = this.van;
+    if (c.parked <= 0 && c.parkIn <= 0 && c.phase === 'approach' && toWaypoint > 9) { c.parked = van.stay; c.parkIn = van.gap[0] + Math.random() * (van.gap[1] - van.gap[0]); }
     if (c.parked > 0) {
       c.parked -= dt;
       // A dog at the hatch (the pavement side) gets an ice cream.
       const hatch = c.pos.clone().addScaledVector(l, 1.5);
       if (c.speed < 0.3 && c.serveCD <= 0 && player.pos.distanceTo(hatch) < 1.8) {
-        c.serveCD = 40;
+        c.serveCD = van.cool;
         this.hud.say(`🍦 ${pick(ICECREAM.serve)}`, () => c.pos.clone().setY(2.6), 2.6);
         this.onServe?.(c.pos.clone().addScaledVector(l, 1.6));
       }

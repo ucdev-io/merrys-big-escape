@@ -22,6 +22,7 @@ import { progress } from './game/progress.js';
 import { statsFor } from './game/stats.js';
 import { music } from './core/music.js';
 import { autoFullscreen } from './ui/fullscreen.js';
+import { localSeason } from './game/season.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
 window.addEventListener('click', (e) => { if (e.target.closest?.('.pill.big, .lobby .solo, .lobby .host, .lobby .join')) autoFullscreen(); }, true);
@@ -92,7 +93,7 @@ if (inTown && packCode && save.profile) {
   const profile = save.profile;
   try {
     net = new NetClient();
-    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed, level: progress.level, look: progress.look, profile: progress.id });
+    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed, level: progress.level, look: progress.look, profile: progress.id, season: localSeason() });
     writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
   } catch (e) {
     net = null;

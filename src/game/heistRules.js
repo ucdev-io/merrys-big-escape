@@ -20,7 +20,7 @@ export const LOOKOUTS = {
  * (bq0–bq2) and burgers (bq3–bq5) on the grill. The first one starts a little while after you
  * arrive; each lasts a few minutes, then there's a break before the next.
  */
-export const PARTY = { sausage: 3, burger: 3, firstMs: 40000, ms: 180000, gap: [60000, 100000] };
+export const PARTY = { sausage: 3, burger: 3, firstMs: 40000, ms: 180000, gap: [60000, 100000], summerGap: [25000, 45000] }; // (summer: BBQ weather!)
 export const PARTY_IDS = Array.from({ length: PARTY.sausage + PARTY.burger }, (_, i) => `bq${i}`);
 
 /**
@@ -56,17 +56,21 @@ const coord = (v) => (Number.isFinite(v) ? Math.max(-150, Math.min(150, Math.rou
  * each returns a list of { to: 'all' | dog id, msg } to send. Dog ids: the server's (0 when alone).
  */
 export class HeistRoom {
-  constructor(now) {
+  /** opts.season: the pack's season (summer brings more BBQ parties); setSeason() when it changes. */
+  constructor(now, { season = null } = {}) {
+    this.season = season;
     this.npcs = {};
     for (const id of Object.keys(LOOKOUTS)) this.npcs[id] = { s: 'busy', until: now + rand(LOOKOUTS[id].busy) * 1000, cool: 0, by: null, doorEnd: 0, wiseAt: 0 };
     this.loot = new Map(); // id → { s: 'home' | 'held' | 'ground' | 'gone', by, x, z, at, helper } (missing = home)
     this.restock = { bk: 0, bq: 0 }; // when the next fresh batch comes out
     this.budget = new Map();
     this.party = null;               // { n, until }: a BBQ party's on
-    this.nextParty = now + PARTY.firstMs;
+    this.nextParty = now + PARTY.firstMs * (season === 'summer' ? 0.5 : 1);
     this.links = hooked();
     this.noGrab = new Map(); // dog → when they can grab the sausages again (after losing a tug)
   }
+
+  setSeason(season) { this.season = season; }
 
   /** Everything, for a dog who's just arrived. */
   snapshot(now) {
@@ -207,7 +211,7 @@ export class HeistRoom {
     }
     if (this.party && now >= this.party.until) {
       this.party = null;
-      this.nextParty = now + rand(PARTY.gap);
+      this.nextParty = now + rand(this.season === 'summer' ? PARTY.summerGap : PARTY.gap);
       this.restock.bq = 0;
       for (const id of PARTY_IDS) { const l = this.get(id); if (l.s !== 'held') Object.assign(l, { s: 'gone', by: null, at: now }); } // (anything in a mouth can still go home)
       return [all({ a: 'party', n: null, ms: 0 })];

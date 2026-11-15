@@ -4,7 +4,8 @@ import { TOWN } from '../../world/town/generator.js';
 import { blocked } from '../../world/spots.js';
 import { BREEDS } from '../../entities/breeds.js';
 import { LineBag } from '../dialogue.js';
-import { SMELLS, SMELL_WEIGHTS } from '../lines/smells.js';
+import { SMELLS, smellWeights, POND_SMELLS } from '../lines/smells.js';
+import { season } from '../season.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const H = TOWN.BLOCK / 2;
@@ -55,11 +56,12 @@ export class Smells {
 
   reroll(s) {
     if (s.where === 'post') s.kind = 'news';
-    else if (s.where === 'pond') s.kind = this.rng.pick(['duck', 'frog', 'duck', 'snail', 'flowers']);
+    else if (s.where === 'pond') s.kind = this.rng.pick(POND_SMELLS[season.is('winter') ? 'winter' : 'other']);
     else {
-      const total = Object.values(SMELL_WEIGHTS).reduce((a, b) => a + b, 0);
+      const weights = smellWeights(season.name, season.weather, season.festive); // (the seasons' smells: mince pies, bonfires, cut grass…)
+      const total = Object.values(weights).reduce((a, b) => a + b, 0);
       let r = this.rng.float(0, total);
-      for (const [k, w] of Object.entries(SMELL_WEIGHTS)) { r -= w; if (r <= 0) { s.kind = k; break; } }
+      for (const [k, w] of Object.entries(weights)) { r -= w; if (r <= 0) { s.kind = k; break; } }
       s.kind ??= 'chips';
     }
   }

@@ -81,5 +81,38 @@ export const JOB_TYPES = {
   },
 };
 
+// 🍂❄️ Seasonal jobs (their things to carry, and the 'blown' step, are in ../../seasons/jobs.js).
+//   when    only then: { seasons: [...], weather: ['showers', …], festive: 'christmas' }
+//   from    (pickups) where the thing's waiting: 'tree' = under the big Christmas tree in the park
+//   herd    found by herding, like the hens (nothing to carry)
+Object.assign(JOB_TYPES, {
+  present: {
+    emoji: '🎁', step: 'pickup', from: 'tree', stars: 18, level: 1, weight: 7, when: { festive: 'christmas' },
+    givers: { house: 6, kid: 6, gus: 1, duchess: 1 },
+    items: { house: ['present'], kid: ['present'], gus: ['present'], duchess: ['present'] },
+    wheres: [],
+    twists: ['quiet', 'timer', 'clean', 'friend'],
+  },
+  brolly: {
+    emoji: '☂️', step: 'blown', herd: true, critter: 'umbrella', stars: 20, level: 2, weight: 4, when: { weather: ['showers', 'windy'] },
+    givers: { house: 1 },
+    wheres: ['street', 'park', 'garden'],
+    twists: ['quiet', 'timer', 'clean', 'friend'],
+  },
+});
+
+/** Now and then, a thing that suits the season instead (per job kind, season and kind of giver). */
+export const SEASONAL_ITEMS = {
+  fetch: {
+    winter: { house: ['scarf', 'bobble', 'mitten', 'glove'], kid: ['bobble', 'mitten'], duchess: ['scarf'] },
+    autumn: { house: ['scarf', 'umbrella'], kid: ['bobble'] },
+    spring: { house: ['umbrella'], kid: ['egg'] },
+  },
+  sniff: { winter: { house: ['mitten', 'bobble'], kid: ['mitten'] }, spring: { kid: ['egg'] } },
+  dig: { spring: { kid: ['egg'] } },
+  high: { winter: { house: ['scarf', 'bobble'] } },
+  pickles: { winter: { house: ['bobble', 'mitten', 'scarf'], kid: ['mitten'] } },
+};
+
 /** Paws for how tricky a job is (shown on the board). */
 export const PAWS = ['', '🐾', '🐾🐾', '🐾🐾🐾'];

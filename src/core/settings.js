@@ -1,7 +1,8 @@
 // Little player settings (instead of URL options nobody wants to type on a phone).
 const KEY = 'merry.settings';
 // picture: 'auto' (eases off when the device is struggling) or 'sharp' (never does).
-const DEFAULTS = { debug: false, styles: false, autoFullscreen: true, haptics: true, texture: 'light', music: true, picture: 'auto' };
+// season: 'auto' (the calendar) or one to keep.
+const DEFAULTS = { debug: false, styles: false, autoFullscreen: true, haptics: true, texture: 'light', music: true, picture: 'auto', season: 'auto' };
 
 // Paint texture strength levels (see WatercolorPipeline.texture).
 export const TEXTURE_LEVELS = { off: 0, light: 0.4, medium: 0.7, strong: 1 };

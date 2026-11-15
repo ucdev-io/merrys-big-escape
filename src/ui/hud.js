@@ -141,7 +141,8 @@ export class HUD {
       <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
         ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
-        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}</div>`,
+        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
+        ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -179,6 +180,7 @@ export class HUD {
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
     item('🐶 My dog', () => this.showMyDog());
     item('❓ How to play', () => this.showHelp());
+    if (this.onSeasons) item('🌦️ Seasons', () => this.onSeasons());
     if (fullscreenButtonUseful()) item(isFullscreen() ? '⛶ Leave full screen' : '⛶ Full screen', () => { this.hideCard(); toggleFullscreen(this); });
     const sound = item(isMuted() ? '🔇 Sound: off' : '🔊 Sound: on', () => {
       setMuted(!isMuted());
@@ -238,6 +240,7 @@ export class HUD {
         <li><b>🌭 The butcher's sausages:</b> grab the dangling end and run! A friend can grab the other end for a <b>tug of war</b>: run away or mash 🐾 to pull. Pull too hard and SNAP: half each.</li>
         <li><b>🍔 BBQ parties!</b> Now and then someone has a barbecue in their garden (follow the smoke). The cook keeps turning round to chat… that's your chance.</li>
         <li>Water is for paddling. Expect a wet-dog shake.</li>
+        <li><b>🌦️ Seasons!</b> The town follows the real calendar (or pick one in ☰ → Seasons): snowmen, sledging and a frozen pond in winter, leaf piles and conkers in autumn, an egg hunt in spring, paddling pools in summer.</li>
         <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);
   }
@@ -269,7 +272,7 @@ export class HUD {
     if (act === this._pawAct) return;
     this._pawAct = act;
     const b = document.querySelector('.touch [data-b="dig!"]');
-    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!' }[act] ?? 'Dig'}`;
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */

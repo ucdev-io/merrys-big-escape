@@ -125,8 +125,9 @@ export class Friends {
     const D = this.duchess, d = flat(P.pos, D.pos);
     D.cool -= dt; D.talkT -= dt;
     const head = () => D.pos.clone().add(V(0, 0.55, 0));
-    D.duck.update(dt, { swim: true });
-    D.pos.x = D.home.x + Math.sin(this.time * 0.4) * 0.6; // paddling to and fro
+    D.duck.update(dt, { swim: !D.pond.frozen });
+    D.pos.x = D.home.x + Math.sin(this.time * 0.4) * 0.6; // paddling to and fro (or, when the pond's frozen, skating)
+    D.pos.y = D.pond.frozen ? (D.pond.iceTop ?? 0.1) - 0.01 : D.home.y;
     const job = D.job;
     if (!job && d < 4 && D.cool <= 0) {
       const ducklings = [];
@@ -178,8 +179,8 @@ export class Friends {
         const step = Math.min(dist - gap, Math.max(0, dist - gap) * 5 * dt + 0.0);
         k.moving = Math.min(1, Math.max(0, (dist - gap) * 2));
         if (dist > gap && step > 0) { k.pos.x += (dx / dist) * step; k.pos.z += (dz / dist) * step; k.duck.root.rotation.y = Math.atan2(dx, dz); }
-        const w = waterAt(this.world.water, k.pos.x, k.pos.z);
-        k.pos.y = w ? w.surface - 0.03 : 0; // paddle across water; otherwise on the ground
+        const w = waterAt(this.world.water, k.pos.x, k.pos.z), ground = this.world.heightAt?.(k.pos.x, k.pos.z) ?? 0;
+        k.pos.y = w ? w.surface - 0.03 : ground > 0.02 ? ground + 0.03 : 0; // paddle across water; otherwise on the ground (or the ice)
         if (k.state === 'following') { leader = k.pos; following++; }
       }
     }
@@ -227,7 +228,7 @@ export class Friends {
     for (const e of this.extras) e.update(dt, P, { ...ctx, canAct });
     if (!canAct) { // still choosing a dog: friends just potter about
       this.gus.dog.update(dt, { speed: 0, turnRate: 0, sniff: false, dig: false, happy: 0.2 });
-      this.duchess.duck.update(dt, { swim: true });
+      this.duchess.duck.update(dt, { swim: !this.duchess.pond.frozen });
       return;
     }
     this.updateGus(dt, P);

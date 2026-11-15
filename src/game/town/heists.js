@@ -14,6 +14,7 @@ import { COSMETICS } from '../cosmetics.js';
 import { buzz } from '../../core/haptics.js';
 import { sfx } from '../../core/audio.js';
 import { blocked } from '../../world/spots.js';
+import { season } from '../season.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const LOCAL = 0;  // our dog's id in a HeistRoom of our own (no pack server)
@@ -126,7 +127,7 @@ export class Heists {
   /** Playing without the pack server (or we just lost it): a HeistRoom of our own. */
   reset() {
     this.online = false;
-    this.room = new HeistRoom(performance.now());
+    this.room = new HeistRoom(performance.now(), { season: season.name });
     this.adopt(this.room.snapshot(performance.now()));
   }
 
@@ -373,6 +374,7 @@ export class Heists {
   update(dt, { canAct = true, barked = false } = {}) {
     if (!this.data?.bakery) return;
     if (!this.pack.net && this.online) this.reset(); // lost the pack: carry on with heists of our own
+    if (this.room && this.room.season !== season.name) this.room.setSeason(season.name); // (summer: more BBQs)
     if (this.room) this.deliver(this.room.tick(performance.now()));
     const P = this.player.pos;
     this.stash();

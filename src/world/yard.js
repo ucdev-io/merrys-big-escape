@@ -3,7 +3,7 @@ import { paint } from '../render/watercolorMaterial.js';
 import { PALETTE } from '../render/palette.js';
 import { RNG, fbm3 } from '../core/rng.js';
 import { Colliders } from './collision.js';
-import { mergeStatic, collectOccluders } from './merge.js';
+import { mergeStatic, collectOccluders, collectLandmarks } from './merge.js';
 import { crate, bench } from './town/townProps.js';
 import { tippableBin } from './town/builders.js';
 import {
@@ -125,8 +125,10 @@ export function buildYard(seed = 'biscuit-yard') {
   const bins = [{ id: 'yardbin', pivot: binPivot, x: -8.6, z: -5.3, collider: col.circle(-8.6, -5.3, 0.4, 1.05), garden }];
 
   const occluders = collectOccluders(group);
+  const landmarks = collectLandmarks(group); // (for the seasons)
   return {
     group: mergeStatic(group),
+    landmarks,
     colliders: col,
     props: { gnome: g },
     occluders,

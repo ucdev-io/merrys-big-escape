@@ -10,6 +10,7 @@ import { cleanName, cleanSeed, cleanId, cleanCode, num, cleanLevel, cleanLook, l
 import { worldFor, worldByCode, touchWorld, getProfile, addResults } from './store.js';
 import { CHALLENGES } from '../src/game/challenges.js';
 import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
+import { seasonOpen, seasonWelcome, seasonMessage, seasonLeave, seasonTick } from './seasons.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
@@ -30,8 +31,8 @@ const broadcast = (room, msg, except) => { for (const p of room.players.values()
 const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot, level: p.level, look: p.look, carry: p.carry ?? null });
 const liveRoom = (world) => [...rooms.values()].find((r) => r.world === world);
 
-/** Open a saved neighbourhood for play, keeping its own code if it can (old links still work). */
-function openRoom(world, wantCode) {
+/** Open a saved neighbourhood for play, keeping its own code if it can (old links still work). msg: the opener's (their season). */
+function openRoom(world, wantCode, msg = null) {
   let code = world.code && !rooms.has(world.code) ? world.code : null;
   const theirs = wantCode && worldByCode(wantCode);
   if (!code && wantCode && !rooms.has(wantCode) && (!theirs || theirs === world)) code = wantCode; // a phone reopening its pack
@@ -39,6 +40,7 @@ function openRoom(world, wantCode) {
   if (!code) return null;
   world.code = code;
   const r = { code, seed: world.seed, world, players: new Map() };
+  seasonOpen(r, msg); // 🍂❄️ whoever opens the pack picks its season
   rooms.set(code, r);
   touchWorld(world);
   return r;
@@ -75,6 +77,7 @@ function enter(p, room, msg) {
     t: 'welcome', id: p.id, slot: p.slot, code: room.code, seed: room.seed,
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
     shared: { discovered: [...room.world.discovered], bones: [...room.world.bones] },
+    season: seasonWelcome(room, p), // the pack's season, weather and seasonal toys
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
   heistJoin(room, p, send); // who's looking, which treats are where
@@ -191,6 +194,7 @@ function leave(p) {
   room.players.delete(p.id);
   broadcast(room, { t: 'leave', id: p.id });
   heistLeave(room, p, send, broadcast);
+  seasonLeave(room, p, send, broadcast);
   const g = room.game;
   if (g && !g.over && room.players.size) {
     if (g.kind === 'tag' && g.it === p.id) { // "it" went home: someone else is it now
@@ -232,7 +236,7 @@ function onMessage(p, msg) {
       const live = liveRoom(world);
       if (live) return enter(p, live, msg);
       if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
-      const r = openRoom(world, cleanCode(msg.code));
+      const r = openRoom(world, cleanCode(msg.code), msg);
       if (!r) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
       return enter(p, r, msg);
     }
@@ -245,14 +249,14 @@ function onMessage(p, msg) {
         const world = code && worldByCode(code);
         if (!world) return send(p.ws, { t: 'error', msg: 'No pack with that code. Check the code and try again!' });
         if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
-        r = openRoom(world, code);
+        r = openRoom(world, code, msg);
         if (!r) return send(p.ws, { t: 'error', msg: 'Could not open that pack.' });
       }
       return enter(p, r, msg);
     }
     case 's': // my dog's state
       if (!room) return;
-      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 31, num(msg.y, 50)];
+      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 63, num(msg.y, 50)]; // (32: on a sledge)
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others
@@ -267,6 +271,9 @@ function onMessage(p, msg) {
       return gameMove(room, p, msg);
     case 'heist': // 🥐 cheeky food raids (see heists.js)
       if (room) heistMessage(room, p, msg, send, broadcast);
+      return;
+    case 'season': // 🍂❄️ the season, the weather, snowmen and leaf piles (see seasons.js)
+      if (room) seasonMessage(room, p, msg, send, broadcast);
       return;
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;
@@ -344,6 +351,7 @@ export function attachDogPark(httpServer) {
       for (const p of room.players.values()) if (p.state) states.push(p.state);
       if (states.length) broadcast(room, { t: 'ss', p: states });
       heistTick(room, send, broadcast);
+      seasonTick(room, send, broadcast);
     }
   }, TICK_MS);
 

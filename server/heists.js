@@ -2,7 +2,7 @@
 // sees the baker look round at the same moment, and it settles who got which treat.
 import { HeistRoom } from '../src/game/heistRules.js';
 
-const heistOf = (room) => (room.heist ??= new HeistRoom(Date.now()));
+const heistOf = (room) => (room.heist ??= new HeistRoom(Date.now(), { season: room.seasons?.season })); // (summer: more BBQ parties)
 
 function deliver(room, list, send, broadcast) {
   for (const { to, msg } of list) {

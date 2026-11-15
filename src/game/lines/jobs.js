@@ -91,6 +91,17 @@ export const SAY = {
     'Goal!… Oh. {Whose} football bounced away, and now it’s {where}. Dribble it home{at}!',
     '{Who}{at} kicked {their} football a bit too hard. It’s {where} now. Nose it home!',
   ],
+  // 🎁 Christmas: presents from under the big tree in the park. ☂️ Showers and wind: runaway umbrellas.
+  present: [
+    'Ho ho ho! There’s a present under the big tree in the park for {to}{toAt}. Can you deliver it?',
+    'A Christmas present for {to}{toAt} is waiting under the big tree in the park. Special delivery!',
+    'Somebody left a present for {to}{toAt} under the park’s Christmas tree. Take it round — no peeking!',
+  ],
+  brolly: [
+    'Whoosh! {Whose} umbrella blew away {where}! Chase it home{at} — nudge it with your nose.',
+    '{Who}{at} lost {their} umbrella to the wind! It’s tumbling about {where}. Herd it home!',
+    'A runaway umbrella! It belongs to {who}{at}, and it’s {where}. Nose it home before it blows away again!',
+  ],
   pickles: [
     'Pickles has pinched {whose} {item}! She’s sitting on a bin {where}, looking smug. Woof to get it back!',
     'That cat! Pickles ran off with {whose} {item}. She’s {where}. A big WOOF should do it.',
@@ -137,6 +148,8 @@ export const THANKS = {
   hen: ['{Hen}! You naughty hen! Thank you, good dog!', 'Back in your garden, {Hen}! Thank you, dog!', 'Oh, {Hen}, you had me worried! Thank you!'],
   football: ['GOAL! Thanks, doggy!', 'What a dribble! You should play for England!', 'Back of the net! Thank you!'],
   baker: ['Well done, pup! Here’s a sniff of a sausage roll.', 'Splendid! Have a crumb. Just one, mind.', 'Thank you, my floury friend!'],
+  present: ['A present! For ME? Merry Christmas, {name}!', 'Ooh, what can it be? Thank you, you lovely dog!', 'Delivered by a dog! Best Christmas ever!'],
+  umbrella: ['My brolly! Thank you, {name} — now I can stay dry!', 'Got it! That wind’s a menace. Good dog!', 'You chased it all the way here? What a hero!'],
 };
 
 /** Pickles, caught with someone else's things. */

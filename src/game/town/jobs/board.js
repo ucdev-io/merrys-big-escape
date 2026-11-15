@@ -13,6 +13,7 @@ import { JobWorld } from './jobWorld.js';
 import { makeOffers } from './offers.js';
 import { STEPS } from './steps.js';
 import { doorMarker } from '../friendModels.js';
+import { season } from '../../season.js';
 
 const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const SHIRTS = [0xd9534f, 0x6f9a52, 0xe39a52, 0x8e6fb0, 0xf2a0b4, 0x4aa3a0, 0xf6d06a, 0x5b86c4];
@@ -179,7 +180,8 @@ export class JobBoard {
   /** Top the board back up to three jobs (team ones only while a friend's here). */
   refill() {
     const busy = new Set([this.friends.gus?.job && 'gus', this.friends.duchess?.job && 'duchess'].filter(Boolean));
-    this.offers = makeOffers(this.jw, new RNG(`jobs:${this.seed}:${Date.now()}:${this.n++}`), { n: 3, team: this.team, keep: this.offers, busy });
+    const when = { season: season.name, weather: season.weather, festive: season.festive }; // (presents at Christmas, umbrellas in the rain…)
+    this.offers = makeOffers(this.jw, new RNG(`jobs:${this.seed}:${Date.now()}:${this.n++}`), { n: 3, team: this.team, keep: this.offers, busy, when });
   }
 
   accept(i) {
@@ -225,9 +227,10 @@ export class JobBoard {
   thank(run) {
     const p = run.person, T = run.T;
     let list = p.kind === 'kid' ? THANKS.kid : THANKS.grown;
-    if (T.step === 'pickup') list = run.spec.item === 'cake' ? THANKS.cake : THANKS.delivery;
+    if (T.step === 'pickup') list = run.spec.item === 'cake' ? THANKS.cake : run.spec.item === 'present' ? THANKS.present : THANKS.delivery;
     if (T.critter === 'hen') list = THANKS.hen;
     else if (T.critter === 'ball') list = THANKS.football;
+    else if (T.critter === 'umbrella') list = THANKS.umbrella;
     if (p.kind === 'baker') list = THANKS.baker;
     if (p.kind === 'gus') list = GUS.thanks;
     this.hud.say(`${p.emoji} ${this.rt.line(list, { item: run.def?.name ?? '', Hen: run.spec.hen ?? '' })}`, this.jw.anchor(p), 3.8);

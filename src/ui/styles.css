@@ -443,3 +443,12 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .tug-meter .tug-text { font-size: 18px; white-space: nowrap; }
 .tug-bar { width: min(260px, 70vw); height: 14px; margin-top: 4px; border-radius: 7px; background: #c4786c; overflow: hidden; border: 2px solid rgba(59, 43, 37, 0.3); }
 .tug-bar i { display: block; height: 100%; width: 50%; background: #e0b04a; border-radius: 6px; transition: width 0.2s; }
+
+/* 🌦️ Seasons (☰ → Seasons): Auto or a season, and (if it's yours to pick) some weather */
+.season-picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; max-width: 540px; margin: 6px auto; }
+.pill.season-pick { padding: 6px 10px; font-size: 21px; background: #fbf3e2; }
+.pill.season-pick small { display: block; font-size: 13px; opacity: 0.75; line-height: 1.15; }
+.pill.season-pick.on, .pill.weather-pick.on { background: var(--accent); border-color: rgba(59, 43, 37, 0.65); }
+.pill.weather-pick { font-size: 22px; padding: 2px 10px; margin: 0 2px; }
+.big-card .page p.season-note { font-size: 17px; background: #fbf3e2; border-radius: var(--wobbly); padding: 6px 10px; }
+@media (max-height: 520px) { .pill.season-pick { font-size: 17px; padding: 3px 8px; } .pill.season-pick small { font-size: 12px; } }
