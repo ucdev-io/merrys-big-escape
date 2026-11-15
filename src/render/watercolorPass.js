@@ -139,14 +139,31 @@ void main() {
 }
 `;
 
+/**
+ * Auto quality's ladder, best first. Slow frames step down a rung at a time — smaller paint blobs
+ * first (the paint filter reads (2r+1)² pixels for each one, so they cost the most, and one size
+ * smaller hardly shows), then a little less paint resolution (that's what looks blurry, so it comes
+ * last). Quick frames step back up. Blob sizes are relative to the style's own.
+ */
+export const LADDER = [
+  { drop: 0, scale: 1 },     // 0: the full look (computers start here)
+  { drop: 1, scale: 1 },     // 1: phones start here
+  { drop: 1, scale: 0.9 },
+  { drop: 2, scale: 0.9 },
+  { drop: 2, scale: 0.85 },
+  { drop: 2, scale: 0.8 },   // as low as phones go
+  { drop: 2, scale: 0.75 },  // as low as computers go
+];
+const SLOW = 1 / 33, VERY_SLOW = 1 / 22, FAST = 1 / 52; // typical frame slower than ~33 fps / ~22 fps; quicker than ~52 fps
+
 export class WatercolorPipeline {
   constructor(renderer, { quality = 'high' } = {}) {
     this.renderer = renderer;
     this.params = {
       enabled: true,
       // Paint at full resolution — MSAA is off (the paint filter smooths edges anyway), which makes
-      // full resolution about as cheap as the old blurry 67%-with-MSAA. Phones start a little lower.
-      renderScale: quality === 'high' ? 1.0 : 0.85,
+      // full resolution about as cheap as the old blurry 67%-with-MSAA. (The most auto quality uses.)
+      renderScale: 1.0,
       autoQuality: true,
       radius: quality === 'high' ? 3 : 2,
       wobble: 4.5,
@@ -171,11 +188,19 @@ export class WatercolorPipeline {
     // Scales the screen-space layers that read like an overlay: blotchy wash, paper grain, paper tint, border.
     this.texture = 1;
     this.frameTimes = [];
-    this.qualityCooldown = 2;
+    this.level = quality === 'high' ? 0 : 1;                                  // where we are on LADDER
+    this.floor = quality === 'high' ? LADDER.length - 1 : LADDER.length - 2;  // and how far down we'll go
+    this.settleUntil = 0;   // ignore frames until then (just started, resized, back from another tab…)
+    this.started = false;
+    this.fastStreak = 0;    // quick windows in a row
+    this.lastMove = null;   // { dir, med, at }: the last step, to judge whether it helped
+    this.capped = false;    // a step down didn't help: the frame rate's capped (e.g. low-power mode)
+    this.noUpUntil = 0;     // a step up was too slow a moment ago: no more until then
+    this.ceilingWait = 60000; // (and how long the next such wait will be)
+    document.addEventListener?.('visibilitychange', () => this.settle(2000));
 
     const rtOpts = { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace };
     this.sceneRT = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, samples: 0 });
-    this.minScale = quality === 'high' ? 0.75 : 0.65;
     this.sceneRT.depthTexture = new THREE.DepthTexture(1, 1);
     this.sceneRT.depthTexture.type = THREE.UnsignedIntType;
     this.paintRT = new THREE.WebGLRenderTarget(1, 1, rtOpts);
@@ -224,10 +249,25 @@ export class WatercolorPipeline {
     this.quad = new FullScreenQuad(this.paintMat);
   }
 
+  /** The paint resolution and blob size in use right now (the style's, less any auto-quality steps). */
+  get effScale() { return this.params.renderScale * LADDER[this.level].scale; }
+  get effRadius() { return Math.max(1, this.params.radius - LADDER[this.level].drop); }
+
+  /** Don't judge the frame rate for a moment (something just changed). */
+  settle(ms = 1500) { this.settleUntil = Math.max(this.settleUntil, performance.now() + ms); this.frameTimes.length = 0; }
+
+  /** "Always sharp": no automatic steps down (and back to the full look now). */
+  setSharp(on) {
+    this.params.autoQuality = !on;
+    if (on && this.level !== 0) { this.level = 0; this.setSize(this.outW, this.outH); }
+    this.capped = false; this.gaveUp = false; this.noUpUntil = 0; this.lastMove = null; this.fastStreak = 0;
+    this.settle(1500);
+  }
+
   /** Output (drawing-buffer) size in pixels. */
   setSize(w, h) {
     this.outW = w; this.outH = h;
-    const s = this.params.renderScale;
+    const s = this.effScale;
     const lw = Math.max(1, Math.round(w * s)), lh = Math.max(1, Math.round(h * s));
     this.sceneRT.setSize(lw, lh);
     this.paintRT.setSize(lw, lh);
@@ -237,29 +277,75 @@ export class WatercolorPipeline {
     this._scale = s;
   }
 
-  /** Drop quality step by step if frames are slow (integrated GPUs, tablets). */
+  /**
+   * Auto quality, called every frame with the real (unclamped) frame time. Judges the typical
+   * (median) frame over about a second, ignoring the moments just after a change.
+   *   Slow (under ~33 fps): a step down — kept only if it actually helped. Paint steps first; if one
+   *     doesn't help, fewer pixels get a try; if that doesn't either, the frame rate's capped (a phone
+   *     in low-power mode runs at 30 fps whatever we do) and blurring it would be for nothing.
+   *   Quick (over ~52 fps) for a few seconds: a step back up — and if that's too slow, back down,
+   *     and no more trying for a while (longer each time).
+   */
   adapt(dt) {
     const p = this.params;
     if (!p.autoQuality || !p.enabled) return;
-    this.qualityCooldown -= dt;
-    this.frameTimes.push(dt);
-    if (this.frameTimes.length > 60) this.frameTimes.shift();
-    if (this.qualityCooldown > 0 || this.frameTimes.length < 60) return;
-    const avg = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
-    if (avg > 1 / 40) {
-      // Cheapest-looking losses first; keep the image sharp as long as possible.
-      if (p.radius > 1) p.radius--;
-      else if (p.renderScale > this.minScale) { p.renderScale = Math.max(this.minScale, p.renderScale - 0.05); this.setSize(this.outW, this.outH); }
-      else this.onTooSlow?.();
-      this.frameTimes.length = 0;
-      this.qualityCooldown = 2;
+    const now = performance.now();
+    if (!this.started) { this.started = true; this.settle(3000); return; } // (shaders compiling, the town building…)
+    if (now < this.settleUntil) return;
+    this.frameTimes.push(dt); // (the odd hitch doesn't move the median)
+    if (this.frameTimes.length < 45) return;
+    const sorted = this.frameTimes.slice().sort((a, b) => a - b), med = sorted[sorted.length >> 1];
+    this.frameTimes.length = 0;
+    const last = this.lastMove;
+    this.lastMove = null;
+    if (last && now - last.at < 5000) {
+      if (last.dir < 0 && med > last.med * 0.98) { // that step didn't help at all: undo exactly it
+        this.step(+1, med, last.lever);
+        this.lastMove = null;
+        if (last.lever === 'paint' && !this.capped && this.step(-1, med, 'pixels')) return; // maybe it's the pixels?
+        if (this.capped) this.gaveUp = true; // (slow for some other reason: stop trying)
+        this.capped = true;
+        return;
+      }
+      if (last.dir > 0 && med > SLOW) { // too much: back down, and leave it a while before trying again
+        this.step(-1, med, last.lever);
+        this.lastMove = null;
+        this.noUpUntil = now + this.ceilingWait;
+        this.ceilingWait = Math.min(this.ceilingWait * 2, 600000);
+        return;
+      }
     }
+    if (med > SLOW) {
+      this.fastStreak = 0;
+      if (!this.capped || (med > VERY_SLOW && !this.gaveUp)) this.step(-1, med);
+    } else if (med < FAST) {
+      if (++this.fastStreak >= 5 && now >= (this.noUpUntil ?? 0)) this.step(+1, med);
+    } else this.fastStreak = 0;
+  }
+
+  /**
+   * One step down (-1) or up (+1), with either lever or just `only` one: 'paint' (the ladder) or
+   * 'pixels' (main.js's pixel ratio: down last, up first). Returns the lever that moved, or null.
+   */
+  step(dir, med, only = null) {
+    let lever = null;
+    if (dir < 0) {
+      if (only !== 'pixels' && this.level < this.floor) { this.level++; lever = 'paint'; }
+      else if (only !== 'paint' && this.onTooSlow?.()) lever = 'pixels';
+    } else if (only !== 'paint' && this.onFast?.()) lever = 'pixels';
+    else if (only !== 'pixels' && this.level > 0) { this.level--; lever = 'paint'; }
+    this.fastStreak = 0;
+    if (!lever) return null;
+    this.setSize(this.outW, this.outH);
+    this.lastMove = { dir, med, lever, at: performance.now() };
+    this.settle(800);
+    return lever;
   }
 
   syncUniforms(camera) {
     const p = this.params, pu = this.paintMat.uniforms, cu = this.compMat.uniforms;
-    if (p.renderScale !== this._scale) this.setSize(this.outW, this.outH);
-    pu.uRadius.value = p.radius;
+    if (this.effScale !== this._scale) this.setSize(this.outW, this.outH);
+    pu.uRadius.value = this.effRadius;
     pu.uWobble.value = p.wobble;
     pu.uWobbleFreq.value = p.wobbleFreq;
     cu.uNear.value = camera.near;

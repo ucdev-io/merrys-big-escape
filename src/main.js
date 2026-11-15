@@ -32,8 +32,10 @@ const isMobile = matchMedia('(pointer: coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-// Phones have ~3x screens; 2x keeps them crisp. Auto-quality may step this down if the phone struggles.
-let pixelRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 1.5);
+// Phones have ~3x screens; 2x keeps them crisp. Auto quality may step this down (a little, and only
+// as a last resort) if the device struggles, and gives it back when things are quick again.
+const bestRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 1.5), ratioFloor = Math.min(bestRatio, isMobile ? 1.5 : 1.25);
+let pixelRatio = bestRatio;
 
 const pipeline = new WatercolorPipeline(renderer, { quality: isMobile ? 'low' : 'high' });
 
@@ -129,10 +131,15 @@ function resize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
-window.addEventListener('resize', resize);
+window.addEventListener('resize', () => { resize(); pipeline.settle(1500); }); // (turning a phone round changes the cost)
 resize();
 pipeline.onTooSlow = () => {
-  if (pixelRatio > 1.25) { pixelRatio = Math.max(1.25, pixelRatio - 0.25); resize(); }
+  if (pixelRatio - 0.25 < ratioFloor - 1e-6) return false;
+  pixelRatio -= 0.25; resize(); return true;
+};
+pipeline.onFast = () => {
+  if (pixelRatio >= bestRatio) return false;
+  pixelRatio = Math.min(bestRatio, pixelRatio + 0.25); resize(); return true;
 };
 // Storybook is the chosen look; add ?styles to the URL to compare the others.
 if (location.search.includes('styles') || getSettings().styles) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
@@ -149,7 +156,7 @@ if (location.search.includes('debug') || getSettings().debug) {
   setInterval(() => {
     const now = performance.now(), fps = (frames * 1000) / (now - last); frames = 0; last = now;
     const p = pipeline.params;
-    d.textContent = `fps ${fps.toFixed(0)} · dpr ${pixelRatio} · paint ${p.renderScale.toFixed(2)} · blobs ${p.radius}`;
+    d.textContent = `fps ${fps.toFixed(0)} · dpr ${pixelRatio} · paint ${pipeline.effScale.toFixed(2)} · blobs ${pipeline.effRadius} · step ${pipeline.level}${p.autoQuality ? '' : ' (sharp)'}`;
   }, 1000);
   (function count() { frames++; requestAnimationFrame(count); })();
 }
@@ -157,6 +164,13 @@ if (location.search.includes('debug') || getSettings().debug) {
 pipeline.texture = TEXTURE_LEVELS[getSettings().texture] ?? TEXTURE_LEVELS.light;
 const hud = new HUD(camera);
 hud.onTexture = (level) => (pipeline.texture = TEXTURE_LEVELS[level]);
+// ☰ → Picture: "auto" eases off on a struggling device; "sharp" never does (and goes back to the best now).
+const setPicture = (mode) => {
+  pipeline.setSharp(mode === 'sharp');
+  if (mode === 'sharp' && pixelRatio !== bestRatio) { pixelRatio = bestRatio; resize(); }
+};
+setPicture(getSettings().picture);
+hud.onPicture = setPicture;
 // Stars float up from your dog; outfits you pick go straight on.
 hud.dogAnchor = () => player.pos.clone().add(new THREE.Vector3(0, 1.15, 0));
 hud.onLook = (look) => player.setLook(look);
@@ -219,7 +233,7 @@ const sky = scene.getObjectByName('sky');
 const timer = new THREE.Timer();
 function frame(now) {
   timer.update(now);
-  const dt = Math.min(timer.getDelta(), 1 / 20);
+  const raw = timer.getDelta(), dt = Math.min(raw, 1 / 20);
   const t = timer.getElapsed();
 
   player.update(dt, input, follow.yaw, world);
@@ -234,7 +248,7 @@ function frame(now) {
   sun.target.position.copy(player.pos);
   sun.position.copy(player.pos).add(new THREE.Vector3(8, 14, 6));
 
-  pipeline.adapt(dt);
+  pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
   pipeline.render(scene, camera);
   input.endFrame();
   requestAnimationFrame(frame);

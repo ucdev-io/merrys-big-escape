@@ -51,6 +51,5 @@ export function applyStyle(pipeline, key) {
   paintUniforms.uPigmentVar.value = sh.pigmentVar;
   paintUniforms.uShadowTint.value.setRGB(...sh.shadowTint);
   paintUniforms.uLightTint.value.setRGB(...sh.lightTint);
-  pipeline.frameTimes.length = 0;
-  pipeline.qualityCooldown = 2;
+  pipeline.settle?.(2000);
 }

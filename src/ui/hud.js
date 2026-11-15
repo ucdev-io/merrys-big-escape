@@ -203,6 +203,13 @@ export class HUD {
       tex.textContent = `🎨 Paint texture: ${TEXTURE_NAMES[next]}`;
       this.onTexture?.(next);
     });
+    const picName = (m) => (m === 'sharp' ? '🔍 Picture: always sharp' : '🔍 Picture: auto');
+    const pic = item(picName(getSettings().picture), () => {
+      const next = getSettings().picture === 'sharp' ? 'auto' : 'sharp';
+      setSetting('picture', next);
+      pic.textContent = picName(next);
+      this.onPicture?.(next);
+    });
     item('🏠 Back to the title', () => { location.href = '/'; });
   }
 
