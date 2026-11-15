@@ -49,10 +49,13 @@ export class SeasonLook {
     this.cols = { top: new THREE.Color(), horizon: new THREE.Color(), fog: new THREE.Color(), cloud: new THREE.Color(), light: new THREE.Color(), shadow: new THREE.Color() };
     this._a = new THREE.Color(); this._b = new THREE.Color();
     this.first = true;
-    // A place with a fog of its own, on top of the season's and the weather's (under the trees in the woods):
-    // { k: 0..1 how far in, near, far, color, mix } or null.
-    this.local = null;
+    // Places with a fog of their own, on top of the season's and the weather's (under the trees in the
+    // woods…): key → { k: 0..1 how far in, near, far, color, mix }. See setLocal().
+    this.locals = new Map();
   }
+
+  /** A place's own fog (key: the area, say), or null when we're nowhere near it. The strongest one wins. */
+  setLocal(key, L) { if (L && L.k > 0.001) this.locals.set(key, L); else this.locals.delete(key); }
 
   set(season, weather) {
     if (season) this.season = season;
@@ -97,8 +100,9 @@ export class SeasonLook {
       fog.color.copy(C.fog);
       fog.near = this.base.near * M.fog;
       fog.far = this.base.far * (0.3 + 0.7 * M.fog);
-      const z = this.local;
-      if (z && z.k > 0.001) { // (closer, never further than the weather's, and tinted)
+      let z = null;
+      for (const q of this.locals.values()) if (!z || q.k > z.k) z = q;
+      if (z) { // (closer, never further than the weather's, and tinted)
         const e = z.k * z.k * (3 - 2 * z.k);
         fog.near += (Math.min(fog.near, z.near) - fog.near) * e;
         fog.far += (Math.min(fog.far, z.far) - fog.far) * e;

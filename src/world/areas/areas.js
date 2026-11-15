@@ -2,9 +2,9 @@ import { RNG } from '../../core/rng.js';
 import { spline } from './lines.js';
 
 /*
- * 🗺️ Areas: places out beyond the edge of town, where the empty hills used to be — the Woods now; the
- * Farm and the Seaside later. Plain data (no three.js), worked out from the seed, so every device builds
- * the same ones and only a town's own areas get built.
+ * 🗺️ Areas: places out beyond the edge of town, where the empty hills used to be: the Woods, the Farm, the
+ * Beach. Every town has every kind there is, each out past its own edge. Plain data (no three.js), worked
+ * out from the seed, so every device builds the same ones.
  *
  * Each area sits in a "strip" outside one edge of town: a flat valley between the hills, reached by a
  * lane from the end of one of the town's roads. In the area's own coordinates, u runs along the town's
@@ -18,8 +18,8 @@ import { spline } from './lines.js';
  *   ════════════════╧═══════ town's edge ════╪═════════════╧═══════════   ← v = EDGE
  *                       (outer road)         lane starts at the end of a town road
  *
- * To add a kind: a row in AREA_KINDS (emoji, names, blurb, depth…), a builder in ./build.js, and (if
- * it should only turn up in some towns) a rule in chooseKinds().
+ * To add a kind: a row in AREA_KINDS (emoji, names, blurb, depth…), its place in KIND_ORDER, a layout and
+ * a builder in ./build.js, and a game controller (see game/town/woods/) created by TownChapter.
  */
 
 export const EDGE = 89;            // the town's own edge (its old bounds)
@@ -48,8 +48,12 @@ const SIDES = {
   w: { dir: [-1, 0], across: [0, 1] },
 };
 
-/** Which kinds of area a town gets. Every town has the Woods for now; later pick one or two here (the Seaside only for "…on Sea"). */
-function chooseKinds(/* seed, townName */) { return ['woods']; }
+// The order kinds are planned in: each takes a free edge of town in turn (with its own dice), so a kind
+// added later never moves the ones before it. New kinds go on the end.
+const KIND_ORDER = ['woods', 'farm', 'beach'];
+
+/** Which kinds of area a town gets: all of them (a lot to do in one town), one per edge. */
+function chooseKinds(/* seed, townName */) { return KIND_ORDER.filter((k) => AREA_KINDS[k]); }
 
 /** Area-local (u along the edge, v outwards) → world [x, z]. */
 export function toWorld(a, u, v) { return [a.across[0] * u + a.dir[0] * v, a.across[1] * u + a.dir[1] * v]; }

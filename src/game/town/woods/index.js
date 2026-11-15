@@ -57,8 +57,10 @@ export class Woods {
     this.flying = [];
     // 🟤 Mud.
     this.mud = new Mud({ scene, hud, player, actions, zones: area.mud, surfaceY });
-    remotes.onMud = (dog, level) => this.mud.setRemote(dog, level);
-    remotes.onBark = (pos) => this.onBark(pos, false);
+    // (Hooks other areas may want too: chained, never replaced.)
+    const mud = remotes.onMud, bark = remotes.onBark;
+    remotes.onMud = (dog, level) => { mud?.(dog, level); this.mud.setRemote(dog, level); };
+    remotes.onBark = (pos) => { bark?.(pos); this.onBark(pos, false); };
 
     this.fogK = 0;
     this.fogBase = null;
@@ -220,7 +222,7 @@ export class Woods {
       const L = this.localFog;
       L.k = k;
       L.mix = season.is('winter') ? 0.35 : 0.7; // (snowy woods: whiter)
-      this.look.local = k > 0.001 ? L : null;
+      this.look.setLocal('woods', L);
       return;
     }
     const fog = this.scene.fog;
