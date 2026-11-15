@@ -52,6 +52,9 @@ sun.shadow.radius = 4;
 scene.add(sun, sun.target);
 paintUniforms.uSunIntensity.value = sun.intensity;
 
+// Catch up with anything our saved dog earned on other devices (and send anything not sent yet).
+progress.refresh();
+
 // Which chapter? ?town or ?seed=CODE in the URL jumps straight to the neighbourhood.
 const params = new URLSearchParams(location.search);
 const save = loadSave();
@@ -83,7 +86,7 @@ if (inTown && packCode && save.profile) {
   const profile = save.profile;
   try {
     net = new NetClient();
-    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed, level: progress.level, look: progress.look });
+    welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed, level: progress.level, look: progress.look, profile: progress.id });
     writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
   } catch (e) {
     net = null;
@@ -225,4 +228,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input };
+window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress };

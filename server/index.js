@@ -3,8 +3,10 @@
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve } from 'node:path';
-import { attachDogPark, packsHandler } from './rooms.js';
-import { lanAddresses, lanInfoHandler } from './lan.js';
+import { attachDogPark } from './rooms.js';
+import { handleApi } from './api.js';
+import { lanAddresses } from './lan.js';
+import { dataDir } from './store.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 const ROOT = resolve(process.cwd(), 'dist');
@@ -13,8 +15,7 @@ const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://x');
-    if (url.pathname === '/api/lan') return lanInfoHandler(req, res);
-    if (url.pathname === '/api/packs') return packsHandler(req, res);
+    if (handleApi(req, res)) return;
     let file = normalize(join(ROOT, decodeURIComponent(url.pathname)));
     if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; } // no escaping dist/
     if ((await stat(file).catch(() => null))?.isDirectory()) file = join(file, 'index.html');
@@ -34,5 +35,7 @@ server.listen(PORT, () => {
   console.log(`\n  🐾 Merry's Big Escape is running!\n`);
   console.log(`  On this computer:  http://localhost:${PORT}`);
   for (const a of lanAddresses()) console.log(`  On your network:   http://${a.address}:${PORT}   (${a.name})`);
-  console.log('');
+  console.log(`
+  Dogs and neighbourhoods are saved in ${dataDir}
+`);
 });

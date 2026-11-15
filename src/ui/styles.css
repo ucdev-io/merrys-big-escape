@@ -160,6 +160,18 @@ body.touch-mode .stamina { bottom: 180px; }
 .lobby .breeds h4:first-child { margin-top: 0; }
 .lobby .bgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .lobby .surprise { margin: 0 0 6px; }
+/* Your saved dogs (from the game server) */
+.lobby .dogrow { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 2px 0 8px; max-height: 120px; overflow-y: auto; }
+.lobby .dogchip {
+  cursor: pointer; background: #fbf3e2; border: 2px solid rgba(59, 43, 37, 0.2); border-radius: var(--wobbly);
+  padding: 5px 10px 4px; display: flex; flex-direction: column; align-items: center; min-width: 76px;
+}
+.lobby .dogchip.active { border-color: var(--ink); background: var(--accent); }
+.lobby .dogchip .dn { font-size: 18px; line-height: 1.1; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lobby .dogchip .dl { font-size: 13px; opacity: 0.75; }
+.lobby .dogchip.new { border-style: dashed; justify-content: center; }
+.lobby .dogchip .plus { font-size: 20px; line-height: 1; }
+.lobby .rebreed { margin: 0 0 6px; }
 .lobby .breed {
   cursor: pointer; background: #fbf3e2; border: 2px solid rgba(59, 43, 37, 0.2); border-radius: var(--wobbly);
   padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;

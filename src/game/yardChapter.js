@@ -80,8 +80,17 @@ export class YardChapter {
       garden: true,
       title: 'Who’s escaping today?',
       subtitle: pack ? `Escape your garden, then you’ll join pack <b>${pack}</b>!` : 'Every dog starts in their own back garden…',
+      current: progress.id,
       onBreed: (k) => { if (k !== this.player.breedKey) this.player.setBreed(k); },
-      onSolo: (c) => { writeSave({ profile: c }); lobby.close(); this.showControls(); },
+      onLook: (look) => this.player.setLook(look),
+      onSolo: async (c) => {
+        lobby.setBusy(true);
+        await progress.useDog(c); // a saved dog (stars, outfit and all), or a brand-new one
+        writeSave({ profile: { breed: c.breed, name: c.name } });
+        this.player.setLook(progress.look);
+        lobby.close();
+        this.showControls();
+      },
     });
   }
 
@@ -274,6 +283,7 @@ export class YardChapter {
       onDone: () => {
         this.cutscene = null;
         if (!this.escaped) progress.award(50, 'Escaped!');
+        progress.escapedGarden();
         this.escaped = true;
         writeSave({ found: this.found, escaped: true, yardDone: true });
         this.refreshObjective();

@@ -1,23 +1,24 @@
 // Dog Park multiplayer: rooms ("packs") relay dog positions and share one adventure.
 // Trust model: home Wi-Fi play, so clients own their own dog's position; the server only
-// validates shapes/sizes, relays, and keeps the shared quest state for each pack.
+// validates shapes/sizes, relays, and keeps the shared adventure for each pack.
+//
+// Every pack plays a saved neighbourhood (store.js): what's been found there and whose house is
+// whose are kept when everyone leaves, and it keeps the same code, so links to it keep working.
 import { WebSocketServer } from 'ws';
-import { BREED_IDS as BREEDS } from '../src/entities/breedIds.js';
-const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
-const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80;
+import { BREED_IDS } from '../src/entities/breedIds.js';
+import { cleanName, cleanSeed, cleanId, cleanCode, num, cleanLevel, cleanLook, list } from './clean.js';
+import { worldFor, worldByCode, touchWorld, getProfile } from './store.js';
 
-const rooms = new Map();
+const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
+const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
+
+const rooms = new Map(); // code → { code, seed, world, players }
 let nextId = 1;
 
-const cleanName = (s) => String(s ?? '').replace(/[^A-Za-z0-9 '\-]/g, '').trim().slice(0, 14) || 'Doggo';
-const cleanSeed = (s) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9\-]/g, '').slice(0, 32);
-const cleanId = (s) => String(s ?? '').replace(/[^a-z0-9_\-]/gi, '').slice(0, 24);
-const num = (v, lim = 1e4) => (Number.isFinite(v) && Math.abs(v) < lim ? Math.round(v * 100) / 100 : 0);
-
 function makeCode() {
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 200; i++) {
     const code = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${10 + Math.floor(Math.random() * 90)}`;
-    if (!rooms.has(code)) return code;
+    if (!rooms.has(code) && !worldByCode(code)) return code;
   }
   return null;
 }
@@ -25,16 +26,53 @@ function makeCode() {
 const send = (ws, msg) => { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); };
 const broadcast = (room, msg, except) => { for (const p of room.players.values()) if (p !== except) send(p.ws, msg); };
 const publicPlayer = (p) => ({ id: p.id, name: p.name, breed: p.breed, slot: p.slot, level: p.level, look: p.look });
-const cleanLevel = (v) => Math.max(1, Math.min(99, v | 0));
-const cleanLook = (v) => Object.fromEntries(['collar', 'neck', 'hat'].map((k) => [k, typeof v?.[k] === 'string' ? cleanId(v[k]) : null]));
-// Each dog gets the lowest free house number (0 = the host's garden).
-const freeSlot = (room) => { const used = new Set([...room.players.values()].map((q) => q.slot)); let i = 0; while (used.has(i)) i++; return i; };
+const liveRoom = (world) => [...rooms.values()].find((r) => r.world === world);
 
-function welcome(room, p) {
+/** Open a saved neighbourhood for play, keeping its own code if it can (old links still work). */
+function openRoom(world, wantCode) {
+  let code = world.code && !rooms.has(world.code) ? world.code : null;
+  const theirs = wantCode && worldByCode(wantCode);
+  if (!code && wantCode && !rooms.has(wantCode) && (!theirs || theirs === world)) code = wantCode; // a phone reopening its pack
+  code ??= makeCode();
+  if (!code) return null;
+  world.code = code;
+  const r = { code, seed: world.seed, world, players: new Map() };
+  rooms.set(code, r);
+  touchWorld(world);
+  return r;
+}
+
+/**
+ * Each dog keeps the same house in a neighbourhood (0 = whoever made it). Visitors get the lowest
+ * house nobody's using right now, preferably one that isn't someone else's.
+ */
+function houseFor(room, profile) {
+  // (The same dog's old connection, still closing after a reload, doesn't count as using its house.)
+  const used = new Set([...room.players.values()].filter((q) => !profile || q.profile !== profile).map((q) => q.slot));
+  const w = room.world;
+  const mine = profile ? w.houses[profile] : undefined;
+  if (mine !== undefined && !used.has(mine)) return mine;
+  const owned = new Set(Object.values(w.houses));
+  let slot = -1;
+  for (let i = 0; i < HOUSES; i++) if (!used.has(i) && !owned.has(i)) { slot = i; break; }
+  if (slot < 0) { slot = 0; while (used.has(slot)) slot++; } // every house has an owner: share
+  else if (profile && mine === undefined) w.houses[profile] = slot; // it's yours from now on
+  return slot;
+}
+
+function enter(p, room, msg) {
+  if (room.players.size >= MAX_PLAYERS) return send(p.ws, { t: 'error', msg: 'That pack is full (8 dogs max).' });
+  const profile = msg.profile && getProfile(msg.profile) ? cleanId(msg.profile) : null;
+  Object.assign(p, {
+    name: cleanName(msg.name), breed: BREED_IDS.includes(msg.breed) ? msg.breed : 'merry', room, profile,
+    slot: houseFor(room, profile), level: cleanLevel(msg.level), look: cleanLook(msg.look),
+  });
+  room.players.set(p.id, p);
+  touchWorld(room.world);
   send(p.ws, {
     t: 'welcome', id: p.id, slot: p.slot, code: room.code, seed: room.seed,
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
-    shared: { discovered: [...room.discovered], bones: [...room.bones] },
+    shared: { discovered: [...room.world.discovered], bones: [...room.world.bones] },
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
 }
@@ -44,37 +82,49 @@ function leave(p) {
   if (!room) return;
   room.players.delete(p.id);
   broadcast(room, { t: 'leave', id: p.id });
+  touchWorld(room.world);
   if (room.players.size === 0) rooms.delete(room.code);
   p.room = null;
+}
+
+/** Finds made elsewhere (playing alone, or before neighbourhoods were saved) count here too. */
+function mergeFinds(world, msg) {
+  for (const [key, n] of [['discovered', 20], ['bones', 50]]) {
+    for (const id of list(msg[key], n)) if (!world[key].includes(id) && world[key].length < MAX_FINDS) world[key].push(id);
+  }
 }
 
 function onMessage(p, msg) {
   if (!msg || typeof msg.t !== 'string') return;
   const room = p.room;
   switch (msg.t) {
-    case 'create': {
+    case 'create': { // open my neighbourhood (or join it, if someone's already there)
       if (room) return;
-      if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
-      // Reopening a pack after everyone's phone slept keeps its old code, if it's free.
-      const want = String(msg.code ?? '').toUpperCase();
-      const code = /^[A-Z]{4}-\d{2}$/.test(want) && !rooms.has(want) ? want : makeCode();
       const seed = cleanSeed(msg.seed);
-      if (!code || !seed) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
-      const list = (v, n) => (Array.isArray(v) ? v : []).slice(0, n).map(cleanId);
-      const r = { code, seed, players: new Map(), discovered: new Set(list(msg.discovered, 20)), bones: new Set(list(msg.bones, 50)) };
-      rooms.set(code, r);
-      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: 0, level: cleanLevel(msg.level), look: cleanLook(msg.look) });
-      r.players.set(p.id, p);
-      return welcome(r, p);
+      if (!seed) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
+      const profile = msg.profile && getProfile(msg.profile) ? cleanId(msg.profile) : null;
+      const world = worldFor(seed, profile);
+      mergeFinds(world, msg);
+      const live = liveRoom(world);
+      if (live) return enter(p, live, msg);
+      if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
+      const r = openRoom(world, cleanCode(msg.code));
+      if (!r) return send(p.ws, { t: 'error', msg: 'Could not start a pack.' });
+      return enter(p, r, msg);
     }
     case 'join': {
       if (room) return;
-      const r = rooms.get(String(msg.code ?? '').toUpperCase().trim());
-      if (!r) return send(p.ws, { t: 'error', msg: 'No pack with that code. Check the code and try again!' });
-      if (r.players.size >= MAX_PLAYERS) return send(p.ws, { t: 'error', msg: 'That pack is full (8 dogs max).' });
-      Object.assign(p, { name: cleanName(msg.name), breed: BREEDS.includes(msg.breed) ? msg.breed : 'merry', room: r, slot: freeSlot(r), level: cleanLevel(msg.level), look: cleanLook(msg.look) });
-      r.players.set(p.id, p);
-      return welcome(r, p);
+      const code = cleanCode(msg.code);
+      let r = code && rooms.get(code);
+      if (!r) {
+        // Nobody's there right now, but it's a saved neighbourhood: open it up again.
+        const world = code && worldByCode(code);
+        if (!world) return send(p.ws, { t: 'error', msg: 'No pack with that code. Check the code and try again!' });
+        if (rooms.size >= MAX_ROOMS) return send(p.ws, { t: 'error', msg: 'Too many packs right now — try again later.' });
+        r = openRoom(world, code);
+        if (!r) return send(p.ws, { t: 'error', msg: 'Could not open that pack.' });
+      }
+      return enter(p, r, msg);
     }
     case 's': // my dog's state
       if (!room) return;
@@ -94,10 +144,15 @@ function onMessage(p, msg) {
     case 'ev': { // shared adventure progress
       const kinds = { discover: 'discovered', bone: 'bones' };
       if (!room || !msg.ev || !kinds[msg.ev.type]) return;
-      const id = cleanId(msg.ev.id), set = room[kinds[msg.ev.type]];
-      if (!id || set.has(id) || set.size > 60) return;
-      set.add(id);
-      return broadcast(room, { t: 'ev', by: p.id, name: p.name, ev: { type: msg.ev.type, id } });
+      const id = cleanId(msg.ev.id), found = room.world[kinds[msg.ev.type]];
+      if (!id) return;
+      const ev = { type: msg.ev.type, id };
+      // Already found (perhaps before this dog arrived): just tell them, so they get their sticker too.
+      if (found.includes(id)) return send(p.ws, { t: 'ev', by: p.id, name: p.name, ev });
+      if (found.length >= MAX_FINDS) return;
+      found.push(id);
+      touchWorld(room.world);
+      return broadcast(room, { t: 'ev', by: p.id, name: p.name, ev });
     }
   }
 }
@@ -115,12 +170,15 @@ export function listPacks() {
   });
 }
 
-/** GET /api/packs */
-export function packsHandler(req, res) {
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Cache-Control', 'no-store');
-  res.end(JSON.stringify({ packs: listPacks() }));
+/** Saved dogs that are in a pack right now. */
+export function onlineProfiles() {
+  const out = new Set();
+  for (const r of rooms.values()) for (const q of r.players.values()) if (q.profile) out.add(q.profile);
+  return out;
 }
+
+/** Codes of the packs playing right now. */
+export const liveCodes = () => new Set(rooms.keys());
 
 /** Attach the Dog Park to an HTTP server, answering WebSocket upgrades on /ws. */
 export function attachDogPark(httpServer) {

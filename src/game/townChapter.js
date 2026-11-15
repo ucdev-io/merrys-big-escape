@@ -59,7 +59,7 @@ export class TownChapter {
 
     this.pack = new Pack({
       hud, remotes: this.remotes,
-      me: () => ({ name: this.profile().name, breed: this.player.breedKey, level: progress.level, look: progress.look }),
+      me: () => ({ name: this.profile().name, breed: this.player.breedKey, level: progress.level, look: progress.look, profile: progress.id }),
       seed: () => this.layout.seed,
       progress: () => ({ discovered: this.state.discovered, bones: this.state.bones }),
       onWelcome: (w, { rejoin }) => this.onWelcome(w, rejoin),
@@ -85,22 +85,31 @@ export class TownChapter {
     this.follow.manualHold = 1e9;
     this.follow.yaw = this.player.heading + Math.PI * 0.62;
     this.follow.distance = 3.2;
-    const remember = (c) => writeSave({ profile: c });
+    // Become the chosen dog: a saved one (stars, outfit and all), or a brand-new one.
+    const remember = async (c) => {
+      await progress.useDog(c);
+      writeSave({ profile: { breed: c.breed, name: c.name } });
+      this.player.setLook(progress.look);
+    };
     const lobby = showLobby({
       hud: this.hud,
       profile: this.profile(),
+      current: progress.id,
+      seed: this.layout.seed,
       townName: this.layout.name,
       onBreed: (k) => { if (k !== this.player.breedKey) this.player.setBreed(k); },
-      onSolo: (c) => { remember(c); lobby.close(); this.begin(); this.pack.open(); },
+      onLook: (look) => this.player.setLook(look),
+      onSolo: async (c) => { lobby.setBusy(true); await remember(c); lobby.close(); this.begin(); this.pack.open(); },
       onJoin: async (c, code) => {
-        remember(c);
         lobby.setBusy(true);
+        await remember(c);
         try {
           const { net, welcome } = await this.pack.join(code);
           if (welcome.seed !== this.layout.seed) {
             // Their town is different: reload into it (we'll rejoin straight away).
             writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
-            location.href = packPath(welcome.code);
+            net.close();
+            setTimeout(() => (location.href = packPath(welcome.code)), 120);
             return;
           }
           lobby.close();
