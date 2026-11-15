@@ -23,7 +23,7 @@ import { Heists } from './town/heists.js';
 import { Seasons } from './seasons/seasons.js';
 import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
-import { AREA_BLURBS } from '../world/areas/areas.js';
+import { AREA_BLURBS, inRect } from '../world/areas/areas.js';
 import { Woods } from './town/woods/index.js';
 import { Mud } from './town/mud.js';
 
@@ -392,6 +392,10 @@ export class TownChapter {
       music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });
     }
     this.seasons.update(dt, { canAct, barked: acted.barked }); // (after the frogs: a frozen pond hushes them)
+    // 🎵 Each area has its own tune: through its gate and the music changes (on the beat), and back again
+    // on the way out (a few steps out, so it doesn't flick between the two at the gate).
+    const here = (this.world.areas ?? []).find((a) => inRect(a.rect, pos.x, pos.z, this.musicPlace === a.kind ? 3 : 0));
+    if ((here?.kind ?? 'town') !== this.musicPlace) { this.musicPlace = here?.kind ?? 'town'; music.setPlace(this.musicPlace); }
 
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
