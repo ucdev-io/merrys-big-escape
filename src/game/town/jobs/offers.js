@@ -47,7 +47,7 @@ function pickWhere(jw, rng, wheres, giver, { from = jw.board, min = 12, max = 95
     const spot = area?.spot(rng);
     if (!spot || flat(spot, jw.board) < 12) continue;
     const d = flat(spot, from);
-    if (d < min || d > max) continue;
+    if (d < min || d > (area.far ? Math.max(max, 200) : max)) continue; // (the woods are a walk away: that's the point)
     return { area, spot };
   }
   return null;
