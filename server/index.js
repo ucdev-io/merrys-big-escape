@@ -9,7 +9,7 @@ import { lanAddresses } from './lan.js';
 import { dataDir } from './store.js';
 
 const PORT = Number(process.env.PORT) || 8080;
-const ROOT = resolve(process.cwd(), 'dist');
+const ROOT = resolve(process.cwd(), process.env.MERRY_DIST || 'dist'); // (tests use their own build folder)
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json' };
 
 const server = http.createServer(async (req, res) => {
@@ -36,6 +36,6 @@ server.listen(PORT, () => {
   console.log(`  On this computer:  http://localhost:${PORT}`);
   for (const a of lanAddresses()) console.log(`  On your network:   http://${a.address}:${PORT}   (${a.name})`);
   console.log(`
-  Dogs and neighbourhoods are saved in ${dataDir}
+  Dogs and neighbourhoods are saved in ${dataDir()}
 `);
 });

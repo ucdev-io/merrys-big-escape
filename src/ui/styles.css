@@ -208,6 +208,20 @@ body.touch-mode .stamina { bottom: 180px; }
 .lobby .small { font-size: 16px; opacity: 0.8; }
 .lobby .link { background: none; border: none; cursor: pointer; font-size: 16px; text-decoration: underline; padding: 0; }
 .lobby.busy .page { opacity: 0.7; }
+/* Phones: the big Go button stays in view while the rest of the lobby scrolls. */
+.lobby .btns { position: sticky; bottom: -20px; z-index: 2; padding: 8px 0 6px; background: linear-gradient(rgba(0, 0, 0, 0), var(--paper) 35%); }
+/* Short screens (phones held sideways): a more compact lobby. */
+@media (max-height: 520px) {
+  .lobby { align-items: center; padding: 6px; }
+  .lobby .page { max-height: calc(100vh - 12px); padding: 8px 14px; }
+  .lobby h1 { font-size: 24px; }
+  .lobby .sub { display: none; }
+  .lobby .breeds { max-height: 36vh; }
+  .lobby .blurb { font-size: 15px; margin: 4px 0; min-height: 0; }
+  .lobby .dogrow { max-height: 76px; }
+}
+/* No joystick or buttons while choosing a dog or on the title screen. */
+body:has(.lobby) .touch, body:has(.title-screen) .touch { display: none; }
 @media (max-width: 700px) {
   .lobby { align-items: flex-end; justify-content: center; padding: 8px; }
   .lobby .page { margin: 0; max-height: 62vh; padding: 12px 14px; }
@@ -373,3 +387,11 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .witem.on { border-color: var(--ink); background: var(--accent); }
 .witem:disabled { opacity: 0.45; cursor: default; }
 @media (max-width: 600px) { .xp-pill .bar { width: 30px; } .stats { grid-template-columns: repeat(2, 1fr); } }
+
+/* (Last, so it wins over the safe-area spacing above.) Phones held sideways: the zoomies bar and prompts sit at the bottom middle, between the joystick and
+   the buttons (not floating over the dog). */
+@media (max-height: 520px) {
+  body.touch-mode .stamina { bottom: calc(14px + var(--sa-b)); }
+  body.touch-mode .boosts { bottom: calc(11px + var(--sa-b)); }
+  body.touch-mode .prompt { bottom: calc(44px + var(--sa-b)); }
+}

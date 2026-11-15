@@ -1,15 +1,19 @@
+import path from 'node:path';
 import { defineConfig } from 'vite';
 import { attachDogPark } from './server/rooms.js';
 import { handleApi } from './server/api.js';
 import { dataDir } from './server/store.js';
 
 // Runs the Dog Park multiplayer server inside the Vite dev server (same port, path /ws).
+// The dev server is the workshop: it keeps its saves in data-dev/, apart from the home
+// game (`npm run play` / play.cmd on port 8080, saving in data/).
 const dogPark = () => ({
   name: 'dog-park',
   configureServer(server) {
+    process.env.MERRY_DATA ??= path.join(process.cwd(), 'data-dev');
     if (server.httpServer) attachDogPark(server.httpServer);
     server.middlewares.use((req, res, next) => { if (!handleApi(req, res)) next(); });
-    server.httpServer?.once('listening', () => console.log(`  🐾 Dogs and neighbourhoods are saved in ${dataDir}`));
+    server.httpServer?.once('listening', () => console.log(`  🐾 Workshop saves (dev server): ${dataDir()}`));
   },
 });
 

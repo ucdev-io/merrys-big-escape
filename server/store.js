@@ -8,9 +8,16 @@ import { BREED_IDS } from '../src/entities/breedIds.js';
 import { levelForXp } from '../src/game/levels.js';
 import { cleanName, cleanId, cleanLook, cleanSeed } from './clean.js';
 
-// npm scripts (and Vite) run from the project folder, so this is <project>/data.
-const DIR = path.resolve(process.env.MERRY_DATA || path.join(process.cwd(), 'data'));
-const FILES = { profiles: path.join(DIR, 'profiles.json'), worlds: path.join(DIR, 'worlds.json') };
+// Where saves live: $MERRY_DATA, or <project>/data (npm scripts run from the project folder).
+// Worked out on first use, so the dev server can point itself somewhere else first.
+let DIR = null, FILES = null;
+function files() {
+  if (!FILES) {
+    DIR = path.resolve(process.env.MERRY_DATA || path.join(process.cwd(), 'data'));
+    FILES = { profiles: path.join(DIR, 'profiles.json'), worlds: path.join(DIR, 'worlds.json') };
+  }
+  return FILES;
+}
 const MAX_PROFILES = 200, MAX_WORLDS = 100;
 const db = { profiles: {}, worlds: {} };
 let loaded = false;
@@ -25,6 +32,7 @@ function readJson(file) {
 function load() {
   if (loaded) return;
   loaded = true;
+  const FILES = files();
   for (const kind of Object.keys(FILES)) {
     // If the file is missing or damaged, fall back to the backup from the last run.
     const data = readJson(FILES[kind]) ?? readJson(FILES[kind] + '.bak');
@@ -41,8 +49,8 @@ function saveSoon(kind) {
 }
 function write(kind) {
   try {
+    const file = files()[kind], tmp = file + '.tmp';
     fs.mkdirSync(DIR, { recursive: true });
-    const file = FILES[kind], tmp = file + '.tmp';
     if (!backedUp.has(kind) && fs.existsSync(file)) { fs.copyFileSync(file, file + '.bak'); backedUp.add(kind); }
     fs.writeFileSync(tmp, JSON.stringify({ version: 1, [kind]: db[kind] }, null, 1));
     try { fs.renameSync(tmp, file); } catch { fs.copyFileSync(tmp, file); fs.rmSync(tmp, { force: true }); }
@@ -165,4 +173,4 @@ export function touchWorld(w) {
 
 /** For tests: forget what's in memory and read the files again. */
 export function reload() { flush(); loaded = false; load(); }
-export const dataDir = DIR;
+export const dataDir = () => (files(), DIR);
