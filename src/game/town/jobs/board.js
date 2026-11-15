@@ -169,7 +169,7 @@ export class JobBoard {
     const rows = this.offers.map((o, i) => {
       const T = JOB_TYPES[o.type], tw = o.twist && TWISTS[o.twist];
       return `<button class="pill job-offer" data-i="${i}"><span class="je">${T.emoji}</span><span class="jt">${o.text}`
-        + `<small>${PAWS[o.diff]} · +${o.stars} ⭐${tw ? ` · ${tw.emoji} +${o.bonus} ⭐ bonus` : ''}${T.team ? ' · 🐾🐾 team job' : ''}</small></span></button>`;
+        + `<small>${PAWS[o.diff]} · +${o.stars} ⭐${tw ? ` · ${tw.emoji} +${o.bonus} ⭐ bonus` : ''}${T.team ? ' · 🤝 team job' : ''}</small></span></button>`;
     }).join('');
     this.hud.showCard(`<h1>📋 Lost &amp; Found</h1><p class="small">${helped ? `You’ve helped the neighbours ${helped} time${helped === 1 ? '' : 's'}! ` : ''}Pick a job:</p>`
       + `<div class="job-offers">${rows || '<p>No jobs right now. Come back soon!</p>'}</div>`, [['Not now', () => { this.hud.hideCard(); this.cool = 10; }]]);

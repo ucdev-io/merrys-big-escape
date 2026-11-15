@@ -207,7 +207,7 @@ export class NutAndMeg {
       if (tw.state !== 'hidden') continue;
       const dd = flat(P.pos, tw.tree);
       if (sniffing && dd < 13 && Math.random() < dt * 5) this.actions.smellPuff(tw.at.hide.clone().add(V(0, -0.3, 0)), Math.random() < 0.5 ? 0xe39a52 : 0xc4622d);
-      if (dd < 7 && this.teaseT <= 0) { this.teaseT = 6 + Math.random() * 3; this.hud.float(this.line(SQUIRRELS.tease), this.actions.anchor().add(V(0, 0.4, 0)), 'sniff'); fsfx.giggle(0.5); }
+      if (dd < 7 && this.teaseT <= 0) { this.teaseT = 6 + Math.random() * 3; this.hud.float(this.line(SQUIRRELS.tease).replace(/^(Nut|Meg): /, ''), this.actions.anchor().add(V(0, 0.4, 0)), 'sniff'); fsfx.giggle(0.5); } // (not saying who: that'd give it away)
     }
     this.awayT = flat(P.pos, this.park) > WANDER ? this.awayT + dt : 0;
     if (this.awayT > 30) this.giveUp();
