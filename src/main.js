@@ -6,6 +6,10 @@ import { FollowCamera } from './core/camera.js';
 import { Player } from './entities/player.js';
 import { buildYard } from './world/yard.js';
 import { createStylePicker } from './ui/stylePicker.js';
+import { applyStyle } from './render/stylePresets.js';
+import { HUD } from './ui/hud.js';
+import { createTouchControls } from './ui/touchControls.js';
+import { YardChapter } from './game/yardChapter.js';
 
 const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
@@ -54,10 +58,16 @@ function resize() {
 }
 window.addEventListener('resize', resize);
 resize();
-createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
+// Storybook is the chosen look; add ?styles to the URL to compare the others.
+if (location.search.includes('styles')) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
+else applyStyle(pipeline, 'storybook');
 
-// Style tuning panel (dev builds, or add ?tune to the URL).
-if (import.meta.env.DEV || location.search.includes('tune')) {
+const hud = new HUD(camera);
+createTouchControls(input);
+const chapter = new YardChapter({ scene, world, player, hud, input, follow, pipeline });
+
+// Style tuning panel: add ?tune to the URL.
+if (location.search.includes('tune')) {
   import('lil-gui').then(({ default: GUI }) => {
     const gui = new GUI({ title: 'Watercolor style' });
     gui.close();
@@ -103,6 +113,8 @@ function frame(now) {
   const t = timer.getElapsed();
 
   player.update(dt, input, follow.yaw, world);
+  chapter.update(dt);
+  hud.update(dt);
   world.update(t);
   follow.update(dt, player.pos, player.heading, player.speed);
 
@@ -117,4 +129,4 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.__game = { scene, camera, player, pipeline, renderer, follow };
+window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input };

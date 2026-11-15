@@ -103,6 +103,7 @@ export function buildYard(seed = 'biscuit-yard') {
   return {
     group,
     colliders: col,
+    props: { gnome: g },
     occluders: (() => { const o = group.children.filter((c) => c.userData.occluder); group.traverse((m) => m.userData.solid && o.push(m)); return o; })(),
     foliage: (() => { const f = []; group.traverse((o) => o.userData.foliage && f.push(o)); return f; })(),
     spawn: new THREE.Vector3(0.5, 0, -1),

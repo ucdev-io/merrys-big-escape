@@ -67,6 +67,7 @@ uniform float uPaper, uPaperScale;
 uniform vec3 uPaperColor, uInkColor;
 uniform float uVignette;
 uniform float uSaturation;
+uniform float uSniff;
 varying vec2 vUv;
 
 float linDepth(vec2 uv) {
@@ -121,6 +122,8 @@ void main() {
 
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(vec3(l), c, uSaturation);
+  // Sniff vision: the world fades to a warm sepia so scent trails stand out.
+  c = mix(c, mix(vec3(l) * vec3(1.06, 0.97, 0.86), c, 0.35), uSniff * 0.8);
 
   // Paper shows through: multiply by paper tone, lighter in the fibres.
   vec3 paperTone = uPaperColor * (0.9 + 0.1 * paper);
@@ -130,6 +133,7 @@ void main() {
   vec2 vq = vUv - 0.5;
   float vig = smoothstep(0.35, 0.85, length(vq * vec2(1.0, 0.85)) + (texture2D(tNoise, vUv * 1.5).g - 0.5) * 0.15);
   c = mix(c, uPaperColor, vig * uVignette);
+  c = mix(c, c * vec3(0.82, 0.72, 0.62), smoothstep(0.25, 0.75, length(vq)) * uSniff * 0.7);
 
   gl_FragColor = vec4(c, 1.0);
 }
@@ -206,6 +210,7 @@ export class WatercolorPipeline {
         uInkColor: { value: new THREE.Color() },
         uVignette: { value: 0 },
         uSaturation: { value: 1 },
+        uSniff: { value: 0 },
       },
       depthTest: false,
       depthWrite: false,
@@ -267,6 +272,7 @@ export class WatercolorPipeline {
     cu.uInkColor.value.setStyle(p.inkColor, THREE.SRGBColorSpace).convertLinearToSRGB();
     cu.uVignette.value = p.vignette;
     cu.uSaturation.value = p.saturation;
+    cu.uSniff.value = this.sniff ?? 0;
   }
 
   render(scene, camera) {

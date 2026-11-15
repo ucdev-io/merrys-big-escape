@@ -267,7 +267,12 @@ export class Dog {
     this.wag = 0.5;
     this.idleLook = 0;
     this.digging = 0;
+    this.barkT = 0;
+    this.shakeT = 0;
   }
+
+  bark() { this.barkT = 0.45; }
+  shake() { this.shakeT = 1.3; }
 
   /**
    * @param {number} dt
@@ -348,6 +353,19 @@ export class Dog {
     this.wag = lerp(this.wag, happy, 1 - Math.exp(-dt * 3));
     this.tail.rotation.y = Math.sin(t * lerp(6, 16, this.wag)) * lerp(0.2, 0.6, this.wag) * (1 - g * 0.7);
     this.tail.rotation.x = -g * 1.0 - this.wag * 0.25;
+
+    // Bark: head flicks up, little hop. Shake: full-body wet-dog wiggle.
+    this.barkT = Math.max(0, this.barkT - dt);
+    const bk = Math.sin((this.barkT / 0.45) * Math.PI);
+    this.neck.rotation.x -= bk * 0.5;
+    this.head.rotation.x -= bk * 0.35;
+    B.position.y += bk * 0.03;
+    this.shakeT = Math.max(0, this.shakeT - dt);
+    const sk = Math.min(1, this.shakeT * 2) * (this.shakeT > 0 ? 1 : 0);
+    B.rotation.z += Math.sin(t * 48) * 0.3 * sk;
+    this.neck.rotation.z = Math.sin(t * 48 + 0.6) * 0.5 * sk;
+    this.ears.forEach((e, i) => (e.rotation.y = Math.sin(t * 48 + i) * 1.2 * sk));
+    this.tail.rotation.y += Math.sin(t * 40) * 0.6 * sk;
 
     // Eyes blink; brows lift when happy; tongue out when galloping.
     this.blinkT -= dt;

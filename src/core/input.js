@@ -28,7 +28,7 @@ export class Input {
     return l > 1 ? { x: x / l, y: y / l } : { x, y };
   }
   get sniff() { return this.down('Space') || this.touchButtons.has('sniff'); }
-  get sprint() { return this.down('ShiftLeft', 'ShiftRight') || this.touchButtons.has('zoom'); }
+  get sprint() { return this.down('ShiftLeft', 'ShiftRight') || this.touchButtons.has('zoom') || this.touchButtons.has('zoom-stick'); }
   get dig() { return this.hit('KeyE') || this.touchButtons.has('dig!'); }
   get bark() { return this.hit('KeyQ') || this.touchButtons.has('bark!'); }
   endFrame() {
