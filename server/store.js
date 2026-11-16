@@ -21,6 +21,8 @@ function files() {
   return FILES;
 }
 const MAX_PROFILES = 200, MAX_WORLDS = 100;
+// How many kinds of stat a dog can keep (each new place, friend and prize adds one or two: 29 in use by the farm).
+const MAX_STATS = 64;
 const db = { profiles: {}, worlds: {}, records: {} };
 let loaded = false;
 
@@ -126,8 +128,8 @@ function apply(p, s, importing) {
   const xp = Math.floor(Number(s.xp) || 0);
   if (xp > 0) p.xp += Math.min(xp, importing ? 20000 : 1500);
   if (s.stats && typeof s.stats === 'object') {
-    for (const [k, v] of Object.entries(s.stats).slice(0, 20)) {
-      if (!/^[a-z]{1,16}$/.test(k) || (!(k in p.stats) && Object.keys(p.stats).length >= 30)) continue;
+    for (const [k, v] of Object.entries(s.stats).slice(0, MAX_STATS)) {
+      if (!/^[a-z]{1,16}$/.test(k) || (!(k in p.stats) && Object.keys(p.stats).length >= MAX_STATS)) continue;
       const n = Math.floor(Number(v) || 0);
       if (n > 0) p.stats[k] = (p.stats[k] ?? 0) + Math.min(n, importing ? 100000 : 500);
     }
