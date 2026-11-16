@@ -168,7 +168,7 @@ export function layoutFarm(a, seed) {
   // Named hiding places (eggs get laid in them; things can be hidden in them).
   const hides = [
     { id: 'barn', name: 'in the barn', u: barn.u + s * rng.float(-3.6, -1.2), v: barn.v + rng.float(-1.5, 1.8) },
-    { id: 'loft', name: 'up on the hay in the barn', u: barn.u + s * 3.4, v: barn.v + 2.6, y: 1.5 },
+    { id: 'loft', name: 'up on the hay in the barn', u: barn.u + s * 3.4, v: barn.v + 2.6, y: 1.38 },
     { id: 'coop', name: 'behind the hen house', u: coop.u - s * 1.4, v: coop.v + 1.4 },
     { id: 'pond', name: 'in the reeds by the duck pond', u: pond.u + Math.cos(0.8) * (pond.r + 0.7), v: pond.v + Math.sin(0.8) * (pond.r + 0.7) },
     { id: 'tractor', name: 'under the tractor', u: tractor.u + Math.sin(tractor.face) * 1.6, v: tractor.v + Math.cos(tractor.face) * 1.6 },

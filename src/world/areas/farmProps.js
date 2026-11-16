@@ -474,17 +474,24 @@ export function sheepPen(parent, pen, C) {
   const g = new THREE.Group();
   parent.add(g);
   const H = 0.95, wood = 0xa8875e, dark = 0x86684a;
-  const hurdle = (u0, v0, u1, v1) => {
+  const hurdle = (u0, v0, u1, v1, diagonal = false) => {
     const len = Math.hypot(u1 - u0, v1 - v0), ang = Math.atan2(u1 - u0, v1 - v0), n = Math.max(1, Math.round(len / 1.8));
     for (let i = 0; i <= n; i++) { const t = i / n; mesh(rbox(0.09, H + 0.1, 0.09, 0.02), dark, g, [u0 + (u1 - u0) * t, (H + 0.1) / 2, v0 + (v1 - v0) * t]); }
     for (let k = 0; k < 4; k++) mesh(rbox(0.05, 0.12, len, 0.02), k % 2 ? wood : 0xb8976c, g, [(u0 + u1) / 2, 0.2 + k * 0.22, (v0 + v1) / 2], [0, ang, 0]);
-    C.box(Math.min(u0, u1) - 0.12, Math.min(v0, v1) - 0.12, Math.max(u0, u1) + 0.12, Math.max(v0, v1) + 0.12, H + 0.05, false);
+    if (!diagonal) { C.box(Math.min(u0, u1) - 0.12, Math.min(v0, v1) - 0.12, Math.max(u0, u1) + 0.12, Math.max(v0, v1) + 0.12, H + 0.05, false); return; }
+    const m = Math.max(2, Math.ceil(len / 0.35)); // (a slanting hurdle: a row of little round colliders, not one big box)
+    for (let i = 0; i <= m; i++) C.circle(u0 + ((u1 - u0) * i) / m, v0 + ((v1 - v0) * i) / m, 0.15, H + 0.05, false);
   };
   const fu = pen.fenceU, gu = pen.gateU;
   hurdle(fu, pen.v0, gu, pen.v0);
   hurdle(fu, pen.v1, gu, pen.v1);
   hurdle(gu, pen.v0, gu, pen.gateV - pen.gap / 2);
   hurdle(gu, pen.gateV + pen.gap / 2, gu, pen.v1);
+  // Two wings opening out from the way in, like a funnel: sheep coming this way get steered inside.
+  for (const k of [-1, 1]) {
+    const v0 = pen.gateV + (k * pen.gap) / 2;
+    hurdle(gu, v0, gu + pen.side * 2.6 * Math.cos(0.62), v0 + k * 2.6 * Math.sin(0.62), true);
+  }
   for (const s of [-1, 1]) mesh(cyl(0.07, 0.08, 1.2, 8), dark, g, [gu, 0.6, pen.gateV + s * pen.gap / 2]);
   // Straw on the ground inside, and a water bucket.
   const straw = mesh(blobGeometry(12, 0.3, 1), COL.straw, g, [(fu + gu) / 2, -0.01, (pen.v0 + pen.v1) / 2], [0, 0.4, 0], [Math.abs(gu - fu) * 0.36, 0.05, (pen.v1 - pen.v0) * 0.36]);

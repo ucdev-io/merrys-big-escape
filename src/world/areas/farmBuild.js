@@ -167,7 +167,8 @@ export function buildFarm(g, d, { C, extra, flats }) {
   tag(soil, 'world');
   g.add(soil);
   g.add(sheepPen(g, d.pen, C));
-  g.add(hayRack(g, d.pen.gateU + s * 4.5, d.pen.v1 + 3.5, Math.PI / 2, C));
+  const rackAt = [d.pen.gateU + s * 4.5, d.pen.v1 + 3.5];
+  hayRack(g, rackAt[0], rackAt[1], Math.PI / 2, C);
   const crow = scarecrow(g, d.scarecrow.u, d.scarecrow.v, s > 0 ? -Math.PI / 2 : Math.PI / 2, C); // (looking over the field towards the yard)
 
   // ---- the farmyard ----
@@ -276,7 +277,7 @@ export function buildFarm(g, d, { C, extra, flats }) {
     stack: { top: at(...HC.top, HC.y) },
     tractor: { pos: at(d.tractor.u, d.tractor.v), seat: at(...TR.seat, 1.08), face: turn + d.tractor.face },
     cart: { bed: at(...CT.bed, CT.y), pos: at(...cartAt) },
-    well: at(d.well.u, d.well.v), trough: at(d.trough.u, d.trough.v),
+    well: at(d.well.u, d.well.v), trough: at(d.trough.u, d.trough.v), rack: at(...rackAt),
     farmer: at(d.farmer.u, d.farmer.v), posts: d.posts.map((p) => at(p.u, p.v)),
     orchard: apples.map((t) => ({ pos: at(t.u, t.v), s: t.s, bend: t.bend ?? 0 })),
     yard: { pos: at(Y.u, Y.v), r: Math.min(Y.ru, Y.rv) },

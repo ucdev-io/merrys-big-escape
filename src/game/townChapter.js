@@ -25,6 +25,7 @@ import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
 import { AREA_BLURBS } from '../world/areas/areas.js';
 import { Woods } from './town/woods/index.js';
+import { Farm } from './town/farm/index.js';
 import { Mud } from './town/mud.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -135,6 +136,18 @@ export class TownChapter {
       });
       this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
       this.pack.onWoods = (m) => this.woods.handle(m);
+    }
+    // 🚜 The Farm, out past another edge: Farmer Mabel and her jobs, the sheep (one flock for the whole pack:
+    // round them into the pen together; the town keeps count), hens, pigs in the mud, hay to climb.
+    const farm = world.areas?.find((a) => a.kind === 'farm');
+    if (farm) {
+      this.state.farm = same ? save.town.farm ?? 0 : 0;
+      this.farm = new Farm({
+        scene, world, area: farm, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
+        dogName: () => this.profile().name, pens: this.state.farm, onPens: (n) => { this.state.farm = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
+      });
+      this.farm.camera = follow.camera; // (to skip drawing the farm when it's lost in the fog)
+      this.pack.onFarm = (m) => this.farm.handle(m);
     }
     // 🟤 Mud, from any area's muddy patches (the wood's, the farm's…): one coat of it per dog, friends see it,
     // a splash in water washes it off. (Prints sit on the ground you see.)
@@ -386,6 +399,7 @@ export class TownChapter {
     this.life.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
+    this.farm?.update(dt, { canAct, barked: acted.barked });
     this.mud?.update(dt, canAct);
     if (this.pond) { // frogs croak as you get near the pond
       const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));
