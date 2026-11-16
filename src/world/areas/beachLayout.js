@@ -147,7 +147,7 @@ export function layoutBeach(a, seed) {
 
   // ---- marram grass on the dunes, sea pinks in the meadow ----
   const tufts = [];
-  for (let t = 0; t < 4000 && tufts.length < 300; t++) {
+  for (let t = 0; t < 4000 && tufts.length < 240; t++) {
     const u = rng.float(uL + 1, uR - 1), v = rng.float(vF - 4, vF + 8), h = duneH(u, v);
     if (h < 0.22 || rng.next() > h * 0.9 || Math.abs(u - gateU) < board.w / 2 + 0.6) continue;
     tufts.push({ u, v, y: h, s: rng.float(0.7, 1.25), rot: rng.float(0, 6.28) });

@@ -40,13 +40,13 @@ const geo = (key, make) => (G[key] ??= make());
 function marramClump() {
   return geo('marram', () => {
     const parts = [];
-    for (let i = 0; i < 9; i++) {
-      const b = new THREE.ConeGeometry(0.009, 0.7, 3, 3, true);
+    for (let i = 0; i < 7; i++) {
+      const b = new THREE.ConeGeometry(0.009, 0.7, 3, 2, true);
       b.translate(0, 0.35, 0);
       const p = b.attributes.position, lean = 0.25 + (i % 3) * 0.15;
       for (let k = 0; k < p.count; k++) { const y = p.getY(k), t = y / 0.7; p.setXYZ(k, p.getX(k), y * (1 - t * lean * 0.3), p.getZ(k) + t * t * lean * 0.4); }
       b.scale(1, 0.7 + (i % 4) * 0.12, 1);
-      b.rotateY((i / 9) * Math.PI * 2 + (i % 2) * 0.4);
+      b.rotateY((i / 7) * Math.PI * 2 + (i % 2) * 0.4);
       b.deleteAttribute('uv');
       parts.push(b.toNonIndexed());
     }
@@ -350,7 +350,8 @@ export function buildBeach(g, d, { C, extra, flats }) {
     const n = fbm3(u * 0.3, 1.7, v * 0.3, 2);
     return mixHex(mixHex(SAND_WET, SAND_DEEP, smooth(vS - 1, vS + 4, v)), 0xb8a47a, (n - 0.5) * 0.5);
   };
-  g.add(heightfield(us, dryRows, lip, sandCol)); // (snow settles on the dry sand in winter…)
+  // (Snow settles on the dry sand in winter, patchy and windswept, and only a few autumn leaves blow onto it: 'road'…)
+  g.add(tag(heightfield(us, dryRows, lip, sandCol), 'road'));
   g.add(tag(heightfield(us, wetRows, d.sandY, wetCol), 'none')); // (…but the sea keeps the wet sand clear)
   // Seaweed and shells along the strandline (where the biggest waves leave things).
   for (let i = 0; i < 70; i++) {
@@ -444,7 +445,7 @@ export function buildBeach(g, d, { C, extra, flats }) {
     line(uL - 0.1, vS + 4, uL - 0.1, vB + 0.35);
     line(uL - 0.1, vB + 0.35, uR + 0.1, vB + 0.35);
     line(uR + 0.1, vB + 0.35, uR + 0.1, vS + 4);
-    const ball = geo('buoy', () => new THREE.SphereGeometry(0.2, 12, 8));
+    const ball = geo('buoy', () => new THREE.SphereGeometry(0.2, 9, 6));
     const rope = geo('rope', () => new THREE.CylinderGeometry(0.014, 0.014, 1, 4));
     const bg = tag(new THREE.Group(), 'none');
     pts.forEach(([u, v], i) => {
