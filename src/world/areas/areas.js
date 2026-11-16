@@ -56,8 +56,9 @@ const SIDES = {
 };
 
 // The order kinds are planned in: each takes a free edge of town in turn (with its own dice), so a kind
-// added later never moves the ones before it. New kinds go on the end.
-const KIND_ORDER = ['woods', 'farm', 'beach'];
+// added later never moves the ones before it. New kinds go on the end. (The beach arrived before the farm,
+// so it's planned first: every town's beach stays put, and the farm takes one of the edges left.)
+const KIND_ORDER = ['woods', 'beach', 'farm'];
 
 /** Which kinds of area a town gets: all of them (a lot to do in one town), one per edge. */
 function chooseKinds(/* seed, townName */) { return KIND_ORDER.filter((k) => AREA_KINDS[k]); }
