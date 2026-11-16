@@ -103,8 +103,8 @@ export const BOTTLES = [
 export const KIOSK = {
   trick: ['A trick! Lovely! Here — a doggy ice cream, on the house.', 'Ooh, very good! One doggy ice cream coming up!', 'Clever pup! That’s worth a vanilla.', 'Bravo! Have a scoop!'],
   wait: ['Another one? Give me a minute to scoop!', 'Patience, pup! The next one’s nearly ready.'],
-  hint: 'Do a trick at the kiosk (😀) for a doggy ice cream!',
-  closed: 'The kiosk’s shut for winter. See you in the spring! 🍦',
+  hint: '🍦 A trick gets an ice cream! 😀',
+  closed: '🍦 Shut for the winter!',
 };
 
 // Beach smells (see game/town/smells.js): where 'beach' spots smell of these.

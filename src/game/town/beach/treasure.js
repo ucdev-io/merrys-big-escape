@@ -132,6 +132,6 @@ export class Treasure {
 
   get hint() {
     const s = this.nearest(this.B.actions.nose(), 1.5);
-    return s ? `🐚 Something’s buried in the sand! Dig! 🐾${s.digs ? ` (${s.digs}/${DIGS})` : ''}` : null;
+    return s ? (s.digs ? `🐚 Keep digging! 🐾 ${s.digs}/${DIGS}` : '🐚 Something buried! Dig! 🐾') : null; // (short: it has to fit a phone)
   }
 }

@@ -196,7 +196,7 @@ export class Sandy {
 
   get hint() {
     const job = this.job;
-    if (job?.kind === 'gulls' && flat(this.player.pos, this.pos) < 5) return 'Watch the picnics for swooping seagulls, and woof! 🐦';
+    if (job?.kind === 'gulls' && flat(this.player.pos, this.pos) < 5) return '🐦 Woof at swooping gulls!';
     return null;
   }
 }

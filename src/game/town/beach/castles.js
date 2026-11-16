@@ -146,7 +146,7 @@ export class Castles {
   onDig(nose) {
     const c = this.nearest(nose, 1.3);
     if (!c) return false;
-    if (c.s >= CASTLE.stages) { this.B.hud.float('🏰 Zoom into it to knock it down!', this.B.actions.anchor()); return true; }
+    if (c.s >= CASTLE.stages) { this.B.hud.float('Zoom into it! 🏰', this.B.actions.anchor()); return true; }
     this.B.send({ a: 'castle', id: c.id, op: 'build' });
     this.B.player.digTimer = 0.35;
     return true;
@@ -202,7 +202,7 @@ export class Castles {
   get prompt() {
     const c = this.near, P = this.B.player;
     if (!c || flat(P.pos, c) > 1.6) return null;
-    return c.s >= CASTLE.stages ? '🏰 Zoom into it to knock it down!' : c.s ? `🏰 Keep building! 🐾 (${c.s}/${CASTLE.stages})` : '🏰 Build a sandcastle! 🐾';
+    return c.s >= CASTLE.stages ? '🏰 Zoom into it: SPLAT!' : c.s ? `🏰 Keep building! 🐾 ${c.s}/${CASTLE.stages}` : '🏰 Build a sandcastle! 🐾';
   }
 
   get pawAct() { const c = this.near; return c && c.s < CASTLE.stages && flat(this.B.player.pos, c) < 1.6 ? 'build' : null; }

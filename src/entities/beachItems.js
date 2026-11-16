@@ -43,7 +43,7 @@ function whistleGeometry() {
 
 const ADD = {
   beachball: { name: 'beach ball', emoji: '🏐', build: () => item(beachBallGeometry()), hold: { pos: [0, -0.15, 0.1], rot: [0, 0, 0] } },
-  whistle: { name: 'whistle', emoji: '📯', build: () => item(whistleGeometry(), 0.012), hold: { pos: [0, -0.03, 0.02], rot: [0, 0, 0] }, digText: 'Something glinting in the sand! Dig! 🐾' },
+  whistle: { name: 'whistle', emoji: '📯', build: () => item(whistleGeometry(), 0.012), hold: { pos: [0, -0.03, 0.02], rot: [0, 0, 0] }, digText: '📯 Something shiny! Dig! 🐾' },
 };
 for (const [k, v] of Object.entries(ADD)) CARRYABLES[k] ??= v;
 

@@ -11,7 +11,7 @@ const all = (msg) => ({ to: 'all', msg });
 
 /** A castle's index from its id ('sc3' → 3), or -1 if it isn't one. */
 export function castleIndex(id) {
-  const m = ID.exec(String(id ?? ''));
+  const m = typeof id === 'string' && ID.exec(id);
   return m && Number(m[1]) < CASTLE.max ? Number(m[1]) : -1;
 }
 
