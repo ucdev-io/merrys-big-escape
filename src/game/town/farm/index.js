@@ -126,20 +126,20 @@ export class Farm {
 
   // ---------- the pack (or our own farm room) ----------
 
-  me() { return this.pack.net?.id ?? LOCAL; }
+  me() { return this.room ? LOCAL : this.pack.net?.id ?? LOCAL; }
 
   /** A pack connection came (or went): say hello to the pack's farm, or run our own. */
   syncPack(now) {
     const net = this.pack.net ?? null;
     if (net === this.net) return;
     this.net = net;
-    if (net) { this.room = null; this.flock.setHost(false); this.flock.heard = this.flock.time; net.send({ t: 'farm', a: 'hello', pens: this.pens }); }
+    if (net) { this.room = null; this.waitT = 6; this.flock.setHost(false); this.flock.heard = this.flock.time; net.send({ t: 'farm', a: 'hello', pens: this.pens }); }
     else { this.room = new FarmRoom(this.pens); this.deliver(this.room.message(LOCAL, { a: 'hello' }, now)); }
   }
 
   send(msg) {
-    if (this.pack.net) this.pack.net.send({ t: 'farm', ...msg });
-    else if (this.room) this.deliver(this.room.message(LOCAL, msg, performance.now()));
+    if (this.room) this.deliver(this.room.message(LOCAL, msg, performance.now()));
+    else this.pack.net?.send({ t: 'farm', ...msg });
   }
 
   deliver(list) { for (const { to, msg } of list) if (to === 'all' || to === LOCAL) this.handle(msg); }
@@ -149,6 +149,7 @@ export class Farm {
     if (!m) return;
     switch (m.a) {
       case 'state':
+        this.waitT = 0;
         this.flock.setHost(m.host === this.me());
         this.setPens(Math.max(this.pens, cleanPens(m.pens)));
         if (m.sheep) this.flock.follow(m.sheep);
@@ -368,10 +369,12 @@ export class Farm {
     if (barked) this.onBark(P.pos);
     const dogs = canAct ? this.dogs() : this.dogs().slice(1);
     const near = flat(P.pos, this.area.yard.pos) < 60;
-    this.flock.update(dt, dogs, { live: !!this.pack.net });
+    // (A pack whose server never answers the farm's hello, an old one say: run a flock of our own, as if alone.)
+    if (this.waitT > 0 && (this.waitT -= dt) <= 0 && this.pack.net && !this.room) { this.room = new FarmRoom(this.pens); this.deliver(this.room.message(LOCAL, { a: 'hello' }, now)); }
+    this.flock.update(dt, dogs, { live: !!this.pack.net && !this.room });
     // No word from the pack's shepherd for a while (their phone's asleep?): offer to run the sheep ourselves.
     this.nudgeT -= dt;
-    if (this.pack.net && !this.flock.host && near && this.flock.time - (this.flock.heard ?? 0) > 3 && this.nudgeT <= 0) { this.nudgeT = 3; this.send({ a: 'nudge' }); }
+    if (this.pack.net && !this.room && !this.flock.host && near && this.flock.time - (this.flock.heard ?? 0) > 3 && this.nudgeT <= 0) { this.nudgeT = 3; this.send({ a: 'nudge' }); }
     this.hens.update(dt, dogs, near);
     this.pigs.update(dt, dogs, near || this.pigs.percy.out);
     this.crops.update(P.pos);
