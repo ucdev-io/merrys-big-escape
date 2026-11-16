@@ -207,7 +207,10 @@ export class WatercolorPipeline {
     this.ceilingWait = 60000; // (and how long the next such wait will be)
     document.addEventListener?.('visibilitychange', () => this.settle(2000));
 
-    const rtOpts = { type: THREE.HalfFloatType, colorSpace: THREE.LinearSRGBColorSpace };
+    // 8-bit sRGB pictures (the chip turns them back into linear colour when they're read): half the
+    // memory and reading of 16-bit floats, which the paint filter and the composite read many times a
+    // pixel. sRGB keeps the steps even to the eye, like the screen's own.
+    const rtOpts = { type: THREE.UnsignedByteType, colorSpace: THREE.SRGBColorSpace };
     this.sceneRT = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, samples: 0 });
     this.sceneRT.depthTexture = new THREE.DepthTexture(1, 1);
     this.sceneRT.depthTexture.type = THREE.UnsignedIntType;

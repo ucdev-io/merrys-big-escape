@@ -125,6 +125,37 @@ function place(g, m) {
   return _mid.set((x0 + x1) * 0.5, (y0 + y1) * 0.5, (z0 + z1) * 0.5);
 }
 
+/** A normal as plain 32-bit floats, x y z (a shape merged before has compact ones: see compact). */
+function floatNormal(a) {
+  if (a.array instanceof Float32Array && a.itemSize === 3 && !a.normalized && !a.isInterleavedBufferAttribute) return new THREE.BufferAttribute(a.array.slice(), 3);
+  const out = new Float32Array(a.count * 3);
+  for (let i = 0; i < a.count; i++) { out[i * 3] = a.getX(i); out[i * 3 + 1] = a.getY(i); out[i * 3 + 2] = a.getZ(i); }
+  return new THREE.BufferAttribute(out, 3);
+}
+
+/**
+ * Smaller vertices for the graphics chip: a town has ~1.4M of them, and phones run short of memory.
+ * Normals go in 4 bytes (from 12) and colours in 8 (from 12), each as four numbers, the sizes every
+ * graphics chip reads as they are (three-number ones are converted behind the scenes, into a second
+ * copy). Colours keep 16 bits so dark shades stay exact; normals lose a fraction of a degree.
+ */
+function compact(g) {
+  const n = g.attributes.normal, c = g.attributes.color;
+  if (n && n.itemSize === 3 && n.array instanceof Float32Array) {
+    const s = n.array, out = new Int8Array(n.count * 4);
+    for (let i = 0, j = 0; i < s.length; i += 3, j += 4) {
+      out[j] = Math.round(s[i] * 127); out[j + 1] = Math.round(s[i + 1] * 127); out[j + 2] = Math.round(s[i + 2] * 127);
+    }
+    g.setAttribute('normal', new THREE.BufferAttribute(out, 4, true));
+  }
+  if (c && c.itemSize === 3 && c.array instanceof Float32Array) {
+    const s = c.array, out = new Uint16Array(c.count * 4);
+    const q = (v) => Math.round(Math.min(1, Math.max(0, v)) * 65535);
+    for (let i = 0, j = 0; i < s.length; i += 3, j += 4) { out[j] = q(s[i]); out[j + 1] = q(s[i + 1]); out[j + 2] = q(s[i + 2]); out[j + 3] = 65535; }
+    g.setAttribute('color', new THREE.BufferAttribute(out, 4, true));
+  }
+}
+
 function dropArray() { this.array = null; }
 function lighten(g) {
   g.computeBoundingSphere();
@@ -171,11 +202,12 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
       if ((shape.index && !A.normal) || Object.values(A).some((a) => a.isInterleavedBufferAttribute)) {
         g = shape.index ? shape.toNonIndexed() : shape.clone();
         for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color', 'wcKind'].includes(k)) g.deleteAttribute(k);
+        if (g.attributes.normal) g.setAttribute('normal', floatNormal(g.attributes.normal));
         colours = g.attributes.color;
       } else {
         g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(A.position.array.slice(), 3));
-        if (A.normal) g.setAttribute('normal', new THREE.BufferAttribute(A.normal.array.slice(), 3, A.normal.normalized));
+        if (A.normal) g.setAttribute('normal', floatNormal(A.normal));
         if (A.wcKind) g.setAttribute('wcKind', A.wcKind);
         if (shape.index) g.setIndex(shape.index);
         colours = A.color;
@@ -213,6 +245,7 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
     geos.forEach((g) => g.dispose());
     b.geos = null; // (the pieces can go before the next bucket is merged: a lower peak while a phone builds)
     if (!merged) continue;
+    compact(merged);
     lighten(merged);
     const m = new THREE.Mesh(merged, paint(0xffffff, {
       vertexColors: true, transparent: mat.transparent, opacity: mat.opacity, side: mat.side, emissive: mat.emissive?.getHex() ?? 0, season: 'attr',

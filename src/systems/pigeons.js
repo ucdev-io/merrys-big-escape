@@ -30,20 +30,23 @@ export class Pigeons {
   constructor(scene, spots, flocks) {
     this.spots = spots;
     const total = flocks.reduce((n, f) => n + f.size, 0);
-    const sphere = new THREE.SphereGeometry(1, 14, 10);
-    const make = (geo, color, count = total) => {
+    // A pigeon is small (its body 15 cm, its head 4): smooth 252-triangle balls for every part made
+    // ~1,500 triangles a bird, all drawn every frame with their shadows. Now ~440, and only the body
+    // and wings cast shadows (the head, neck, beak and tail's are a few pixels inside the body's).
+    const body = new THREE.SphereGeometry(1, 10, 7), small = new THREE.SphereGeometry(1, 8, 6), flat = new THREE.SphereGeometry(1, 8, 4);
+    const make = (geo, color, count = total, shadow = true) => {
       const m = new THREE.InstancedMesh(geo, paint(color), count);
-      m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
+      m.castShadow = shadow; m.receiveShadow = true; m.frustumCulled = false;
       scene.add(m);
       return m;
     };
     this.parts = {
-      body: make(sphere, C.body),
-      head: make(sphere, C.head),
-      neck: make(sphere, C.neck),
-      beak: make(new THREE.ConeGeometry(1, 1, 8), C.beak),
-      tail: make(sphere, C.tail),
-      wing: make(sphere, C.wing, total * 2),
+      body: make(body, C.body),
+      head: make(small, C.head, total, false),
+      neck: make(small, C.neck, total, false),
+      beak: make(new THREE.ConeGeometry(1, 1, 6), C.beak, total, false),
+      tail: make(flat, C.tail, total, false),
+      wing: make(flat, C.wing, total * 2),
     };
     // A reusable "rig": pose it for one bird, then copy each part's matrix into the instances.
     this.rig = new THREE.Object3D();
