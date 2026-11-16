@@ -173,6 +173,7 @@ export class Flock {
             const home = this.farSide(), hx = home.x - cx, hz = home.z - cz, hl = Math.hypot(hx, hz), drift = s.calm > 20 && hl > 4 ? Math.min(2.5, hl) / hl : 0;
             const a = Math.random() * Math.PI * 2, r = 0.5 + Math.random() * 1.3;
             s.walkTo = { x: s.x + Math.cos(a) * r + hx * drift, z: s.z + Math.sin(a) * r + hz * drift };
+            if (this.inPen(s.walkTo.x, s.walkTo.z, -0.8)) { s.state = 0; s.walkTo = null; } // (they only go in the pen when they're driven in)
           } else { s.state = 0; s.walkTo = null; s.t = 2 + Math.random() * 4; }
         }
         if (s.state === 1 && s.walkTo) {
@@ -195,7 +196,9 @@ export class Flock {
     }
     if (this.all && !this.gateShut && now - this.penSent > 3) { // every last one: tell the pack (it says "penned" back)
       this.penSent = now;
-      this.send({ a: 'pen', by: [...this.nearDog].filter(([, t]) => now - t < 45).map(([id]) => id) });
+      const by = [...this.nearDog].filter(([, t]) => now - t < 45).map(([id]) => id);
+      if (by.length) this.send({ a: 'pen', by });
+      else this.letOut(); // (wandered in on their own, with no dog about: that's not a round-up)
     }
   }
 

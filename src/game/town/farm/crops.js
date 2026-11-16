@@ -56,7 +56,7 @@ export class Crops {
   clear() { for (const o of this.objects) o.removeFromParent(); this.objects = []; this.wheat = false; }
 
   /** Rows of clumps along the furrows (every other ridge), `step` apart along them, up to about `max` of them. */
-  rows(geo, h, { step = 0.9, max = 1200, skip = null, rng, lean = 0.12, color = null } = {}) {
+  rows(geo, h, { step = 0.9, max = 1200, skip = null, rng, lean = 0.12, color = null, fat = 0.9 } = {}) {
     const F = this.field, W = this.area.W;
     const u0 = F.u0 + 0.75, u1 = F.u1 - 0.75, v0 = F.v0 + 1.2, v1 = F.v1 - 1.2;
     let du = 0.68, dv = step;
@@ -67,7 +67,7 @@ export class Crops {
     spots.forEach(([u, v], i) => {
       const [x, z] = W(u + rng.float(-0.08, 0.08), v + rng.float(-0.15, 0.15)), k = h * rng.float(0.85, 1.12);
       _q.setFromEuler(_e.set(rng.float(-lean, lean), rng.float(0, 6.28), rng.float(-lean, lean)));
-      m.setMatrixAt(i, _m.compose(_p.set(x, 0.0, z), _q, _s.set(k * 0.9, k, k * 0.9)));
+      m.setMatrixAt(i, _m.compose(_p.set(x, 0.0, z), _q, _s.set(k * fat, k, k * fat)));
       if (color) m.setColorAt(i, _c.set(color[i % color.length]));
     });
     m.count = spots.length;
@@ -84,7 +84,7 @@ export class Crops {
     if (name === 'spring') {
       this.rows(clumpGeometry(0x5f8a48, 0xa9c97a, 5, BLADE), 0.22, { step: 0.5, max: 1500, rng, lean: 0.25 });
     } else if (name === 'summer') {
-      this.rows(clumpGeometry(0xc9a95a, 0xf2d488, 6), 0.95, { step: 0.6, max: 1100, rng });
+      this.rows(clumpGeometry(0xc9a95a, 0xf2d488, 6), 0.95, { step: 0.6, max: 1100, rng, fat: 1.5 });
       this.wheat = true;
       // Poppies here and there among the wheat.
       const n = 70, stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.01, 1, 3), paint(0x6f9a52), n), heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xd9433a), n);

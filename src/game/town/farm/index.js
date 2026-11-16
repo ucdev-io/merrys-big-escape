@@ -430,9 +430,6 @@ export class Farm {
     }
   }
 
-  /** For the prompt line. */
-  get hint() { return null; }
-
   dispose() {
     this.stopSeason?.();
     for (const x of [this.flock, this.hens, this.pigs, this.crops, this.farmer]) x.dispose?.();
