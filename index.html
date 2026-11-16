@@ -40,6 +40,15 @@
         }
         window.__report = report;
         window.__note = note;
+        // Where a load's time goes: each step marks how long it took since the last mark (sent with 'ready').
+        var marks = [], lastMark = performance.now();
+        window.__marks = marks;
+        window.__mark = function (label) { var now = performance.now(); if (label !== 'start') marks.push([label, Math.round(now - lastMark)]); else marks.length = 0; lastMark = now; };
+        // A quick sum to see how fast this browser runs plain code (a phone with its fast compiler turned
+        // off is ten or more times slower): ~3 ms on a PC.
+        var b0 = performance.now(), bx = 1;
+        for (var bi = 0; bi < 3000000; bi++) bx = (Math.imul(bx, 1103515245) + 12345) | 0;
+        var cpuMs = Math.round((performance.now() - b0) * 10) / 10 + (bx === 42 ? 0.01 : 0);
         window.addEventListener('error', function (e) {
           var where = e.filename ? ' (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : '';
           report('error', (e.message || 'error') + where, { stack: e.error && String(e.error.stack || '').slice(0, 600) });
@@ -52,7 +61,7 @@
         var last = null;
         try { last = sessionStorage.getItem('doggoLoading'); sessionStorage.removeItem('doggoLoading'); } catch (e) {}
         var n = navigator;
-        report('boot', (n.userAgent.match(/(iPhone|iPad|Android)[^;)]*/) || ['desktop'])[0], { ua: n.userAgent, screen: screen.width + 'x' + screen.height, dpr: window.devicePixelRatio, cores: n.hardwareConcurrency, mem: n.deviceMemory });
+        report('boot', (n.userAgent.match(/(iPhone|iPad|Android)[^;)]*/) || ['desktop'])[0], { ua: n.userAgent, screen: screen.width + 'x' + screen.height, dpr: window.devicePixelRatio, cores: n.hardwareConcurrency, mem: n.deviceMemory, cpuMs: cpuMs });
         if (last) report('died?', 'The last load never finished (stopped while: ' + last + ')');
       })();
     </script>

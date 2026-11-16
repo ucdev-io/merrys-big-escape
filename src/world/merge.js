@@ -86,6 +86,45 @@ function mergeBucket(geos) {
  * (it's the biggest thing a town keeps in memory). Its bounds are worked out first, for culling. If the
  * picture is ever lost and comes back, the page starts again (main.js), as the shapes can't be resent.
  */
+/**
+ * Move a piece into place straight on its arrays, with the same sums as three's applyMatrix4 (positions by
+ * the matrix, normals by its normal matrix, normalised) but without its per-vertex helpers, which made this
+ * the slowest step of building a town. Returns the middle of where it ends up (it picks the piece's chunk).
+ */
+const _nm = new THREE.Matrix3(), _mid = new THREE.Vector3();
+function place(g, m) {
+  const pa = g.attributes.position, na = g.attributes.normal;
+  const plain = (a) => a.array instanceof Float32Array && a.itemSize === 3 && !a.normalized && !a.isInterleavedBufferAttribute;
+  if (!plain(pa) || (na && !plain(na))) { // (anything unusual: three's own way)
+    g.applyMatrix4(m);
+    g.computeBoundingBox();
+    return g.boundingBox.getCenter(_mid);
+  }
+  const e = m.elements, p = pa.array;
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (let i = 0; i < p.length; i += 3) {
+    const x = p[i], y = p[i + 1], z = p[i + 2];
+    const w = 1 / (e[3] * x + e[7] * y + e[11] * z + e[15]);
+    p[i] = (e[0] * x + e[4] * y + e[8] * z + e[12]) * w;
+    p[i + 1] = (e[1] * x + e[5] * y + e[9] * z + e[13]) * w;
+    p[i + 2] = (e[2] * x + e[6] * y + e[10] * z + e[14]) * w;
+    const X = p[i], Y = p[i + 1], Z = p[i + 2]; // (as stored)
+    if (X < x0) x0 = X; if (X > x1) x1 = X;
+    if (Y < y0) y0 = Y; if (Y > y1) y1 = Y;
+    if (Z < z0) z0 = Z; if (Z > z1) z1 = Z;
+  }
+  if (na) {
+    const n = na.array, ne = _nm.getNormalMatrix(m).elements;
+    for (let i = 0; i < n.length; i += 3) {
+      const x = n[i], y = n[i + 1], z = n[i + 2];
+      const X = ne[0] * x + ne[3] * y + ne[6] * z, Y = ne[1] * x + ne[4] * y + ne[7] * z, Z = ne[2] * x + ne[5] * y + ne[8] * z;
+      const inv = 1 / (Math.sqrt(X * X + Y * Y + Z * Z) || 1);
+      n[i] = X * inv; n[i + 1] = Y * inv; n[i + 2] = Z * inv;
+    }
+  }
+  return _mid.set((x0 + x1) * 0.5, (y0 + y1) * 0.5, (z0 + z1) * 0.5);
+}
+
 function dropArray() { this.array = null; }
 function lighten(g) {
   g.computeBoundingSphere();
@@ -142,24 +181,26 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
         colours = A.color;
       }
       if (!g.attributes.normal) g.computeVertexNormals();
-      g.applyMatrix4(_m);
+      const mid = place(g, _m);
 
       // Bake colour: material × (vertex colour) × (instance colour).
       _c.copy(mat.color);
       if (o.isInstancedMesh && o.instanceColor) { const ic = new THREE.Color(); o.getColorAt(i, ic); _c.multiply(ic); }
       const count = g.attributes.position.count;
       const src = mat.vertexColors && colours ? colours : null;
-      const col = new Float32Array(count * 3);
-      for (let k = 0; k < count; k++) {
-        const r = src ? src.getX(k) : 1, gg = src ? src.getY(k) : 1, b = src ? src.getZ(k) : 1;
-        col[k * 3] = _c.r * r; col[k * 3 + 1] = _c.g * gg; col[k * 3 + 2] = _c.b * b;
+      const col = new Float32Array(count * 3), cr = _c.r, cg = _c.g, cb = _c.b;
+      if (src && !src.normalized && !src.isInterleavedBufferAttribute) {
+        const s = src.array, st = src.itemSize;
+        for (let k = 0, j = 0; k < count; k++, j += st) { col[k * 3] = cr * s[j]; col[k * 3 + 1] = cg * s[j + 1]; col[k * 3 + 2] = cb * s[j + 2]; }
+      } else if (src) {
+        for (let k = 0; k < count; k++) { col[k * 3] = cr * src.getX(k); col[k * 3 + 1] = cg * src.getY(k); col[k * 3 + 2] = cb * src.getZ(k); }
+      } else {
+        for (let k = 0; k < count; k++) { col[k * 3] = cr; col[k * 3 + 1] = cg; col[k * 3 + 2] = cb; }
       }
       g.setAttribute('color', new THREE.BufferAttribute(col, 3));
       if (!g.attributes.wcKind) g.setAttribute('wcKind', new THREE.BufferAttribute(new Uint8Array(count).fill(kind), 1)); // (already merged once: keep what it says)
 
-      g.computeBoundingSphere();
-      _v.copy(g.boundingSphere.center);
-      const key = `${Math.floor(_v.x / chunk)},${Math.floor(_v.z / chunk)}|${flags}`;
+      const key = `${Math.floor(mid.x / chunk)},${Math.floor(mid.z / chunk)}|${flags}`;
       if (!buckets.has(key)) buckets.set(key, { mat, cast: o.castShadow, geos: [] });
       buckets.get(key).geos.push(g);
     }

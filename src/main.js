@@ -131,11 +131,14 @@ let world;
   window.__report?.('start', inTown ? 'town' : 'garden', { gpu, maxTex: renderer.capabilities.maxTextureSize });
 }
 const buildT0 = performance.now();
+window.__mark?.('start');
 loading(inTown ? 'building the town' : 'building the garden');
 if (inTown) {
   const seed = (welcome?.seed || params.get('seed') || loadSave().town?.seed || randomSeed()).toUpperCase();
   if (loadSave().town?.seed !== seed) writeSave({ chapter: 'town', town: { seed, discovered: [] } });
-  world = buildTown(generateTown(seed));
+  const plan = generateTown(seed);
+  window.__mark?.('build: plan');
+  world = buildTown(plan);
   scene.fog.near = 30;
   scene.fog.far = 120;
 } else {
@@ -297,14 +300,29 @@ function frame(now) {
   if (++drawn === 2) {
     loading(null);
     loadNote.remove();
+    // (the slowest steps of the build and setup, biggest first)
+    const steps = Object.fromEntries((window.__marks ?? []).slice().sort((a, b) => b[1] - a[1]).slice(0, 12));
     window.__report?.('ready', `first pictures after ${Math.round(performance.now() - buildT0)} ms`, {
       build: Math.round(builtAt - buildT0), setup: Math.round(setupAt - builtAt), first: Math.round(firstMs),
-      programs: renderer.info.programs?.length, geometries: renderer.info.memory.geometries, px: `${canvas.width}x${canvas.height}`,
+      programs: renderer.info.programs?.length, geometries: renderer.info.memory.geometries, px: `${canvas.width}x${canvas.height}`, steps,
     });
+    warm = { t0: now, frames: 0, long: 0, worst: 0 };
+  } else if (warm && !warm.done) {
+    // The first ten seconds of play: how smooth (a stutter is often a shader being made the first time
+    // something comes into view).
+    warm.frames++;
+    if (raw > 0.05) warm.long++;
+    warm.worst = Math.max(warm.worst, raw);
+    if (now - warm.t0 >= 10000) {
+      warm.done = true;
+      window.__report?.('warm', `${Math.round((warm.frames * 1000) / (now - warm.t0))} fps over the first 10 s`, {
+        stutters: warm.long, worst: Math.round(warm.worst * 1000), programs: renderer.info.programs?.length, step: pipeline.level, dpr: pixelRatio,
+      });
+    }
   }
   requestAnimationFrame(frame);
 }
-let drawn = 0, firstMs = 0;
+let drawn = 0, firstMs = 0, warm = null;
 requestAnimationFrame(frame);
 
 window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress, world };

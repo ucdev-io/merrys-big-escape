@@ -65,9 +65,12 @@ export class TownChapter {
       onAct: (a, extra) => this.pack.act(a, extra),
     });
     this.bones = new GoldenBones(scene, world.bones ?? [], this.state.bones);
+    globalThis.__mark?.('setup: dog actions, bones');
     // Things to sniff out all over town, and cars pottering round the streets.
     this.smells = new Smells(world, this.layout.seed);
+    globalThis.__mark?.('setup: smells');
     this.traffic = new Traffic(scene, { seed: this.layout.seed, hud, avoid: world.spawn });
+    globalThis.__mark?.('setup: traffic');
     // Friends who need a hand: Gus in the park, Duchess at the pond, and the Lost & Found board.
     this.friends = new Friends({
       scene, world, hud, actions: this.actions, player, seed: this.layout.seed, dogName: () => this.profile().name,
@@ -82,9 +85,11 @@ export class TownChapter {
     const friendly = { scene, world, hud, player, actions: this.actions, friends: this.friends, seed: this.layout.seed, dogName: () => this.profile().name };
     this.friends.add(new NutAndMeg(friendly));
     this.friends.add(new Pepper(friendly));
+    globalThis.__mark?.('setup: friends');
     this.actions.onCarry = (kind) => { this.pack.sendCarry(kind); this.refreshObjective(); };
     // People out and about (the postman, dog walkers), and ice creams from the van.
     this.life = new TownLife({ scene, world, hud, player, seed: this.layout.seed, dogName: () => this.profile().name });
+    globalThis.__mark?.('setup: town life');
     this.traffic.onServe = (at) => this.actions.snacks.drop('icecream', at.x, at.z);
     this.pond = world.water?.find((w) => w.kind === 'pond');
 
@@ -105,6 +110,7 @@ export class TownChapter {
       onEvent: (ev, byName) => this.applyEvent(ev, byName),
       onMischief: (m) => (m.a === 'scatter' ? this.actions.remoteScatter(m.id, m.x) : this.actions.mischief.remote(m)),
     });
+    globalThis.__mark?.('setup: friends\u2019 dogs, pack');
 
     // Games and challenges (from the 👥 card), and the 🏆 family records.
     const records = (focus = null) => showRecords(hud, { town: this.layout.seed, townName: this.layout.name, profile: progress.id, focus });
@@ -117,9 +123,11 @@ export class TownChapter {
     this.pack.onStartGame = (kind) => this.games.start(kind);
     this.pack.onRecords = records;
     this.actions.onScatter = (flock, n) => this.games.onScatter(n);
+    globalThis.__mark?.('setup: games');
     // Heists: cheeky food raids on the bakery street, on your own or as a team.
     this.heists = new Heists({ scene, world, hud, player, actions: this.actions, pack: this.pack, remotes: this.remotes, dogName: () => this.profile().name });
     this.pack.onHeist = (m) => this.heists.handle(m);
+    globalThis.__mark?.('setup: heists');
     // 🍂❄️🌸☀️ Seasons and weather (the pack's, or the calendar's): snow, falling leaves, showers, and things to do in each.
     this.seasons = new Seasons({
       scene, world, player, hud, input, actions: this.actions, pipeline, follow, chapter: 'town', seed: this.layout.seed, welcome,
@@ -127,6 +135,7 @@ export class TownChapter {
     });
     this.pack.onSeason = (m) => this.seasons.handle(m);
     hud.onSeasons = () => this.seasons.showCard();
+    globalThis.__mark?.('setup: seasons');
     // 🌲 The Woods, out past the edge of town: the owl, Brock the badger, big sticks for the den, mud.
     const woods = world.areas?.find((a) => a.kind === 'woods');
     if (woods) {
@@ -138,6 +147,7 @@ export class TownChapter {
       this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
       this.pack.onWoods = (m) => this.woods.handle(m);
     }
+    globalThis.__mark?.('setup: woods');
     // 🏖️ The Beach, out past another edge of town: waves, sandcastles, rock pools, seagulls and Sandy the lifeguard.
     const beach = world.areas?.find((a) => a.kind === 'beach');
     if (beach) {
@@ -147,6 +157,7 @@ export class TownChapter {
       });
       this.pack.onBeach = (m) => this.beach.handle(m);
     }
+    globalThis.__mark?.('setup: beach');
     // 🚜 The Farm, out past another edge: Farmer Mabel and her jobs, the sheep (one flock for the whole pack:
     // round them into the pen together; the town keeps count), hens, pigs in the mud, hay to climb.
     const farm = world.areas?.find((a) => a.kind === 'farm');
@@ -159,6 +170,7 @@ export class TownChapter {
       this.farm.camera = follow.camera; // (to skip drawing the farm when it's lost in the fog)
       this.pack.onFarm = (m) => this.farm.handle(m);
     }
+    globalThis.__mark?.('setup: farm');
     // 🟤 Mud, from any area's muddy patches (the wood's, the farm's…): one coat of it per dog, friends see it,
     // a splash in water washes it off. (Prints sit on the ground you see.)
     const mudZones = (world.areas ?? []).flatMap((a) => a.mud ?? []);
@@ -174,6 +186,7 @@ export class TownChapter {
     this.player.frozen = true;
     if (welcome) { this.pack.attach(net, welcome); this.begin(); } // arrived via a pack link
     else this.showLobby();
+    globalThis.__mark?.('setup: mud, lobby');
   }
 
   // ---------- lobby & pack ----------

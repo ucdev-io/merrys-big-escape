@@ -410,7 +410,9 @@ export function buildTown(layout) {
   // The town's areas (the Woods…) are laid out first, so the ground can be flat and woodland-coloured under them.
   const areaData = layoutAreas(layout), flats = areaFlats(layout, TOWN.SIZE / 2 + 6, areaData);
   root.add(ground(flats, areaGround(areaData)));
+  globalThis.__mark?.('build: ground');
   streets(root, layout, rng, col, bones);
+  globalThis.__mark?.('build: streets');
 
   let spawn = new THREE.Vector3(0, 0, 0), spawnFace = 0, park = null;
   const otherHomes = []; // every other garden in town: one per dog in a pack
@@ -437,6 +439,7 @@ export function buildTown(layout) {
     else if (b.type === 'bakery') bakeryBlock(g, lc, br);
     else if (b.type === 'alley') alleyBlock(g, lc, br);
   }
+  globalThis.__mark?.('build: blocks (houses, park, pond, shops)');
 
   // Pigeons also hang about on the pavements.
   for (const b of layout.blocks) {
@@ -454,6 +457,7 @@ export function buildTown(layout) {
     if (!areaAt(layout.areas, t.position.x, t.position.z, 3) && areaClear(areaData, t.position.x, t.position.z)) root.add(t); // (an area has trees of its own, out of the way of its paths; none in the sea)
   }
   // The areas themselves: after everything else, so the town's own colliders and dice are just as they were.
+  globalThis.__mark?.('build: countryside');
   const areas = buildAreas(root, layout, areaData, col, extra, TOWN.SIZE / 2 + 4, flats);
 
   const sky = skyDome(190);
@@ -476,7 +480,9 @@ export function buildTown(layout) {
 
   const occluders = collectOccluders(root);
   const landmarks = collectLandmarks(root); // (houses, shops and trees, for the seasons)
+  globalThis.__mark?.('build: occluders, landmarks');
   const group = mergeStatic(root, { chunk: 45 });
+  globalThis.__mark?.('build: merge');
   const half = TOWN.SIZE / 2 + 4;
   return {
     group,

@@ -65,7 +65,9 @@ export function buildAreas(root, layout, data, col, extra, half, flats) {
       circle: (u, v, r, top, stand) => { const [x, z] = d.W(u, v); return col.circle(x, z, r, top, stand); },
       box: (u0, v0, u1, v1, top, stand) => { const r = worldRect(a, u0, v0, u1, v1); return col.box(r.x0, r.z0, r.x1, r.z1, top, stand); },
     };
-    return BUILDERS[d.kind](g, d, { C, extra, flats });
+    const built = BUILDERS[d.kind](g, d, { C, extra, flats });
+    globalThis.__mark?.(`build: ${d.kind}`);
+    return built;
   });
   // The hillsides beside each area are out of bounds.
   for (const f of areaFillers(layout.areas, half)) col.box(f.x0, f.z0, f.x1, f.z1);
