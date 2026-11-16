@@ -22,10 +22,14 @@ export class HUD {
     this.root = document.getElementById('hud');
     this.root.innerHTML = '';
 
+    // Top left: the current goal and, in the neighbourhood, the compass (beside it on a phone held
+    // sideways, under it on one held upright, top middle on a big screen). News notes go under them both.
+    this.topLeft = el('div', 'top-left');
+    this.root.appendChild(this.topLeft);
     // Current goal: pops open when it changes, then tucks away into a small icon. Tap to see it again.
     this.objective = el('button', 'objective');
     this.objective.onclick = () => this.expandObjective(this.objective.classList.contains('open') ? 0 : 9000, true);
-    this.root.appendChild(this.objective);
+    this.topLeft.appendChild(this.objective);
 
     this.prompt = el('div', 'prompt');
     this.root.appendChild(this.prompt);
@@ -41,8 +45,12 @@ export class HUD {
     this.root.appendChild(this.toasts);
     this.toast = null; // (the newest note: callers can fill in its words just after showToastRaw)
     window.addEventListener('resize', () => this.placeToasts());
+    const fit = window.ResizeObserver ? new ResizeObserver(() => this.placeToasts()) : null; // (the goal popping open, the compass coming and going, a pill more top right)
+    fit?.observe(this.topLeft);
 
     const tr = el('div', 'top-right');
+    this.topRight = tr;
+    fit?.observe(tr);
     this.bookBtn = el('button', 'pill book-btn');
     this.mischiefPill = el('div', 'pill mischief hidden');
     // One menu for everything that isn't playing: help, full screen, sound, vibration, title.
@@ -290,13 +298,15 @@ export class HUD {
   /** Not enough zoomies for a huge jump. */
   flashStamina() {
     this.stamina.classList.add('show', 'flash');
+    this._stShow = undefined; // (setStamina decides again next frame)
     clearTimeout(this._flashT);
     this._flashT = setTimeout(() => this.stamina.classList.remove('flash'), 700);
   }
 
   setStamina(v, active) {
-    this.stamina.classList.toggle('show', active || v < 0.98);
-    this.stamina.firstChild.style.width = `${Math.round(v * 100)}%`;
+    const show = active || v < 0.98, w = `${Math.round(v * 100)}%`;
+    if (show !== this._stShow) { this._stShow = show; this.stamina.classList.toggle('show', show); } // (every frame: only touch the page when it changes)
+    if (w !== this._stW) { this._stW = w; this.stamina.firstChild.style.width = w; }
   }
 
   showToast(key) {
@@ -340,10 +350,18 @@ export class HUD {
     t._hideT = setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 350); }, ms);
   }
 
-  /** The notes sit just under the goal panel (which grows when it pops open). */
+  /**
+   * The goal and compass (top left) keep clear of the pills top right, however wide those are on this
+   * phone; the notes sit just under them (and move when the goal pops open).
+   */
   placeToasts() {
-    const r = this.objective.getBoundingClientRect();
-    this.toasts.style.top = `${Math.round(r.height ? r.bottom + 6 : 64)}px`;
+    if (this.topRight) {
+      const room = `${Math.max(150, Math.floor(this.topRight.getBoundingClientRect().left - this.topLeft.getBoundingClientRect().left - 10))}px`;
+      if (room !== this._room) { this._room = room; this.topLeft.style.setProperty('--room', room); }
+    }
+    const r = this.topLeft.getBoundingClientRect();
+    const top = `${Math.round(r.height ? r.bottom + 6 : 64)}px`;
+    if (this.toasts.style.top !== top) this.toasts.style.top = top;
   }
 
   setFound(list, total) {

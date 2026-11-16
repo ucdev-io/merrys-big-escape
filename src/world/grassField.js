@@ -10,7 +10,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  */
 export class GrassField {
   constructor(scene, isLawn, { count = 7000, tile = 44, y = 0.05 } = {}) {
-    const blade = new THREE.ConeGeometry(0.014, 0.13, 3, 1);
+    const blade = new THREE.ConeGeometry(0.014, 0.13, 3, 1, true); // (open-ended: its base faces the ground, never seen)
     blade.translate(0, 0.065, 0);
     const parts = [0, 1, 2].map((i) => { const b = blade.clone(); b.rotateZ((i - 1) * 0.35); b.rotateY(i * 2.1); return b; });
     const geo = mergeGeometries(parts.map((p) => p.toNonIndexed()));
@@ -29,28 +29,40 @@ export class GrassField {
     const r = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
     const cols = [PALETTE.grass, PALETTE.grassLight, 0x8fb565].map((c) => new THREE.Color(c));
     this.items = [];
+    const e = new THREE.Euler();
     for (let i = 0; i < count; i++) {
-      this.items.push({ ox: r() * tile, oz: r() * tile, rot: r() * 6.28, s: 0.6 + r() * 0.7, sy: 0.7 + r() * 0.6, tx: (r() - 0.5) * 0.3, tz: (r() - 0.5) * 0.3 });
+      const it = { ox: r() * tile, oz: r() * tile, rot: r() * 6.28, s: 0.6 + r() * 0.7, sy: 0.7 + r() * 0.6, tx: (r() - 0.5) * 0.3, tz: (r() - 0.5) * 0.3 };
+      it.q = new THREE.Quaternion().setFromEuler(e.set(it.tx, it.rot, it.tz)); // (its lean never changes)
+      it.kx = it.kz = NaN; it.lawn = false; it.sc = -1; // (where it was last put, and how big)
+      this.items.push(it);
       this.mesh.setColorAt(i, cols[i % 3]);
     }
-    this._m = new THREE.Matrix4(); this._q = new THREE.Quaternion(); this._e = new THREE.Euler(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3();
+    this._m = new THREE.Matrix4(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3();
   }
 
+  /**
+   * Each tuft sits at its own spot plus a whole number of tiles, in the tile centred on the dog. As she
+   * walks, most tufts stay exactly where they are at full size, so only the few that wrap round to the
+   * far side, or fade in and out at the edge, are put again (and the lawn's only asked about new spots).
+   */
   update(px, pz) {
     if (Math.abs(px - this.last.x) < 0.5 && Math.abs(pz - this.last.y) < 0.5) return; // only when she's moved
     this.last.set(px, pz);
     const T = this.tile, half = T / 2;
+    let changed = false;
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
-      // Wrap each tuft into the tile centred on the dog.
-      const x = px + ((((it.ox - px) % T) + T * 1.5) % T) - half;
-      const z = pz + ((((it.oz - pz) % T) + T * 1.5) % T) - half;
-      const d = Math.hypot(x - px, z - pz);
-      let sc = this.isLawn(x, z) ? it.s * Math.min(1, Math.max(0, (half - d) / 4)) : 0;
-      this._q.setFromEuler(this._e.set(it.tx, it.rot, it.tz));
-      this._m.compose(this._p.set(x, this.y, z), this._q, this._s.set(sc, sc * it.sy, sc));
+      const kx = Math.ceil((px - half - it.ox) / T), kz = Math.ceil((pz - half - it.oz) / T);
+      const x = it.ox + kx * T, z = it.oz + kz * T;
+      const moved = kx !== it.kx || kz !== it.kz; // (wrapped round, or the dog popped somewhere new)
+      if (moved) { it.kx = kx; it.kz = kz; it.lawn = this.isLawn(x, z); }
+      const sc = it.lawn ? it.s * Math.min(1, Math.max(0, (half - Math.hypot(x - px, z - pz)) / 4)) : 0;
+      if (sc === it.sc && !moved) continue;
+      it.sc = sc;
+      this._m.compose(this._p.set(x, this.y, z), it.q, this._s.set(sc, sc * it.sy, sc));
       this.mesh.setMatrixAt(i, this._m);
+      changed = true;
     }
-    this.mesh.instanceMatrix.needsUpdate = true;
+    if (changed) this.mesh.instanceMatrix.needsUpdate = true;
   }
 }

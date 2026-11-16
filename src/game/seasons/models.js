@@ -6,6 +6,10 @@ import { paint } from '../../render/watercolorMaterial.js';
 // Models for the seasons' things to do: baked into single geometries (vertex colours), so a whole
 // set of them (every snowman, every pumpkin…) can be one instanced mesh — one draw call.
 
+// Small things don't need the shared 660-triangle sphere: a leaf is 9 cm across, a conker 4 cm.
+const LEAF = new THREE.SphereGeometry(1, 8, 5);   // 64 triangles
+const HEAP = new THREE.SphereGeometry(1, 18, 9);  // 288
+const SMALL = new THREE.SphereGeometry(1, 12, 8); // 168
 const CYL = (r0, r1, h, n = 12) => new THREE.CylinderGeometry(r0, r1, h, n);
 const CONE = (r, h, n = 10) => new THREE.ConeGeometry(r, h, n);
 const RB = (w, h, d, r = 0.02) => new RoundedBoxGeometry(w, h, d, 2, r);
@@ -173,15 +177,15 @@ export function leafPileGeometry(seed = 1) {
   const parts = [];
   for (let i = 0; i < 46; i++) {
     const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 0.5, h = Math.max(0, 0.32 * (1 - (d / 0.5) ** 1.6));
-    parts.push([SPHERE, AUTUMN[i % AUTUMN.length], [Math.cos(a) * d, h * (0.6 + r() * 0.5) + 0.02, Math.sin(a) * d], [r() * 1.2 - 0.6, r() * 6, r() * 1.2 - 0.6], [0.09, 0.016, 0.055]]);
+    parts.push([LEAF, AUTUMN[i % AUTUMN.length], [Math.cos(a) * d, h * (0.6 + r() * 0.5) + 0.02, Math.sin(a) * d], [r() * 1.2 - 0.6, r() * 6, r() * 1.2 - 0.6], [0.09, 0.016, 0.055]]);
   }
-  parts.push([SPHERE, 0xb8743a, [0, 0.06, 0], [0, 0, 0], [0.42, 0.13, 0.38]]); // (the heap under them)
-  return bake(parts);
+  parts.push([HEAP, 0xb8743a, [0, 0.06, 0], [0, 0, 0], [0.42, 0.13, 0.38]]); // (the heap under them)
+  return bake(parts); // (3,200 triangles: it was 31,000, and every pile in town is drawn every frame)
 }
 
 /** A shiny conker (with its pale spot). */
 export function conkerGeometry() {
-  return bake([[SPHERE, 0x6b3417, [0, 0.035, 0], [0, 0, 0], [0.04, 0.035, 0.038]], [SPHERE, 0xc9a57a, [0, 0.062, 0.006], [0, 0, 0], [0.018, 0.006, 0.016]]]);
+  return bake([[SMALL, 0x6b3417, [0, 0.035, 0], [0, 0, 0], [0.04, 0.035, 0.038]], [SMALL, 0xc9a57a, [0, 0.062, 0.006], [0, 0, 0], [0.018, 0.006, 0.016]]]);
 }
 
 /** A spiky conker case, split open. */

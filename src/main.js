@@ -277,7 +277,9 @@ const timer = new THREE.Timer();
 function frame(now) {
   if (leaving) return; // (on the way out: the picture's been let go)
   timer.update(now);
-  const raw = timer.getDelta(), dt = Math.min(raw, 1 / 20);
+  // (Never backwards: after a long build, the first frame can come stamped with a time from before the
+  // clock started, and a step back in time sank the dog under the ground and flung the camera far away.)
+  const raw = Math.max(0, timer.getDelta()), dt = Math.min(raw, 1 / 20);
   const t = timer.getElapsed();
 
   player.update(dt, input, follow.yaw, world);
@@ -306,7 +308,22 @@ function frame(now) {
       build: Math.round(builtAt - buildT0), setup: Math.round(setupAt - builtAt), first: Math.round(firstMs),
       programs: renderer.info.programs?.length, geometries: renderer.info.memory.geometries, px: `${canvas.width}x${canvas.height}`, steps,
     });
-    warm = { t0: now, frames: 0, long: 0, worst: 0 };
+    warm = { t0: now, frames: 0, long: 0, worst: 0, programs: renderer.info.programs?.length };
+    // Now get the shader for everything else in the world ready, in the background: otherwise the
+    // first time something new comes into view (a pond, the beach, a hidden prop) that frame stalls while
+    // its shader's made. Made for the scene's own picture (what the paint pass reads), so they're the very
+    // ones used. (A browser that can't make shaders in the background makes them all here, at once, while
+    // you're still at the start.)
+    setTimeout(() => {
+      if (leaving) return;
+      const t0 = performance.now(), before = renderer.info.programs?.length;
+      try {
+        renderer.setRenderTarget(pipeline.params.enabled ? pipeline.sceneRT : null);
+        renderer.compileAsync(scene, camera).then(() => {
+          if (warm) warm.made = { programs: (renderer.info.programs?.length ?? 0) - (before ?? 0), ms: Math.round(performance.now() - t0) };
+        }, () => {});
+      } catch { /* not this time */ } finally { renderer.setRenderTarget(null); }
+    }, 250);
   } else if (warm && !warm.done) {
     // The first ten seconds of play: how smooth (a stutter is often a shader being made the first time
     // something comes into view).
@@ -316,7 +333,7 @@ function frame(now) {
     if (now - warm.t0 >= 10000) {
       warm.done = true;
       window.__report?.('warm', `${Math.round((warm.frames * 1000) / (now - warm.t0))} fps over the first 10 s`, {
-        stutters: warm.long, worst: Math.round(warm.worst * 1000), programs: renderer.info.programs?.length, step: pipeline.level, dpr: pixelRatio,
+        stutters: warm.long, worst: Math.round(warm.worst * 1000), programs: renderer.info.programs?.length, early: warm.programs, made: warm.made ?? null, step: pipeline.level, dpr: pixelRatio,
       });
     }
   }

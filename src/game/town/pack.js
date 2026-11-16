@@ -244,7 +244,7 @@ export class Pack {
     if (!this.net) { this.badge.classList.add('hidden'); return; }
     this.badge.classList.remove('hidden');
     const n = this.remotes.dogs.size + 1;
-    this.badge.textContent = n === 1 ? '👥 Just you' : `👥 ${n} dogs`;
+    this.badge.innerHTML = `👥 <span class="lbl">${n === 1 ? 'Just you' : `${n} dogs`}</span><span class="num">${n}</span>`; // (a phone shows just the number)
     this.badge.title = `Pack ${this.code}`;
   }
 }

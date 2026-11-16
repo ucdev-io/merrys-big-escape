@@ -281,7 +281,7 @@ export function steppingStones(points, rng) {
 
 /** Thousands of grass tufts in one draw call. `accept(x,z)` filters placement. */
 export function grassTufts(count, area, rng, accept = () => true) {
-  const blade = new THREE.ConeGeometry(0.014, 0.13, 3, 1);
+  const blade = new THREE.ConeGeometry(0.014, 0.13, 3, 1, true); // (open-ended: its base faces the ground, never seen)
   blade.translate(0, 0.065, 0);
   const parts = [];
   for (let i = 0; i < 3; i++) {

@@ -2,6 +2,9 @@
   --paper: #f6efe0;
   --ink: #3b2b25;
   --wash: rgba(246, 239, 224, 0.86);
+  /* Everything that floats over the world while playing is see-through, so the world shows */
+  --glass: rgba(246, 239, 224, 0.66);
+  --glass-line: rgba(59, 43, 37, 0.18);
   --accent: #e9c99a;
   --wobbly: 18px 22px 16px 24px / 22px 16px 24px 18px;
 }
@@ -21,7 +24,7 @@ button { font: inherit; color: var(--ink); }
 /* Objective */
 .objective {
   position: absolute; left: 16px; top: 14px; max-width: min(440px, calc(100vw - 32px));
-  padding: 8px 16px 10px; background: var(--wash); border-radius: var(--wobbly);
+  padding: 8px 16px 10px; background: var(--glass); border-radius: var(--wobbly);
   box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
 }
 .objective.pulse { animation: pulse 0.6s ease-out; }
@@ -32,18 +35,20 @@ button { font: inherit; color: var(--ink); }
 
 .top-right { position: absolute; right: 16px; top: 14px; display: flex; gap: 8px; }
 
-/* Prompt */
+/* Prompt: what you can do right here. Light and see-through like the news notes (it was a dark bar) */
 .prompt {
   position: absolute; left: 50%; bottom: 120px; transform: translate(-50%, 10px); opacity: 0;
-  background: var(--ink); color: var(--paper); font-size: 24px; padding: 6px 18px; border-radius: var(--wobbly);
-  transition: opacity 0.2s, transform 0.2s; white-space: nowrap;
+  width: max-content; max-width: min(560px, calc(100vw - 32px)); text-align: center;
+  background: var(--glass); color: var(--ink); font-size: 20px; line-height: 1.2; padding: 3px 14px 4px;
+  border: 1.5px solid var(--glass-line); border-radius: 14px;
+  transition: opacity 0.2s, transform 0.2s;
 }
-.prompt.show { opacity: 0.92; transform: translate(-50%, 0); }
+.prompt.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* Stamina */
 .stamina {
   position: absolute; left: 50%; bottom: 84px; width: 180px; height: 18px; transform: translateX(-50%);
-  background: var(--wash); border-radius: 10px; border: 2px solid rgba(59, 43, 37, 0.3); overflow: hidden;
+  background: var(--glass); border-radius: 10px; border: 2px solid rgba(59, 43, 37, 0.3); overflow: hidden;
   opacity: 0; transition: opacity 0.3s;
 }
 .stamina.show { opacity: 1; }
@@ -54,7 +59,7 @@ button { font: inherit; color: var(--ink); }
 @keyframes shake { 25% { transform: translateX(calc(-50% - 6px)); } 75% { transform: translateX(calc(-50% + 6px)); } }
 /* Snack power-ups, to the right of the zoomies bar */
 .boosts { position: absolute; left: calc(50% + 98px); bottom: 81px; display: flex; gap: 5px; pointer-events: none; }
-.boost { background: var(--wash); border: 2px solid rgba(59, 43, 37, 0.3); border-radius: 12px; padding: 0 8px; font-size: 16px; line-height: 20px; white-space: nowrap; }
+.boost { background: var(--glass); border: 2px solid rgba(59, 43, 37, 0.3); border-radius: 12px; padding: 0 8px; font-size: 16px; line-height: 20px; white-space: nowrap; }
 .boost.ending { animation: blinky 0.4s infinite alternate; }
 @keyframes blinky { to { opacity: 0.35; } }
 body.touch-mode .boosts { bottom: 177px; }
@@ -72,7 +77,7 @@ body.touch-mode .boosts { bottom: 177px; }
 /* Games with friends */
 .game-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
 .game-btns .pill small { display: block; font-size: 13px; opacity: 0.75; }
-.game-banner { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--wash); border-radius: var(--wobbly); padding: 4px 16px; font-size: 20px; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); white-space: nowrap; }
+.game-banner { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--glass); border-radius: var(--wobbly); padding: 4px 16px; font-size: 20px; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); white-space: nowrap; }
 .game-banner.big { top: 30%; font-size: 64px; padding: 8px 28px; }
 .big-card .results { text-align: left; display: inline-block; font-size: 19px; line-height: 1.6; list-style: none; padding-left: 0; }
 /* Games & challenges, and the 🏆 family records */
@@ -162,13 +167,12 @@ body.touch-mode .touch { display: block; }
 .knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: var(--wash); border: 3px solid rgba(59, 43, 37, 0.45); }
 .buttons { position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(2, 76px); gap: 10px; }
 .buttons button {
-  pointer-events: auto; width: 76px; height: 76px; border-radius: 50%; border: 3px solid rgba(59, 43, 37, 0.35);
-  background: var(--wash); font-size: 15px; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none;
+  pointer-events: auto; width: 76px; height: 76px; border-radius: 50%; border: 2.5px solid rgba(59, 43, 37, 0.3);
+  background: rgba(246, 239, 224, 0.42); font-size: 15px; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; touch-action: none;
+  text-shadow: 0 0 3px rgba(246, 239, 224, 0.95), 0 0 6px rgba(246, 239, 224, 0.8); /* (the words stay readable over the world) */
 }
 .buttons button span { font-size: 28px; margin-bottom: 2px; }
 .buttons button.down { background: var(--accent); transform: scale(0.94); }
-body.touch-mode .prompt { bottom: 200px; }
-body.touch-mode .stamina { bottom: 180px; }
 @media (max-width: 600px) {
   .obj-text { font-size: 18px; }
   .objective { padding: 6px 12px 8px; max-width: calc(100vw - 140px); }
@@ -190,15 +194,15 @@ body.touch-mode .stamina { bottom: 180px; }
 .bubble.offscreen::after { display: none; }
 .bubble.offscreen.cat::before { content: "🐱  "; } /* (Pickles; everyone in town says their own emoji) */
 
-/* Compass toward the next place */
+/* Compass toward the next place: top middle on a big screen; on a phone it goes with the goal, top left
+   (it's in .top-left, so 'fixed' here keeps it in the middle of the screen) */
 .compass {
-  position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+  position: fixed; left: 50%; top: 14px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 8px; padding: 4px 14px 4px 8px;
-  background: var(--wash); border-radius: var(--wobbly); box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
+  background: var(--glass); border-radius: var(--wobbly); box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
 }
 .compass .arrow { font-size: 26px; line-height: 1; transition: transform 0.15s linear; color: #c9783a; }
 .compass .label { font-size: 18px; white-space: nowrap; }
-@media (max-width: 600px) { .compass { top: auto; bottom: 200px; } }
 
 /* Lobby: sits to the right so your dog stays visible on the left */
 .lobby { position: absolute; inset: 0; display: flex; align-items: center; justify-content: flex-end; padding: 16px; pointer-events: none; }
@@ -258,8 +262,9 @@ body.touch-mode .stamina { bottom: 180px; }
   .lobby .blurb { font-size: 15px; margin: 4px 0; min-height: 0; }
   .lobby .dogrow { max-height: 76px; }
 }
-/* No joystick or buttons while choosing a dog or on the title screen. */
-body:has(.lobby) .touch, body:has(.title-screen) .touch { display: none; }
+/* No joystick or buttons while choosing a dog, on the title screen, or reading a card or the Sniff Book
+   (on a phone held sideways they sat over the card's words). */
+body:has(.lobby) .touch, body:has(.title-screen) .touch, body:has(.big-card:not(.hidden)) .touch, body:has(.sniff-book:not(.hidden)) .touch { display: none; }
 @media (max-width: 700px) {
   .lobby { align-items: flex-end; justify-content: center; padding: 8px; }
   .lobby .page { margin: 0; max-height: 62vh; padding: 12px 14px; }
@@ -349,7 +354,6 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .ios-share { display: inline-block; border: 1.5px solid currentColor; border-radius: 4px; padding: 0 4px; font-size: 14px; }
 @media (max-width: 600px) {
   .book-btn .lbl { display: none; }
-  .compass { top: auto; bottom: calc(200px + var(--sa-b)); }
 }
 
 /* Friends playing now */
@@ -426,15 +430,7 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .witem:disabled { opacity: 0.45; cursor: default; }
 @media (max-width: 600px) { .xp-pill .bar { width: 30px; } .stats { grid-template-columns: repeat(2, 1fr); } }
 
-/* (Last, so it wins over the safe-area spacing above.) Phones held sideways: the zoomies bar and prompts sit at the bottom middle, between the joystick and
-   the buttons (not floating over the dog), and so does the compass (at the top it covered the buttons there). */
-@media (max-height: 520px) {
-  body.touch-mode .stamina { bottom: calc(14px + var(--sa-b)); }
-  body.touch-mode .boosts { bottom: calc(11px + var(--sa-b)); }
-  body.touch-mode .prompt { bottom: calc(44px + var(--sa-b)); }
-  .compass { top: auto; bottom: calc(92px + var(--sa-b)); }
-  .book-btn .lbl { display: none; }
-}
+@media (max-height: 520px) { .book-btn .lbl { display: none; } }
 
 /* 📋 The Lost & Found board: pick a job */
 .job-offers { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 2px; }
@@ -453,7 +449,7 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .lookout.look { font-size: 50px; }
 @keyframes lookwarn { from { margin-top: 0; } to { margin-top: -8px; } }
 /* Heists: a tug of war over the butcher's sausages (your side fills from the left) */
-.tug-meter { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--wash); border-radius: var(--wobbly);
+.tug-meter { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--glass); border-radius: var(--wobbly);
   padding: 4px 14px 8px; text-align: center; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); }
 .tug-meter .tug-text { font-size: 18px; white-space: nowrap; }
 .tug-bar { width: min(260px, 70vw); height: 14px; margin-top: 4px; border-radius: 7px; background: #c4786c; overflow: hidden; border: 2px solid rgba(59, 43, 37, 0.3); }
@@ -500,4 +496,62 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
   .floater.xp, .floater.sniff { font-size: 16px; }
   .floater.dig { font-size: 17px; }
   .name-tag { font-size: 12px; padding: 0 5px; }
+}
+
+/* ---------- The playing screen's layout ---------- */
+/* Top left: the goal, then the compass (in .top-left; on a big screen the compass sits top middle) */
+.top-left {
+  position: absolute; left: calc(16px + var(--sa-l)); top: calc(14px + var(--sa-t));
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px 8px;
+  max-width: var(--room, calc(100vw - 150px)); /* (--room: up to the pills top right, measured by the HUD) */
+}
+.top-left > .objective { position: relative; left: 0; top: 0; max-width: min(460px, 100%); }
+.top-right .pill { background: var(--glass); border-color: var(--glass-line); }
+.pack-badge .num { display: none; }
+
+/* Phones, either way up: smaller see-through pills (the friends pill just says how many dogs) */
+@media (max-width: 700px), (max-height: 520px) {
+  .top-right { gap: 6px; }
+  .top-right .pill { font-size: 16px; padding: 2px 9px 3px; }
+  .top-right .pill.menu-btn { font-size: 18px; padding: 0 10px 1px; }
+  .xp-pill .bar { width: 30px; }
+  .pack-badge .lbl { display: none; }
+  .pack-badge .num { display: inline; }
+  .compass { padding: 2px 10px 3px 6px; gap: 5px; border-radius: 999px; }
+  .compass .arrow { font-size: 20px; }
+  .compass .label { font-size: 15px; }
+  .prompt { font-size: 16px; padding: 2px 11px 3px; border-radius: 11px; }
+  .game-banner:not(.big) { font-size: 16px; padding: 2px 12px 3px; }
+  .tug-meter { padding: 2px 10px 5px; }
+  .tug-meter .tug-text { font-size: 15px; }
+}
+
+/* Phones held upright: the compass under the goal; the zoomies bar over the joystick and the prompt over
+   the buttons (in the middle they were on top of the Jump button); a game's scores at the top. */
+@media (max-width: 600px) {
+  .top-left { flex-direction: column; }
+  .compass { position: static; transform: none; }
+  body.touch-mode .stamina { left: calc(16px + var(--sa-l)); transform: none; width: 140px; bottom: calc(184px + var(--sa-b)); }
+  body.touch-mode .stamina.flash { animation-name: shake-left; }
+  body.touch-mode .boosts { left: calc(16px + var(--sa-l)); bottom: calc(208px + var(--sa-b)); }
+  body.touch-mode .prompt { bottom: calc(262px + var(--sa-b)); }
+  .game-banner:not(.big), .tug-meter { top: calc(14px + var(--sa-t)); max-width: calc(100vw - 200px); white-space: normal; text-align: center; }
+  .tug-meter .tug-text { white-space: normal; }
+  .tug-bar { width: min(240px, calc(100vw - 230px)); }
+}
+@keyframes shake-left { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+/* Phones held sideways: the compass in the top row beside the goal (it floated under the dog), the
+   prompt and zoomies bar low in the middle between the joystick and the buttons, smaller buttons. */
+@media (max-height: 520px) {
+  .top-left { flex-direction: row; }
+  .compass { position: static; transform: none; }
+  body.touch-mode .stamina { bottom: calc(10px + var(--sa-b)); }
+  body.touch-mode .boosts { bottom: calc(7px + var(--sa-b)); }
+  body.touch-mode .prompt { bottom: calc(36px + var(--sa-b)); max-width: calc(100vw - 340px - var(--sa-l) - var(--sa-r)); }
+  .buttons { grid-template-columns: repeat(2, 64px); gap: 8px; }
+  .buttons button { width: 64px; height: 64px; font-size: 13px; }
+  .buttons button span { font-size: 24px; }
+  .buttons button.jump { height: 50px; }
+  .toasts { max-width: min(300px, 42vw); }
 }

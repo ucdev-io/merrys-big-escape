@@ -57,7 +57,7 @@ export class TownChapter {
     this.compass = document.createElement('div');
     this.compass.className = 'compass hidden';
     this.compass.innerHTML = '<div class="arrow">➤</div><div class="label"></div>';
-    hud.root.appendChild(this.compass);
+    hud.topLeft.appendChild(this.compass); // (with the goal: see the HUD's top left)
 
     this.actions = new DogActions({
       scene, hud, input, player, pipeline, world,
@@ -453,9 +453,10 @@ export class TownChapter {
       const fx = -Math.sin(yaw), fz = -Math.cos(yaw), rx = -fz, rz = fx;
       const dx = aim.x - pos.x, dz = aim.z - pos.z;
       const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz);
-      this.compass.classList.remove('hidden');
-      this.compass.firstChild.style.transform = `rotate(${ang - Math.PI / 2}rad)`;
-      this.compass.lastChild.innerHTML = `${aim.label} · ${Math.round(Math.hypot(dx, dz))}m`;
-    } else this.compass.classList.add('hidden');
+      if (this.compass.classList.contains('hidden')) this.compass.classList.remove('hidden');
+      this.compass.firstChild.style.transform = `rotate(${(ang - Math.PI / 2).toFixed(2)}rad)`;
+      const label = `${aim.label} · ${Math.round(Math.hypot(dx, dz))}m`;
+      if (label !== this.compassLabel) { this.compassLabel = label; this.compass.lastChild.innerHTML = label; } // (only when it changes: new words mean the page lays itself out again)
+    } else if (!this.compass.classList.contains('hidden')) this.compass.classList.add('hidden');
   }
 }
