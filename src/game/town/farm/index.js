@@ -375,6 +375,8 @@ export class Farm {
     // No word from the pack's shepherd for a while (their phone's asleep?): offer to run the sheep ourselves.
     this.nudgeT -= dt;
     if (this.pack.net && !this.room && !this.flock.host && near && this.flock.time - (this.flock.heard ?? 0) > 3 && this.nudgeT <= 0) { this.nudgeT = 3; this.send({ a: 'nudge' }); }
+    const penned = this.flock.penned; // (the round-up job's count, in the goal panel)
+    if (penned !== this.lastPenned) { this.lastPenned = penned; if (this.farmer.job?.kind === 'sheep') this.friends.onChange?.(); }
     this.hens.update(dt, dogs, near);
     this.pigs.update(dt, dogs, near || this.pigs.percy.out);
     this.crops.update(P.pos);
