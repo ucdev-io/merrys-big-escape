@@ -22,7 +22,7 @@ const SEP = 1.0;          // sheep keep about this far apart
 const HOLD = 32;          // seconds the sheep stay penned before the farmer lets them out
 const SEND = 0.12, SEND_CALM = 0.8;
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const _root = new THREE.Matrix4(), _m = new THREE.Matrix4(), _c = new THREE.Color();
+const _root = new THREE.Matrix4(), _m = new THREE.Matrix4();
 const BLACK = new THREE.Color(0.33, 0.3, 0.3), WHITE = new THREE.Color(1, 1, 1);
 export const LIQUORICE = FLOCK - 1; // the black sheep (she's last of the grown-ups)
 

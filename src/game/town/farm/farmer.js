@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { bakedMesh, group } from '../../../entities/shapes.js';
 import { RNG } from '../../../core/rng.js';
-import { sfx } from '../../../core/audio.js';
 import { buzz } from '../../../core/haptics.js';
 import { LineBag, fill } from '../../dialogue.js';
 import { progress } from '../../progress.js';
