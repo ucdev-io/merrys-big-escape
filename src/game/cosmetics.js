@@ -50,6 +50,11 @@ COSMETICS.push(
   { id: 'neck-bracken', slot: 'neck', name: 'Brock’s bracken bandana', emoji: '🦡', color: 0xb5713a, level: 1, friend: 'badger', jobs: 3, hint: 'Help Brock the badger 3 times', boost: { speed: 1, zoomies: 2 } },
   { id: 'collar-twig', slot: 'collar', name: 'Den builder’s collar', emoji: '🪵', color: 0x7f5f45, level: 1, friend: 'den', jobs: 10, hint: 'Bring 10 big sticks to the den', boost: { speed: 2, zoomies: 1 } },
 );
+// Prizes from the Farm: Farmer Mabel's thank-you, and one for rounding up the sheep (in a pack or alone).
+COSMETICS.push(
+  { id: 'hat-straw', slot: 'hat', name: 'Farmer Mabel’s straw hat', emoji: '👒', color: 0xe8cf86, level: 1, friend: 'farmer', jobs: 3, hint: 'Help Farmer Mabel 3 times', boost: { speed: 1, zoomies: 2 } },
+  { id: 'neck-woolly', slot: 'neck', name: 'Woolly scarf', emoji: '🧣', color: 0xd9534f, level: 1, friend: 'flock', jobs: 5, hint: 'Round up the sheep 5 times', style: 'scarf', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

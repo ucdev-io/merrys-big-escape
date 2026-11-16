@@ -7,6 +7,7 @@ import { LineBag } from '../dialogue.js';
 import { SMELLS, smellWeights, POND_SMELLS } from '../lines/smells.js';
 import { season } from '../season.js';
 import { WOODS_SMELLS, WOODS_SMELL_WEIGHTS, WOODS_SEASON_SMELLS } from '../lines/woods.js';
+import { FARM_SMELLS, FARM_SMELL_WEIGHTS, FARM_SEASON_SMELLS } from '../lines/farm.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const H = TOWN.BLOCK / 2;
@@ -17,6 +18,8 @@ const now = () => performance.now() / 1000;
 // Out in the town's areas, spots smell of things from the area's own list (where: the area's kind).
 const AREA_SMELLS = { woods: { weights: WOODS_SMELL_WEIGHTS, seasons: WOODS_SEASON_SMELLS } };
 const INFO = { ...SMELLS, ...WOODS_SMELLS };
+AREA_SMELLS.farm = { weights: FARM_SMELL_WEIGHTS, seasons: FARM_SEASON_SMELLS }; // 🚜 the farm's own
+Object.assign(INFO, FARM_SMELLS);
 
 
 /**

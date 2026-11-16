@@ -81,6 +81,9 @@ export const JOB_TYPES = {
   },
 };
 
+// 🚜 Things get lost on the Farm too (out past the edge of town, like the woods): a walk, but worth it.
+for (const k of ['fetch', 'sniff', 'dig']) JOB_TYPES[k].wheres.push('farm');
+
 // 🍂❄️ Seasonal jobs (their things to carry, and the 'blown' step, are in ../../seasons/jobs.js).
 //   when    only then: { seasons: [...], weather: ['showers', …], festive: 'christmas' }
 //   from    (pickups) where the thing's waiting: 'tree' = under the big Christmas tree in the park

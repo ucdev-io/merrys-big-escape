@@ -44,6 +44,7 @@ export class JobWorld {
     this.places = Object.fromEntries(world.layout.places.filter((p) => p.type !== 'home').map((p) => [p.type, p]));
     this.pond = world.water?.find((w) => w.kind === 'pond') ?? null;
     this.woods = world.areas?.find((a) => a.kind === 'woods') ?? null; // (out past the edge of town)
+    this.farm = world.areas?.find((a) => a.kind === 'farm') ?? null;
     const bk = this.places.bakery;
     const shop = bk && world.gardens.find((g) => !g.front && !g.home && Math.abs(g.door.x - bk.x) < H + 2 && Math.abs(g.door.z - bk.z) < H + 2);
     // (She's the baker at her stall in the heists, too: world.heist.bakery.baker is where she stands.)
@@ -124,6 +125,10 @@ export class JobWorld {
     if (kind === 'woods') {
       const w = this.woods;
       return w && { kind, far: true, name: `in ${w.name}`, spot: (q) => { const s = w.spot(q); return s && this.clear(s.x, s.z) ? s : null; } };
+    }
+    if (kind === 'farm') { // (on the farm: in the fields, the orchard, round the yard…)
+      const f = this.farm;
+      return f && { kind, far: true, name: `on ${f.name}`, spot: (q) => { const s = f.spot(q); return s && this.clear(s.x, s.z) ? s : null; } };
     }
     if (kind === 'garden' || kind === 'street') {
       const h = house ?? rng.pick(this.houses);

@@ -250,6 +250,7 @@ export class HUD {
         <li><b>🍔 BBQ parties!</b> Now and then someone has a barbecue in their garden (follow the smoke). The cook keeps turning round to chat… that's your chance.</li>
         <li>Water is for paddling. Expect a wet-dog shake.</li>
         <li><b>🌲 The Woods!</b> Follow the lane out past the edge of town. Woof to wake the owl, help Brock the badger, and carry BIG sticks to the den (go straight at gaps!): the whole pack builds it. Mud is glorious; a paddle in the stream washes it off.</li>
+        <li><b>🚜 The Farm!</b> Out past another edge of town. Help <b>Farmer Mabel</b>, round the sheep into their pen (get behind them; friends can help), shoo Percy the pig home, climb the hay, and roll in the mud with the pigs. A paddle in the duck pond washes it off.</li>
         <li><b>🌦️ Seasons!</b> The town follows the real calendar (or pick one in ☰ → Seasons): snowmen, sledging and a frozen pond in winter, leaf piles and conkers in autumn, an egg hunt in spring, paddling pools in summer.</li>
         <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);
