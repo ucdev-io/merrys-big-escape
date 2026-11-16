@@ -11,7 +11,6 @@ import { FARMER, SHEEP, HENS, PIGS, CROW, HAY } from '../../lines/farm.js';
 import { worldRect, inRect } from '../../../world/areas/areas.js';
 import { sheepGeometry, SHEEP as RIG, crowGeometry, instancedPart, rootMatrix, partMatrix } from '../../../entities/farmAnimals.js';
 import { bake, bakedMat } from '../../../entities/shapes.js';
-import { paint } from '../../../render/watercolorMaterial.js';
 import { Flock } from './flock.js';
 import { Hens } from './hens.js';
 import { Pigs } from './pigs.js';
