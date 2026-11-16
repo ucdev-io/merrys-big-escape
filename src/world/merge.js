@@ -43,6 +43,61 @@ function treeRandom(o) {
   return spotRandom(_v.x, _v.z);
 }
 
+/**
+ * One bucket's pieces as one shape: their attributes end to end, and their indices, if any has one (a
+ * piece without gets a plain 0, 1, 2… run). Quicker than BufferGeometryUtils for big indexed merges,
+ * which matters on a phone; anything unusual (mismatched attribute types) goes to mergeGeometries.
+ */
+function mergeBucket(geos) {
+  const names = Object.keys(geos[0].attributes);
+  const odd = geos.some((g) => Object.keys(g.attributes).length !== names.length || names.some((k) => {
+    const a = g.attributes[k], f = geos[0].attributes[k];
+    return !a || a.isInterleavedBufferAttribute || a.array.constructor !== f.array.constructor || a.itemSize !== f.itemSize || a.normalized !== f.normalized;
+  }));
+  if (odd) {
+    if (geos.some((g) => g.index)) for (const g of geos) if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
+    return mergeGeometries(geos, false);
+  }
+  let nv = 0, ni = 0;
+  for (const g of geos) { const n = g.attributes.position.count; nv += n; ni += g.index ? g.index.count : n; }
+  const out = new THREE.BufferGeometry();
+  for (const k of names) {
+    const f = geos[0].attributes[k], arr = new f.array.constructor(nv * f.itemSize);
+    let o = 0;
+    for (const g of geos) { const a = g.attributes[k].array; arr.set(a, o); o += a.length; }
+    out.setAttribute(k, new THREE.BufferAttribute(arr, f.itemSize, f.normalized));
+  }
+  if (geos.some((g) => g.index)) {
+    const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+    let o = 0, base = 0;
+    for (const g of geos) {
+      const n = g.attributes.position.count;
+      if (g.index) { const s = g.index.array; for (let j = 0; j < s.length; j++) idx[o + j] = s[j] + base; o += s.length; }
+      else { for (let j = 0; j < n; j++) idx[o + j] = base + j; o += n; }
+      base += n;
+    }
+    out.setIndex(new THREE.BufferAttribute(idx, 1));
+  }
+  return out;
+}
+
+/**
+ * Once a merged shape has gone to the graphics chip, the copy kept here is never read again: let it go
+ * (it's the biggest thing a town keeps in memory). Its bounds are worked out first, for culling. If the
+ * picture is ever lost and comes back, the page starts again (main.js), as the shapes can't be resent.
+ */
+function dropArray() { this.array = null; }
+function lighten(g) {
+  g.computeBoundingSphere();
+  g.computeBoundingBox();
+  // (Asked for its bounds again later, a shape whose copy has gone keeps the ones it has.)
+  const sphere = g.computeBoundingSphere, box = g.computeBoundingBox;
+  g.computeBoundingSphere = function () { if (this.attributes.position.array) sphere.call(this); };
+  g.computeBoundingBox = function () { if (this.attributes.position.array) box.call(this); };
+  for (const a of Object.values(g.attributes)) a.onUpload(dropArray);
+  g.index?.onUpload(dropArray);
+}
+
 export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
   root.updateMatrixWorld(true);
   const buckets = new Map();
@@ -68,8 +123,24 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
     for (let i = 0; i < n; i++) {
       _m.copy(o.matrixWorld);
       if (o.isInstancedMesh) { o.getMatrixAt(i, _im); _m.multiply(_im); }
-      let g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
-      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color', 'wcKind'].includes(k)) g.deleteAttribute(k);
+      // Shared corners stay shared (a sphere has a third of the vertices that way: less memory, which is
+      // what phones run short of). Only what's kept is copied, once: position and normal (they're moved
+      // into place); the index and season kind are only read, so they're shared. A shape without normals
+      // is split up first, so the ones worked out for it stay flat, as they always were.
+      const shape = o.geometry, A = shape.attributes;
+      let g, colours;
+      if ((shape.index && !A.normal) || Object.values(A).some((a) => a.isInterleavedBufferAttribute)) {
+        g = shape.index ? shape.toNonIndexed() : shape.clone();
+        for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'color', 'wcKind'].includes(k)) g.deleteAttribute(k);
+        colours = g.attributes.color;
+      } else {
+        g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(A.position.array.slice(), 3));
+        if (A.normal) g.setAttribute('normal', new THREE.BufferAttribute(A.normal.array.slice(), 3, A.normal.normalized));
+        if (A.wcKind) g.setAttribute('wcKind', A.wcKind);
+        if (shape.index) g.setIndex(shape.index);
+        colours = A.color;
+      }
       if (!g.attributes.normal) g.computeVertexNormals();
       g.applyMatrix4(_m);
 
@@ -77,7 +148,7 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
       _c.copy(mat.color);
       if (o.isInstancedMesh && o.instanceColor) { const ic = new THREE.Color(); o.getColorAt(i, ic); _c.multiply(ic); }
       const count = g.attributes.position.count;
-      const src = mat.vertexColors && g.attributes.color ? g.attributes.color : null;
+      const src = mat.vertexColors && colours ? colours : null;
       const col = new Float32Array(count * 3);
       for (let k = 0; k < count; k++) {
         const r = src ? src.getX(k) : 1, gg = src ? src.getY(k) : 1, b = src ? src.getZ(k) : 1;
@@ -95,10 +166,13 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
   });
 
   const out = new THREE.Group();
-  for (const { mat, cast, geos } of buckets.values()) {
-    const merged = mergeGeometries(geos, false);
+  for (const b of buckets.values()) {
+    const { mat, cast, geos } = b;
+    const merged = mergeBucket(geos);
     geos.forEach((g) => g.dispose());
+    b.geos = null; // (the pieces can go before the next bucket is merged: a lower peak while a phone builds)
     if (!merged) continue;
+    lighten(merged);
     const m = new THREE.Mesh(merged, paint(0xffffff, {
       vertexColors: true, transparent: mat.transparent, opacity: mat.opacity, side: mat.side, emissive: mat.emissive?.getHex() ?? 0, season: 'attr',
     }));
