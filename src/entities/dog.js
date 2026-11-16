@@ -488,6 +488,14 @@ export class Dog {
       mesh(SPHERE, c('neck').color, g, [0, 0, 0.004], [0, 0, 0], [0.009, 0.009, 0.008]);
     } else if (c('neck')?.style === 'daisies') {
       keep(daisyChain(this.neck, this.dims)); // Pepper's daisy chain
+    } else if (c('neck')?.style === 'whistle') {
+      // Sandy's spare whistle, on a red cord round the neck, hanging at the chest.
+      const { NL, nr } = this.dims, cy = 0.07 * NL, cr = 0.052 * nr + F * 1.3, g = keep(group(this.neck));
+      mesh(new THREE.TorusGeometry(cr, 0.0042, 6, 28), c('neck').color, g, [0, cy, 0.006], [Math.PI / 2 + 0.45, 0, 0]);
+      const w = group(g, [0, cy - 0.03, cr + 0.016], [0.35, 0, 0]);
+      mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.026, 12), 0xc9ced6, w, [0, -0.01, 0], [0, 0, Math.PI / 2]);
+      mesh(new THREE.BoxGeometry(0.02, 0.008, 0.009), 0xc9ced6, w, [0.018, -0.005, 0]);
+      mesh(new THREE.TorusGeometry(0.005, 0.0016, 4, 10), 0xc9ced6, w, [-0.006, 0.004, 0]);
     } else if (c('neck')?.style === 'scarf') {
       // A woolly scarf (from the flock's own wool): stripy, wound round the neck, two ends hanging down in front.
       const { NL, nr } = this.dims, cy = 0.085 * NL - 0.006, R = 0.049 * nr + F * 1.3 + 0.012, col = c('neck').color, cream = 0xf4ecdc;
@@ -579,6 +587,13 @@ export class Dog {
         }
         mesh(SPHERE, hat.color, m, [0, 0.044 + hf * 0.3, 0.046 + o], [0.45, 0, 0], [0.026, 0.006, 0.012]); // across the bridge of the nose
         mesh(SPHERE, hat.color, m, [0, 0.034, -0.054 - o], [0, 0, 0], [0.011, 0.01, 0.008]);                // the knot at the back
+      } else if (hat.id === 'hat-bucket') {
+        // A seaside bucket, upside down (for all those sandcastles), with its handle and a starfish sticker.
+        mesh(new THREE.CylinderGeometry(0.032, 0.046, 0.07, 18, 1, true), hat.color, g, [0, 0.03, -0.004]);
+        mesh(new THREE.CircleGeometry(0.032, 18), hat.color, g, [0, 0.065, -0.004], [-Math.PI / 2, 0, 0]);
+        mesh(new THREE.TorusGeometry(0.046, 0.0045, 6, 24), 0xc95c2c, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0]);
+        mesh(new THREE.TorusGeometry(0.044, 0.003, 4, 18, Math.PI), 0xf2c94e, g, [0, 0.002, -0.004], [0.5, Math.PI / 2, 0]);
+        mesh(SPHERE, 0xf2c94e, g, [0, 0.032, 0.038], [0.3, 0, 0], [0.011, 0.011, 0.004]);
       } else if (hat.id === 'hat-straw') {
         // Farmer Mabel's straw hat: a wide brim, a red band, and a daisy tucked into it.
         mesh(new THREE.CylinderGeometry(0.075, 0.078, 0.006, 24), hat.color, g, [0, -0.002, -0.004]);

@@ -35,6 +35,13 @@ export const AREA_KINDS = {
     depth: 70,      // how far out the strip goes from the town's edge (m)
     front: 15,      // the meadow between the town and the wood's fence (m)
   },
+  beach: {
+    emoji: '🏖️',
+    names: ['Pebble Bay', 'Sandy Paws Beach', 'Shell Cove', 'Seagull Sands', 'Crabby Cove', 'Paddlesworth Bay'],
+    blurb: 'Waves to chase, sandcastles to build… and seagulls after everyone’s chips!',
+    depth: 72,      // out to the buoys at the end of the swimming area (the sea goes on to the horizon)
+    front: 14,      // the meadow between the town and the dunes
+  },
   farm: {
     emoji: '🚜',
     names: ['Buttercup Farm', 'Muddy Lane Farm', 'Clover Farm', 'Hayseed Farm', 'Wobbly Gate Farm', 'Daisy Bank Farm'],

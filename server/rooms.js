@@ -12,6 +12,7 @@ import { CHALLENGES } from '../src/game/challenges.js';
 import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
 import { seasonOpen, seasonWelcome, seasonMessage, seasonLeave, seasonTick } from './seasons.js';
 import { cleanDen, DEN_MAX, STICK_GAP_MS } from '../src/game/denRules.js';
+import { beachWelcome, beachMessage } from './beach.js';
 import { farmMessage, farmLeave } from './farm.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
@@ -80,6 +81,7 @@ function enter(p, room, msg) {
     players: [...room.players.values()].filter((q) => q !== p).map(publicPlayer),
     shared: { discovered: [...room.world.discovered], bones: [...room.world.bones], den: room.world.den ?? 0 },
     season: seasonWelcome(room, p), // the pack's season, weather and seasonal toys
+    beach: beachWelcome(room),      // 🏖️ the sandcastles, as the pack left them
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
   heistJoin(room, p, send); // who's looking, which treats are where
@@ -285,6 +287,9 @@ function onMessage(p, msg) {
       room.world.den = Math.min(DEN_MAX, (room.world.den ?? 0) + 1);
       touchWorld(room.world);
       return broadcast(room, { t: 'woods', a: 'den', n: room.world.den, by: p.id, name: p.name });
+    case 'beach': // 🏖️ sandcastles: built by the whole pack, and kept with the town (see beach.js)
+      if (room) beachMessage(room, p, msg, send, broadcast);
+      return;
     case 'farm': // 🚜 the sheep (run by one dog's game for everyone) and round-ups, kept with the town (see farm.js)
       if (room) farmMessage(room, p, msg, send, broadcast);
       return;

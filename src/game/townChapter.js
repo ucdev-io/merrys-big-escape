@@ -23,10 +23,11 @@ import { Heists } from './town/heists.js';
 import { Seasons } from './seasons/seasons.js';
 import { showRecords } from '../ui/records.js';
 import { music } from '../core/music.js';
-import { AREA_BLURBS } from '../world/areas/areas.js';
+import { AREA_BLURBS, inRect } from '../world/areas/areas.js';
 import { Woods } from './town/woods/index.js';
 import { Farm } from './town/farm/index.js';
 import { Mud } from './town/mud.js';
+import { Beach } from './town/beach/index.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -137,6 +138,15 @@ export class TownChapter {
       this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
       this.pack.onWoods = (m) => this.woods.handle(m);
     }
+    // 🏖️ The Beach, out past another edge of town: waves, sandcastles, rock pools, seagulls and Sandy the lifeguard.
+    const beach = world.areas?.find((a) => a.kind === 'beach');
+    if (beach) {
+      this.beach = new Beach({
+        scene, world, area: beach, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
+        dogName: () => this.profile().name, look: this.seasons.look, camera: follow.camera,
+      });
+      this.pack.onBeach = (m) => this.beach.handle(m);
+    }
     // 🚜 The Farm, out past another edge: Farmer Mabel and her jobs, the sheep (one flock for the whole pack:
     // round them into the pen together; the town keeps count), hens, pigs in the mud, hay to climb.
     const farm = world.areas?.find((a) => a.kind === 'farm');
@@ -227,6 +237,7 @@ export class TownChapter {
     for (const id of w.shared.discovered) if (!this.state.discovered.includes(id)) this.state.discovered.push(id);
     for (const id of w.shared.bones ?? []) if (!this.state.bones.includes(id)) { this.state.bones.push(id); this.bones.hide(id); }
     if (w.shared.den !== undefined) this.woods?.setDen(w.shared.den, { quiet: true }); // (the pack's den, built by everyone)
+    if (w.beach) this.beach?.adopt(w.beach); // (the pack's sandcastles)
     this.hud.setPlaces?.(this.placeList());
     this.refreshObjective();
     if (!rejoin) this.goHome(w.slot ?? 0);
@@ -373,8 +384,8 @@ export class TownChapter {
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
-    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? this.seasons.pawAct ?? 'dig');
-    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.seasons.prompt);
+    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
+    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
     // Discover places by walking into them (an area's place: by going in past its gate).
@@ -395,10 +406,11 @@ export class TownChapter {
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.seasons.onDig(n) });
+    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
+    if (this.beach) { if (acted.barked) this.beach.onBark(pos); this.beach.update(dt, { canAct }); }
     this.farm?.update(dt, { canAct, barked: acted.barked });
     this.mud?.update(dt, canAct);
     if (this.pond) { // frogs croak as you get near the pond
@@ -406,6 +418,10 @@ export class TownChapter {
       music.setAmbient({ frogs: THREE.MathUtils.clamp(1.6 - dp * 1.6, 0, 1) });
     }
     this.seasons.update(dt, { canAct, barked: acted.barked }); // (after the frogs: a frozen pond hushes them)
+    // 🎵 Each area has its own tune: through its gate and the music changes (on the beat), and back again
+    // on the way out (a few steps out, so it doesn't flick between the two at the gate).
+    const here = (this.world.areas ?? []).find((a) => inRect(a.rect, pos.x, pos.z, this.musicPlace === a.kind ? 3 : 0));
+    if ((here?.kind ?? 'town') !== this.musicPlace) { this.musicPlace = here?.kind ?? 'town'; music.setPlace(this.musicPlace); }
 
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);

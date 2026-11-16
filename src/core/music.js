@@ -3,15 +3,20 @@ import { RNG } from './rng.js';
 
 /*
  * Gentle background music and birdsong, made on the fly (no audio files): a soft pad, a plucky
- * tune, a bass line and a little shaker, in a different key and mood for the garden and the town.
- * Notes are scheduled a moment ahead on the audio clock, so they keep perfect time even when the
- * game is busy.
+ * tune, a bass line and a little shaker, in a different key and mood for the garden and the town, and
+ * for each area out past the town (the woods, the farm, the beach). Notes are scheduled a moment ahead
+ * on the audio clock, so they keep perfect time even when the game is busy.
  */
 
 const THEMES = {
   garden: { bpm: 92, root: 60, prog: [[0, 4, 7], [7, 11, 14], [9, 12, 16], [5, 9, 12]], seed: 'garden', shaker: false, vol: 1 },
   town: { bpm: 104, root: 65, prog: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]], seed: 'town', shaker: true, vol: 1 },
   title: { bpm: 80, root: 62, prog: [[0, 4, 7], [5, 9, 12], [9, 12, 16], [7, 11, 14]], seed: 'title', shaker: false, vol: 0.8 },
+  // The areas (see setPlace): a folky wood in D (Dm C F G, a breathy flute), a bouncy farm in G (a twangy
+  // pluck over oom-pah), a sunny beach in E (I vi IV V on a steel drum, maracas).
+  woods: { bpm: 84, root: 62, prog: [[0, 3, 7], [-2, 2, 5], [3, 7, 10], [5, 9, 12]], seed: 'woods', shaker: false, vol: 0.9, scale: [0, 3, 5, 7, 10], lead: 'flute' },
+  farm: { bpm: 116, root: 67, prog: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], seed: 'farm', shaker: true, vol: 0.95, lead: 'twang' },
+  beach: { bpm: 98, root: 64, prog: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]], seed: 'beach', shaker: true, vol: 0.95, lead: 'bell' },
 };
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic: always sounds friendly
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
@@ -40,7 +45,17 @@ class Music {
     if (!this.timer) this.timer = setInterval(() => this.tick(), 90);
   }
 
-  stop() { clearInterval(this.timer); this.timer = null; this.theme = null; }
+  stop() { clearInterval(this.timer); this.timer = null; this.theme = null; this.want = null; }
+
+  /**
+   * Where the dog is now ('town', or an area: 'woods' | 'farm' | 'beach'…; anything without a theme of its
+   * own plays the town's). The tune changes at the start of the next bar, so it never stumbles.
+   */
+  setPlace(name) {
+    if (!this.theme) return;
+    const next = THEMES[name] ? name : 'town';
+    this.want = next === this.theme ? null : next;
+  }
 
   /** How much birdsong (0..1) and how many frogs (0..1, near the pond) there should be. */
   setAmbient(a) { Object.assign(this.ambient, a); }
@@ -75,6 +90,7 @@ class Music {
       const th = THEMES[this.theme], beat = 60 / th.bpm / 2; // eighth notes
       if (this.nextT < now) this.nextT = now + 0.05;
       while (this.nextT < now + 0.35) {
+        if (this.want && this.step % 8 === 0) { this.switchTo(this.want); break; } // (on to the new place's tune, on the beat)
         this.playStep(A, th, this.step, this.nextT, beat);
         this.step = (this.step + 1) % 64;
         if (this.step === 0) this.melody = this.rng.chance(0.5) ? this.makeMelody() : this.melody; // a new tune now and then
@@ -86,6 +102,15 @@ class Music {
     if (Math.random() < 0.05 * this.ambient.frogs) this.frog(A, now + Math.random() * 0.2);
   }
 
+  /** Carry on in another theme from the next beat (keeps the beat clock going, unlike play()). */
+  switchTo(name) {
+    this.theme = name;
+    this.want = null;
+    this.rng = new RNG(THEMES[name].seed);
+    this.melody = this.makeMelody();
+    this.step = 0;
+  }
+
   playStep(A, th, step, t, beat) {
     const bar = Math.floor(step / 8) % th.prog.length, chord = th.prog[bar].map((n) => th.root + n);
     if (step % 8 === 0) {
@@ -95,8 +120,8 @@ class Music {
     if (step % 8 === 4) this.bass(A, hz(chord[0] - 24 + 7), t, beat * 2, 0.11 * th.vol);
     const n = this.melody[step % 32];
     if (n !== null && n !== undefined) {
-      const midi = th.root + 12 + PENTA[n % 5] + 12 * Math.floor(n / 5);
-      this.pluck(A, hz(midi), t, beat * 1.6, 0.075 * th.vol);
+      const sc = th.scale ?? PENTA, midi = th.root + 12 + sc[n % 5] + 12 * Math.floor(n / 5);
+      this[th.lead ?? 'pluck'](A, hz(midi), t, beat * 1.6, 0.075 * th.vol);
     }
     if (th.shaker && step % 2 === 1) this.shaker(A, t, step % 4 === 3 ? 0.03 : 0.018);
   }
@@ -117,6 +142,9 @@ class Music {
   pluck(A, f, t, dur, vol) { this.osc(A, 'triangle', f, t, dur, vol, 0.008); this.osc(A, 'sine', f * 2, t, dur * 0.5, vol * 0.3, 0.005); }
   pad(A, freqs, t, dur, vol) { for (const f of freqs) for (const d of [-3, 3]) this.osc(A, 'sine', f * 2 ** (d / 1200), t, dur * 0.8, vol, dur * 0.25); }
   bass(A, f, t, dur, vol) { this.osc(A, 'sine', f, t, dur, vol, 0.02); }
+  flute(A, f, t, dur, vol) { this.osc(A, 'sine', f, t, dur * 1.1, vol * 1.05, 0.045); this.osc(A, 'triangle', f * 2, t, dur * 0.7, vol * 0.12, 0.05); } // (soft and breathy)
+  twang(A, f, t, dur, vol) { this.osc(A, 'sawtooth', f, t, dur * 0.45, vol * 0.42, 0.004); this.osc(A, 'triangle', f, t, dur * 0.8, vol * 0.8, 0.006); } // (a banjo-ish pluck)
+  bell(A, f, t, dur, vol) { this.osc(A, 'sine', f, t, dur * 0.9, vol * 0.95, 0.004); this.osc(A, 'sine', f * 2, t, dur * 0.5, vol * 0.35, 0.003); this.osc(A, 'sine', f * 3.01, t, dur * 0.25, vol * 0.12, 0.003); } // (a steel drum)
   shaker(A, t, vol) {
     const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
     s.buffer = A.noiseBuf; f.type = 'highpass'; f.frequency.value = 6000;
