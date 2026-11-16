@@ -33,8 +33,10 @@ const isMobile = matchMedia('(pointer: coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 // 🩺 If the phone runs out of graphics memory the picture stops: say so (index.html's notes), and start
 // again once it's back (the world's shapes have gone to the graphics chip and aren't kept here to resend).
+let leaving = false; // (set on the way out: see 'pagehide' below)
 canvas.addEventListener('webglcontextlost', (e) => {
   e.preventDefault();
+  if (leaving) return; // (we let it go ourselves, on the way out)
   window.__report?.('gl-lost', 'The picture stopped');
   window.__note?.('The picture stopped (the phone may be short of memory). It should come back in a moment.');
 });
@@ -95,6 +97,15 @@ if (packCode && !yardDone) writeSave({ chapter: 'yard', found: [], escaped: fals
 Object.assign(save, loadSave());
 const inTown = params.has('town') || params.has('seed') || (!!packCode && yardDone) || save.chapter === 'town';
 
+// A note while the world is built and first painted (a few seconds for a big town on a phone), so the
+// screen isn't just blank. It goes up before joining a pack: from the pack's welcome to the town
+// listening for its news (heists, the season…) nothing may wait on the browser, or that news is missed.
+const loadNote = document.createElement('div');
+loadNote.className = 'loading-note';
+loadNote.textContent = inTown ? '🐾 Building the neighbourhood…' : '🐾 Opening the garden…';
+document.body.appendChild(loadNote);
+await new Promise((r) => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 120); }); // (on screen before the build)
+
 // Arriving with ?room=CODE: join that pack first, because the pack decides which town we're in.
 let net = null, welcome = null;
 // First time on this device? Pick a dog first (code pre-filled), then join.
@@ -130,7 +141,8 @@ if (inTown) {
 } else {
   world = buildYard();
 }
-window.__report?.('built', `${inTown ? 'town' : 'garden'} in ${Math.round(performance.now() - buildT0)} ms`);
+const builtAt = performance.now();
+window.__report?.('built', `${inTown ? 'town' : 'garden'} in ${Math.round(builtAt - buildT0)} ms`);
 loading('setting up and drawing the first picture');
 scene.add(world.group);
 world.attach?.(scene);
@@ -204,6 +216,14 @@ createTouchControls(input, follow);
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
   : new YardChapter({ scene, world, player, hud, input, follow, pipeline });
+const setupAt = performance.now();
+// Leaving (into the neighbourhood, say): give the graphics memory back now rather than whenever the old
+// page is finally thrown away, so the next page has all of it (a big town needs it on a phone). Back to
+// a page kept in the browser's cache: start it again (its picture's gone).
+// (Just the context, and no more frames: renderer.dispose() would take away three's own context-lost
+// listener, and a last frame would then try to resend shapes that are no longer kept.)
+window.addEventListener('pagehide', () => { leaving = true; try { renderer.forceContextLoss(); } catch { /* going anyway */ } });
+window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 // Music for this chapter, and birds singing.
 music.setEnabled(getSettings().music);
 music.play(inTown ? 'town' : 'garden');
@@ -252,6 +272,7 @@ if (location.search.includes('tune')) {
 const sky = scene.getObjectByName('sky');
 const timer = new THREE.Timer();
 function frame(now) {
+  if (leaving) return; // (on the way out: the picture's been let go)
   timer.update(now);
   const raw = timer.getDelta(), dt = Math.min(raw, 1 / 20);
   const t = timer.getElapsed();
@@ -269,12 +290,21 @@ function frame(now) {
   sun.position.copy(player.pos).add(new THREE.Vector3(8, 14, 6));
 
   pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
+  const r0 = drawn ? 0 : performance.now();
   pipeline.render(scene, camera);
+  if (!drawn) firstMs = performance.now() - r0; // (the first picture: every shader made, every shape sent)
   input.endFrame();
-  if (++drawn === 2) { loading(null); window.__report?.('ready', `first pictures after ${Math.round(performance.now() - buildT0)} ms`); }
+  if (++drawn === 2) {
+    loading(null);
+    loadNote.remove();
+    window.__report?.('ready', `first pictures after ${Math.round(performance.now() - buildT0)} ms`, {
+      build: Math.round(builtAt - buildT0), setup: Math.round(setupAt - builtAt), first: Math.round(firstMs),
+      programs: renderer.info.programs?.length, geometries: renderer.info.memory.geometries, px: `${canvas.width}x${canvas.height}`,
+    });
+  }
   requestAnimationFrame(frame);
 }
-let drawn = 0;
+let drawn = 0, firstMs = 0;
 requestAnimationFrame(frame);
 
 window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress, world };

@@ -90,6 +90,14 @@ body.touch-mode .boosts { bottom: 177px; }
 .rec-grid .records { margin: 0; padding-left: 4px; list-style: none; font-size: 16px; line-height: 1.5; }
 .rec-grid .mine { margin: 2px 0 0; font-size: 14px; opacity: 0.75; }
 
+/* While a world is built and first painted: a small note in the middle, so the wait isn't a blank screen */
+.loading-note {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 50; pointer-events: none;
+  background: rgba(246, 239, 224, 0.85); border: 1.5px solid rgba(59, 43, 37, 0.15); border-radius: 14px;
+  padding: 6px 16px 8px; font-size: 22px; white-space: nowrap; animation: loading-bob 1.4s ease-in-out infinite;
+}
+@keyframes loading-bob { 50% { transform: translate(-50%, calc(-50% - 4px)); } }
+
 /* News notes: small, see-through, stacked on the left under the goal panel (tap one for the rest) */
 .toasts {
   position: absolute; left: calc(16px + var(--sa-l, 0px)); top: 64px; display: flex; flex-direction: column; align-items: flex-start;
