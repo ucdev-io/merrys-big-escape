@@ -50,6 +50,11 @@ COSMETICS.push(
   { id: 'neck-bracken', slot: 'neck', name: 'Brock’s bracken bandana', emoji: '🦡', color: 0xb5713a, level: 1, friend: 'badger', jobs: 3, hint: 'Help Brock the badger 3 times', boost: { speed: 1, zoomies: 2 } },
   { id: 'collar-twig', slot: 'collar', name: 'Den builder’s collar', emoji: '🪵', color: 0x7f5f45, level: 1, friend: 'den', jobs: 10, hint: 'Bring 10 big sticks to the den', boost: { speed: 2, zoomies: 1 } },
 );
+// Prizes from the beach: Sandy the lifeguard's thank-you (her spare whistle), and one for building sandcastles.
+COSMETICS.push(
+  { id: 'neck-whistle', slot: 'neck', name: 'Sandy’s whistle', emoji: '🛟', color: 0xd9534f, level: 1, friend: 'sandy', jobs: 3, style: 'whistle', hint: 'Help Sandy the lifeguard 3 times', boost: { speed: 2, zoomies: 1 } },
+  { id: 'hat-bucket', slot: 'hat', name: 'Bucket hat', emoji: '🪣', color: 0xe8743c, level: 1, friend: 'castles', jobs: 5, hint: 'Build 5 sandcastles (at the beach)', boost: { speed: 1, zoomies: 2 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

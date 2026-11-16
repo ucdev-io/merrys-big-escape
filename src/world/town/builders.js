@@ -13,9 +13,9 @@ import {
   kennel, swingSet, slide, lawnmower, bbq, cafeTable, shop, brickBuilding, car, hedge, pathRibbon,
 } from './townProps.js';
 import { bakeryHeist, butcherHeist } from './heistProps.js';
-import { flatOut, hillHeight } from '../areas/terrain.js';
+import { groundAt } from '../areas/terrain.js';
 import { areaBounds, areaAt } from '../areas/areas.js';
-import { layoutAreas, areaFlats, areaGround, buildAreas } from '../areas/build.js';
+import { layoutAreas, areaFlats, areaGround, buildAreas, areaClear } from '../areas/build.js';
 
 const H = TOWN.BLOCK / 2;          // 15: half block
 const EDGE = H - 0.4;              // where garden fences sit
@@ -77,7 +77,7 @@ function ground(flats, tint = null) {
   const cA = new THREE.Color(PALETTE.grass), cB = new THREE.Color(PALETTE.grassDark), cC = new THREE.Color(PALETTE.grassLight), c = new THREE.Color();
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), z = p.getZ(i);
-    p.setY(i, hillHeight(x, z, flatOut(flats, x, z)));
+    p.setY(i, groundAt(flats, x, z)); // (the hills, and the sea floor out past the beach)
     const n = fbm3(x * 0.12, 5, z * 0.12, 3);
     c.copy(cA).lerp(n > 0.5 ? cC : cB, Math.abs(n - 0.5) * 1.6);
     tint?.(x, z, c);
@@ -408,7 +408,7 @@ export function buildTown(layout) {
   const extra = { root, beds: [], gardens: [], bins: [], water: [], birdSpots: [] };
 
   // The town's areas (the Woods…) are laid out first, so the ground can be flat and woodland-coloured under them.
-  const areaData = layoutAreas(layout), flats = areaFlats(layout, TOWN.SIZE / 2 + 6);
+  const areaData = layoutAreas(layout), flats = areaFlats(layout, TOWN.SIZE / 2 + 6, areaData);
   root.add(ground(flats, areaGround(areaData)));
   streets(root, layout, rng, col, bones);
 
@@ -451,7 +451,7 @@ export function buildTown(layout) {
   for (let i = 0; i < 60; i++) {
     const a = rng.float(0, Math.PI * 2), r = rng.float(TOWN.SIZE / 2 + 12, TOWN.SIZE / 2 + 60);
     const t = tree(Math.cos(a) * r, Math.sin(a) * r, rng.float(1.2, 2), rng, null, { detail: 1, blobs: 3 });
-    if (!areaAt(layout.areas, t.position.x, t.position.z, 3)) root.add(t); // (an area has trees of its own, out of the way of its paths)
+    if (!areaAt(layout.areas, t.position.x, t.position.z, 3) && areaClear(areaData, t.position.x, t.position.z)) root.add(t); // (an area has trees of its own, out of the way of its paths; none in the sea)
   }
   // The areas themselves: after everything else, so the town's own colliders and dice are just as they were.
   const areas = buildAreas(root, layout, areaData, col, extra, TOWN.SIZE / 2 + 4, flats);

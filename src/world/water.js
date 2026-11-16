@@ -4,6 +4,10 @@
 // zones: [{ kind: 'pond', x, z, rx, rz, surface } | { kind: 'pool', x, z, r, surface } | { kind: 'stream', pts: [[x, z]…], w, surface, box }]
 //   (frozen: true in winter — then it's ice to stand and slide on, not water; ice: count it anyway)
 //   stream: a winding line `w` metres either side of its points (the Woods): shelving banks, deep in the middle.
+//   sea: everything out past a beach's waterline: { kind: 'sea', dir, across (the beach's frame), shore (v of the
+//     waterline), edge (v of the water's edge right now: the waves move it up the sand and back), shelf (how far out
+//     it gets deep enough to swim), u0, u1, v1 (the swimming area), surface }. It never freezes.
+//   rockpool: a little circle of shallow water ({ x, z, r, surface }): paddling only, like a pool (never frozen).
 
 const BEACH = 0.22; // how much of the pond's radius is the shelving bit near the edge
 const BANK = 0.55;  // how much of a stream's half-width is the shelving bit
@@ -34,6 +38,9 @@ export function waterAt(zones, x, z, ice = false) {
     } else if (w.kind === 'stream') {
       const d = streamDist(w, x, z);
       if (d < w.w) return { zone: w, depth: Math.min(1, (w.w - d) / (w.w * BANK)), surface: w.surface, wade: false };
+    } else if (w.kind === 'sea') {
+      const v = w.dir[0] * x + w.dir[1] * z, u = w.across[0] * x + w.across[1] * z;
+      if (v > w.edge && v < w.v1 && u > w.u0 && u < w.u1) return { zone: w, depth: Math.max(0, Math.min(1, (v - w.shore) / w.shelf)), surface: w.surface, wade: false };
     } else if (Math.hypot(x - w.x, z - w.z) < w.r) {
       return { zone: w, depth: 1, surface: w.surface, wade: true };
     }

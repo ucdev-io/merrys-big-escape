@@ -19,4 +19,5 @@ export function hillHeight(x, z, out) {
   return out > 0 ? Math.max(0, hill) - 0.05 : -0.05;
 }
 
-export const groundAt = (flats, x, z) => hillHeight(x, z, flatOut(flats, x, z));
+/** The ground's height at (x, z): the hills, reshaped by any area that does (flats.sink: the beach's sea floor). */
+export const groundAt = (flats, x, z) => { const h = hillHeight(x, z, flatOut(flats, x, z)); return flats.sink ? flats.sink(x, z, h) : h; };

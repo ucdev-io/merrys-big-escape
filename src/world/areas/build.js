@@ -3,6 +3,8 @@ import { fbm3 } from '../../core/rng.js';
 import { areaFillers, worldRect } from './areas.js';
 import { layoutWoods } from './woodsLayout.js';
 import { buildWoods } from './woodsBuild.js';
+import { layoutBeach } from './beachLayout.js';
+import { buildBeach } from './beachBuild.js';
 
 /*
  * Turning a town's planned areas (./areas.js) into the world: first each area's layout (plain data, so
@@ -10,16 +12,26 @@ import { buildWoods } from './woodsBuild.js';
  * A new kind of area adds a layout and a builder here.
  */
 
-const LAYOUTS = { woods: layoutWoods };
-const BUILDERS = { woods: buildWoods };
+const LAYOUTS = { woods: layoutWoods, beach: layoutBeach };
+const BUILDERS = { woods: buildWoods, beach: buildBeach };
 
 /** Each planned area's layout (in the town's order). */
 export function layoutAreas(layout) { return (layout.areas ?? []).map((a) => LAYOUTS[a.kind](a, layout.seed)); }
 
-/** Where the ground is flat: the town (half: its half-width, verge and all) and each area's strip (plus a little). */
-export function areaFlats(layout, half) {
-  return [{ x0: -half, z0: -half, x1: half, z1: half }, ...(layout.areas ?? []).map((a) => { const r = a.strip; return { x0: r.x0 - 2, z0: r.z0 - 2, x1: r.x1 + 2, z1: r.z1 + 2 }; })];
+/**
+ * Where the ground is flat: the town (half: its half-width, verge and all) and each area's strip (plus a little).
+ * data (the areas' layouts): an area can also reshape the ground round about (the beach sinks the hills under
+ * its sea): flats.sink(x, z, h) → the height there, for groundAt (./terrain.js).
+ */
+export function areaFlats(layout, half, data = null) {
+  const flats = [{ x0: -half, z0: -half, x1: half, z1: half }, ...(layout.areas ?? []).map((a) => { const r = a.strip; return { x0: r.x0 - 2, z0: r.z0 - 2, x1: r.x1 + 2, z1: r.z1 + 2 }; })];
+  const sinks = (data ?? []).filter((d) => d.sink);
+  if (sinks.length) flats.sink = (x, z, h) => sinks.reduce((y, d) => d.sink(x, z, y), h);
+  return flats;
 }
+
+/** Is (x, z) clear of anything an area keeps for itself out beyond its strip (the beach's sea)? */
+export function areaClear(data, x, z) { return !data.some((d) => d.keepOut?.(x, z)); }
 
 /** Colour the ground under the areas (woodland floor under the trees): (x, z, color) → tints color, or null. */
 export function areaGround(data) {
@@ -27,6 +39,7 @@ export function areaGround(data) {
   const floor = new THREE.Color(0x7f9655), moss = new THREE.Color(0x6f8f4e), earth = new THREE.Color(0x8c8058), c2 = new THREE.Color();
   return (x, z, c) => {
     for (const d of data) {
+      if (d.tint) { d.tint(x, z, c); continue; } // (an area with a colouring of its own: the beach's sand)
       const k = d.floor?.(x, z) ?? 0;
       if (k <= 0) continue;
       const n = fbm3(x * 0.09, 3, z * 0.09, 3);
