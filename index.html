@@ -18,6 +18,44 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/ui/styles.css" />
+    <script>
+      // 🩺 When something goes wrong on a phone, tell the computer that runs the game (its console, and
+      // /api/log) and show a small note. A page that runs out of memory just dies, so the steps of loading
+      // are noted too (window.__report from main.js), and the next load says if the last one never finished.
+      (function () {
+        var sent = 0, shown = {};
+        function report(kind, msg, data) {
+          if (sent++ > 40) return;
+          var body = JSON.stringify({ kind: kind, msg: String(msg == null ? '' : msg).slice(0, 500), data: data || null, page: location.pathname + location.search, t: Math.round(performance.now()) });
+          try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/log', body))) fetch('/api/log', { method: 'POST', body: body, keepalive: true }); } catch (e) {}
+        }
+        function note(text) {
+          if (shown[text] || !document.body) return;
+          shown[text] = 1;
+          var d = document.createElement('div');
+          d.textContent = '⚠️ ' + text;
+          d.style.cssText = 'position:fixed;left:8px;top:40%;max-width:min(80vw,420px);z-index:99;padding:6px 10px;border-radius:10px;font:13px/1.3 system-ui,sans-serif;color:#5a3b1c;background:rgba(255,248,235,.85);box-shadow:0 1px 6px rgba(0,0,0,.15)';
+          d.onclick = function () { d.remove(); };
+          document.body.appendChild(d);
+        }
+        window.__report = report;
+        window.__note = note;
+        window.addEventListener('error', function (e) {
+          var where = e.filename ? ' (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : '';
+          report('error', (e.message || 'error') + where, { stack: e.error && String(e.error.stack || '').slice(0, 600) });
+          note('Oops, something went wrong: ' + (e.message || 'error') + where);
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e.reason;
+          report('rejection', r && r.message || String(r), { stack: r && String(r.stack || '').slice(0, 600) });
+        });
+        var last = null;
+        try { last = sessionStorage.getItem('doggoLoading'); sessionStorage.removeItem('doggoLoading'); } catch (e) {}
+        var n = navigator;
+        report('boot', (n.userAgent.match(/(iPhone|iPad|Android)[^;)]*/) || ['desktop'])[0], { ua: n.userAgent, screen: screen.width + 'x' + screen.height, dpr: window.devicePixelRatio, cores: n.hardwareConcurrency, mem: n.deviceMemory });
+        if (last) report('died?', 'The last load never finished (stopped while: ' + last + ')');
+      })();
+    </script>
   </head>
   <body>
     <canvas id="game"></canvas>

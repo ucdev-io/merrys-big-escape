@@ -4,6 +4,8 @@
 //   GET  /api/profiles  saved dogs (for "Who's playing?")
 //   POST /api/profile   { action: 'create' | 'get' | 'sync', ... } → { profile }
 //   GET  /api/records?town=SEED&profile=ID   🏆 family records → { boards, mine }
+//   POST /api/log       🩺 a device's note: an error, or how far a page got loading (see index.html)
+//   GET  /api/log       the last few hundred of those (also printed on this computer's console)
 import { listPacks, onlineProfiles, liveCodes } from './rooms.js';
 import { listProfiles, createProfile, getProfile, syncProfile, listWorlds, getRecords } from './store.js';
 import { lanInfoHandler } from './lan.js';
@@ -28,11 +30,30 @@ function readBody(req, limit = 16384) {
   });
 }
 
+// 🩺 Notes from the players' devices (kept in memory only): when a phone's page goes wrong, what it said
+// and how far it got. A page that dies outright (out of memory) can't say so, but the next load can.
+const LOG = [], LOG_MAX = 300, logRate = new Map();
+const clip = (v, n) => String(v ?? '').replace(/[\u0000-\u001f]+/g, ' ').slice(0, n);
+function clientLog(req, res) {
+  const ip = String(req.socket?.remoteAddress ?? '?').replace(/^::ffff:/, ''), now = Date.now();
+  const r = logRate.get(ip);
+  if (r && now - r.t < 60000 && r.n >= 60) { req.resume(); return json(res, 429, { error: 'Slow down' }); }
+  logRate.set(ip, r && now - r.t < 60000 ? { t: r.t, n: r.n + 1 } : { t: now, n: 1 });
+  readBody(req, 4096).then((b) => {
+    const e = { at: new Date(now).toISOString(), ip, kind: clip(b?.kind, 24), msg: clip(b?.msg, 500), page: clip(b?.page, 80), ms: Math.round(Number(b?.t) || 0), data: b?.data && typeof b.data === 'object' ? clip(JSON.stringify(b.data), 900) : '' };
+    LOG.push(e);
+    if (LOG.length > LOG_MAX) LOG.shift();
+    console.log(`  🩺 ${ip} ${e.kind}: ${e.msg}${e.data ? ' ' + e.data : ''}`);
+    json(res, 200, { ok: true });
+  }).catch(() => json(res, 400, { error: 'Bad request' }));
+}
+
 /** Answer /api/… requests. Returns false for anything else. */
 export function handleApi(req, res) {
   const [path, query = ''] = (req.url ?? '').split('?');
   if (!path.startsWith('/api/')) return false;
-  if (path === '/api/lan') lanInfoHandler(req, res);
+  if (path === '/api/log') { if (req.method === 'POST') clientLog(req, res); else json(res, 200, { log: LOG }); }
+  else if (path === '/api/lan') lanInfoHandler(req, res);
   else if (path === '/api/packs') json(res, 200, { packs: listPacks(), worlds: listWorlds(liveCodes()) });
   else if (path === '/api/profiles') json(res, 200, { profiles: listProfiles(onlineProfiles()) });
   else if (path === '/api/records') { const q = new URLSearchParams(query); json(res, 200, getRecords(q.get('town'), q.get('profile'))); }

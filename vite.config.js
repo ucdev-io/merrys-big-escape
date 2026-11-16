@@ -21,6 +21,7 @@ export default defineConfig({
   plugins: [dogPark()],
   // Listen on the local network so phones/tablets on the same Wi-Fi can play.
   // Saved dogs/neighbourhoods (data/) change while you play: that's not a reason to reload the page.
-  server: { host: true, port: 5173, watch: { ignored: ['**/data/**'] } },
+  // Nor is a test build (dist-test) or a helper's copy of the project (.claude/worktrees).
+  server: { host: true, port: 5173, watch: { ignored: ['**/data/**', '**/data-dev/**', '**/dist-test/**', '**/dist/**', '**/.claude/**'] } },
   preview: { host: true, port: 4173 },
 });

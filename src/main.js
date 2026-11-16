@@ -31,6 +31,16 @@ const canvas = document.getElementById('game');
 const isMobile = matchMedia('(pointer: coarse)').matches;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+// 🩺 If the phone runs out of graphics memory the picture stops: say so (index.html's notes), and start
+// again once it's back (the world's shapes have gone to the graphics chip and aren't kept here to resend).
+canvas.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  window.__report?.('gl-lost', 'The picture stopped');
+  window.__note?.('The picture stopped (the phone may be short of memory). It should come back in a moment.');
+});
+canvas.addEventListener('webglcontextrestored', () => location.reload());
+// (How far a load gets: a load that never finishes is reported by the next one.)
+const loading = (what) => { try { if (what) sessionStorage.setItem('doggoLoading', what); else sessionStorage.removeItem('doggoLoading'); } catch { /* private mode */ } };
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 // Phones have ~3x screens; 2x keeps them crisp. Auto quality may step this down (a little, and only
@@ -104,6 +114,13 @@ if (inTown && packCode && save.profile) {
 }
 
 let world;
+{
+  let gpu = '?';
+  try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); gpu = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER)); } catch { /* not told */ }
+  window.__report?.('start', inTown ? 'town' : 'garden', { gpu, maxTex: renderer.capabilities.maxTextureSize });
+}
+const buildT0 = performance.now();
+loading(inTown ? 'building the town' : 'building the garden');
 if (inTown) {
   const seed = (welcome?.seed || params.get('seed') || loadSave().town?.seed || randomSeed()).toUpperCase();
   if (loadSave().town?.seed !== seed) writeSave({ chapter: 'town', town: { seed, discovered: [] } });
@@ -113,6 +130,8 @@ if (inTown) {
 } else {
   world = buildYard();
 }
+window.__report?.('built', `${inTown ? 'town' : 'garden'} in ${Math.round(performance.now() - buildT0)} ms`);
+loading('setting up and drawing the first picture');
 scene.add(world.group);
 world.attach?.(scene);
 
@@ -252,8 +271,10 @@ function frame(now) {
   pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
   pipeline.render(scene, camera);
   input.endFrame();
+  if (++drawn === 2) { loading(null); window.__report?.('ready', `first pictures after ${Math.round(performance.now() - buildT0)} ms`); }
   requestAnimationFrame(frame);
 }
+let drawn = 0;
 requestAnimationFrame(frame);
 
 window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress, world };
