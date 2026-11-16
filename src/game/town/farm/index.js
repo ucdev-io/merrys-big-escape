@@ -222,7 +222,7 @@ export class Farm {
     R.count = 12;
     R.instanceMatrix.needsUpdate = true;
     R.instanceColor.needsUpdate = true;
-    this.rosetteBoard.visible = this.pens > 0;
+    this.rosetteBoard.visible = this.pens > 0 && this.shown !== false;
   }
 
   buildCrow() {
@@ -428,6 +428,16 @@ export class Farm {
       const s = o.geometry.boundingSphere;
       o.visible = camera.position.distanceTo(s.center) - s.radius < fog.far * 1.25 + 2;
     }
+    // The animals, the farmer and the rest move about, so they're not in the town's baked meshes: hide them
+    // all together when the whole farm's lost in the fog (from the far side of town, say).
+    const r = this.area.strip, c = camera.position;
+    const away = Math.hypot(Math.max(r.x0 - c.x, 0, c.x - r.x1), Math.max(r.z0 - c.z, 0, c.z - r.z1));
+    const show = away < fog.far * 1.25 + 2;
+    if (show === this.shown) return;
+    this.shown = show;
+    const things = [this.flock.body, this.flock.head, this.flock.legs, this.flock.gate, this.hens.body, this.hens.head, this.hens.wings, this.hens.legs,
+      this.pigs.pink, this.pigs.spotty, this.pigs.head, this.pigs.legs, this.farmer.p.root, this.crow.g, this.rosetteBoard, ...(this.lamb?.meshes ?? [])];
+    for (const o of things) o.visible = show && (o !== this.rosetteBoard || this.pens > 0);
   }
 
   dispose() {

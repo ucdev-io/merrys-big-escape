@@ -30,20 +30,20 @@ export function instancedPart(geo, n, { shadow = true } = {}) {
 
 // ---------------------------------------------------------------------------------------------
 /** 🐑 A woolly sheep with a black face (and her lambs: the same, smaller). Neck at NECK, hips at HIPS. */
-export const SHEEP = { NECK: [0, 0.74, 0.4], HIPS: [[0.15, 0.42, 0.25], [-0.15, 0.42, 0.25], [0.15, 0.42, -0.24], [-0.15, 0.42, -0.24]] };
+export const SHEEP = { NECK: [0, 0.68, 0.4], HIPS: [[0.15, 0.36, 0.25], [-0.15, 0.36, 0.25], [0.15, 0.36, -0.24], [-0.15, 0.36, -0.24]] };
 export function sheepGeometry() {
   if (cache.sheep) return cache.sheep;
   const W = [0xf6f1e6, 0xebe3d3, 0xfbf8f0], FACE = 0x3b3431;
   const wool = (i, v) => W[(Math.floor(v.x * 31 + v.y * 23 + v.z * 41) & 3) % 3];
   const body = bake([
-    { geo: blobGeometry(3, 0.18, 2), color: W[0], pos: [0, 0.62, -0.02], scale: [0.34, 0.29, 0.47], colors: wool },
-    { geo: blobGeometry(5, 0.3, 1), color: W[1], pos: [0.12, 0.8, 0.12], scale: [0.17, 0.13, 0.19], colors: wool },
-    { geo: blobGeometry(7, 0.3, 1), color: W[2], pos: [-0.12, 0.81, -0.08], scale: [0.17, 0.13, 0.21], colors: wool },
-    { geo: blobGeometry(9, 0.3, 1), color: W[0], pos: [0.01, 0.83, -0.26], scale: [0.16, 0.12, 0.17], colors: wool },
-    { geo: blobGeometry(11, 0.3, 1), color: W[1], pos: [0.23, 0.62, -0.1], scale: [0.13, 0.18, 0.23], colors: wool },
-    { geo: blobGeometry(13, 0.3, 1), color: W[2], pos: [-0.23, 0.63, 0.08], scale: [0.13, 0.17, 0.23], colors: wool },
-    { geo: blobGeometry(17, 0.25, 1), color: W[1], pos: [0, 0.67, 0.37], scale: [0.21, 0.21, 0.15], colors: wool }, // (a woolly chest)
-    [blobGeometry(15, 0.3, 1), W[0], [0, 0.63, -0.48], [0, 0, 0], [0.08, 0.1, 0.08]], // a little tail
+    { geo: blobGeometry(3, 0.18, 2), color: W[0], pos: [0, 0.56, -0.02], scale: [0.34, 0.29, 0.47], colors: wool },
+    { geo: blobGeometry(5, 0.3, 2), color: W[1], pos: [0.12, 0.74, 0.12], scale: [0.17, 0.13, 0.19], colors: wool },
+    { geo: blobGeometry(7, 0.3, 2), color: W[2], pos: [-0.12, 0.75, -0.08], scale: [0.17, 0.13, 0.21], colors: wool },
+    { geo: blobGeometry(9, 0.3, 2), color: W[0], pos: [0.01, 0.77, -0.26], scale: [0.16, 0.12, 0.17], colors: wool },
+    { geo: blobGeometry(11, 0.3, 2), color: W[1], pos: [0.23, 0.56, -0.1], scale: [0.13, 0.18, 0.23], colors: wool },
+    { geo: blobGeometry(13, 0.3, 2), color: W[2], pos: [-0.23, 0.57, 0.08], scale: [0.13, 0.17, 0.23], colors: wool },
+    { geo: blobGeometry(17, 0.25, 2), color: W[1], pos: [0, 0.61, 0.37], scale: [0.21, 0.21, 0.15], colors: wool }, // (a woolly chest)
+    [blobGeometry(15, 0.3, 1), W[0], [0, 0.57, -0.48], [0, 0, 0], [0.08, 0.1, 0.08]], // a little tail
   ]);
   const head = bake([
     [BALL, FACE, [0, -0.03, 0.12], [0.3, 0, 0], [0.1, 0.11, 0.17]],          // a long face, a little bowed
@@ -57,8 +57,8 @@ export function sheepGeometry() {
     [DOT, 0x15110f, [-0.069, 0.014, 0.174], [0, 0, 0], [0.01, 0.011, 0.007]],
   ]);
   const leg = bake([
-    [new THREE.CapsuleGeometry(0.034, 0.3, 2, 7), 0x332d2b, [0, -0.2, 0]],
-    [SMALL, 0x221d1b, [0, -0.39, 0.012], [0, 0, 0], [0.042, 0.028, 0.05]], // hoof
+    [new THREE.CapsuleGeometry(0.036, 0.24, 2, 7), 0x332d2b, [0, -0.17, 0]],
+    [SMALL, 0x221d1b, [0, -0.33, 0.012], [0, 0, 0], [0.044, 0.028, 0.052]], // hoof
   ]);
   return (cache.sheep = { body, head, leg });
 }
