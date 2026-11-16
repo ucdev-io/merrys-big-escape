@@ -273,6 +273,19 @@ if (location.search.includes('tune')) {
 }
 
 const sky = scene.getObjectByName('sky');
+// The shadow camera follows the dog in whole shadow-map texels: sliding smoothly, the texels'
+// edges crept across the ground as she ran, and shadow edges shimmered. (Its axes never change:
+// the sun always shines from the same side, so they're worked out once.)
+const SUN_FROM = new THREE.Vector3(8, 14, 6);
+const sunZ = SUN_FROM.clone().normalize(), sunX = new THREE.Vector3(0, 1, 0).cross(sunZ).normalize(), sunY = sunZ.clone().cross(sunX);
+const sunAt = new THREE.Vector3();
+function followSun(p) {
+  const cam = sun.shadow.camera, texel = (cam.right - cam.left) / sun.shadow.mapSize.x;
+  const u = Math.round(p.dot(sunX) / texel) * texel, v = Math.round(p.dot(sunY) / texel) * texel;
+  sunAt.copy(sunX).multiplyScalar(u).addScaledVector(sunY, v).addScaledVector(sunZ, p.dot(sunZ));
+  sun.target.position.copy(sunAt);
+  sun.position.copy(sunAt).add(SUN_FROM);
+}
 const timer = new THREE.Timer();
 function frame(now) {
   if (leaving) return; // (on the way out: the picture's been let go)
@@ -290,9 +303,7 @@ function frame(now) {
 
   sky?.position.copy(camera.position);
 
-  // Keep the shadow camera centred on the dog.
-  sun.target.position.copy(player.pos);
-  sun.position.copy(player.pos).add(new THREE.Vector3(8, 14, 6));
+  followSun(player.pos);
 
   pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
   const r0 = drawn ? 0 : performance.now();

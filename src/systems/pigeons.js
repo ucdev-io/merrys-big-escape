@@ -8,6 +8,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const smooth = (t) => t * t * (3 - 2 * t);
 
 const C = { body: 0x9aa3b4, wing: 0x7f8798, head: 0x8a93a6, neck: 0x6fae8f, beak: 0x4a4444, tail: 0x6f7788 };
+const POSE_FAR = 45; // metres: a flock on the ground further from the dog than this keeps its last pose
+const _tmp = V(0, 0, 0), _prev = V(0, 0, 0), _vel = V(0, 0, 0), _goal = V(0, 0, 0), _to = V(0, 0, 0);
 
 function bezier(p0, p1, p2, p3, t, out) {
   const u = 1 - t;
@@ -73,7 +75,7 @@ export class Pigeons {
           peck: rand(0, 3), walkT: rand(0, 3), flap: rand(0, 6), spread: V(rand(-1.5, 1.5), rand(-0.6, 0.8), rand(-1.5, 1.5)),
         });
       }
-      return { ...f, home, birds, state: 'ground', t: 0, roofT: rand(18, 35) };
+      return { ...f, home, birds, state: 'ground', t: 0, roofT: rand(18, 35), fresh: true }; // (fresh: pose it at least once, however far)
     });
     this.time = 0;
   }
@@ -141,6 +143,7 @@ export class Pigeons {
           f.state = 'ground';
           f.home = this.spots[f.landing].clone();
           f.roofT = rand(18, 35);
+          f.fresh = true; // (landed: pose them on the ground once, even far away)
           for (const b of f.birds) {
             b.target = V(rand(-1, 1), 0, rand(-1, 1)).multiplyScalar(f.home.y > 0.5 ? 0.9 : 1.3);
             b.pos.copy(f.home).add(b.target);
@@ -148,7 +151,7 @@ export class Pigeons {
         }
       }
     }
-    this.pose(dt);
+    this.pose(dt, dog.pos);
     this.feathers.update(dt);
     return scared;
   }
@@ -162,9 +165,18 @@ export class Pigeons {
     return out;
   }
 
-  pose(dt) {
-    const p = this.parts, r = this.r, tmp = V(0, 0, 0);
+  /**
+   * Pose every bird into the instanced meshes. A flock pottering about on the ground far from the dog
+   * (a few pixels, in the haze) keeps its last pose: re-posing all ~65 birds every frame cost the most
+   * on phones with slow JavaScript. Flying flocks always move.
+   */
+  pose(dt, near) {
+    const p = this.parts, r = this.r, tmp = _tmp;
+    let posed = false;
     for (const f of this.flocks) {
+      if (f.state === 'ground' && near && !f.fresh && Math.hypot(near.x - f.home.x, near.z - f.home.z) > POSE_FAR) continue;
+      f.fresh = false;
+      posed = true;
       for (const b of f.birds) {
         let flying = false;
         if (f.state === 'flying') {
@@ -172,20 +184,21 @@ export class Pigeons {
           const t = smooth(Math.min(1, f.t));
           bezier(f.path[0], f.path[1], f.path[2], f.path[3], t, tmp);
           const spread = Math.sin(Math.PI * Math.min(1, f.t));
-          const prev = b.pos.clone();
-          b.pos.copy(tmp).addScaledVector(b.spread, spread).add(V(0, Math.sin(this.time * 5 + b.i) * 0.08 * spread, 0));
+          const prev = _prev.copy(b.pos);
+          b.pos.copy(tmp).addScaledVector(b.spread, spread);
+          b.pos.y += Math.sin(this.time * 5 + b.i) * 0.08 * spread;
           if (f.t < 0.08) b.pos.lerp(b.takeoff, 1 - f.t / 0.08);
-          const v = b.pos.clone().sub(prev);
+          const v = _vel.subVectors(b.pos, prev);
           if (v.lengthSq() > 1e-6) b.heading = Math.atan2(v.x, v.z);
           flying = f.t < 0.97;
           b.flap += dt * (f.t > 0.35 && f.t < 0.75 && Math.sin(this.time + b.i) > 0.6 ? 4 : 22); // glide now and then
         } else {
           // Pottering about: waddle to a spot, peck, pick a new spot.
-          const goal = f.home.clone().add(b.target);
-          const to = goal.clone().sub(b.pos).setY(0);
-          if (to.length() > 0.05) {
+          const goal = _goal.addVectors(f.home, b.target);
+          const to = _to.subVectors(goal, b.pos).setY(0), left = to.length();
+          if (left > 0.05) {
             b.heading = Math.atan2(to.x, to.z);
-            b.pos.addScaledVector(to.normalize(), Math.min(to.length(), dt * 0.35));
+            b.pos.addScaledVector(to.normalize(), Math.min(left, dt * 0.35)); // (a step, but never past the spot)
           } else if ((b.walkT -= dt) <= 0) {
             b.walkT = rand(1.5, 4);
             b.target = V(rand(-1, 1), 0, rand(-1, 1)).multiplyScalar(f.home.y > 0.5 ? 0.9 : 1.3);
@@ -194,7 +207,7 @@ export class Pigeons {
           b.flap = 0;
         }
         // Pose the rig.
-        const walking = !flying && b.target && f.home.clone().add(b.target).distanceTo(b.pos) > 0.05;
+        const walking = !flying && b.target && _goal.addVectors(f.home, b.target).distanceTo(b.pos) > 0.05;
         this.rig.position.copy(b.pos);
         this.rig.position.y += walking ? Math.abs(Math.sin(this.time * 14 + b.i)) * 0.02 : 0;
         this.rig.rotation.set(flying ? -0.15 : 0, b.heading, 0);
@@ -215,6 +228,6 @@ export class Pigeons {
         p.wing.setMatrixAt(b.i * 2 + 1, r.wingR.matrixWorld);
       }
     }
-    for (const m of Object.values(p)) m.instanceMatrix.needsUpdate = true;
+    if (posed) for (const m of Object.values(p)) m.instanceMatrix.needsUpdate = true; // (nothing moved: nothing to send)
   }
 }

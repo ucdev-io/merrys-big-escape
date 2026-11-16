@@ -10,11 +10,14 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 `;
 
 // Pass 1 (low res): wobbly UVs (edge bleed) + Kuwahara filter (flat paint blobs).
+// The blob radius R is built into the shader (a #define, one shader per size, swapped when auto
+// quality changes it), so the loops have fixed lengths the graphics chip can unroll. Each row is
+// summed as its left half, middle and right half, then added to the quarters it belongs to: the same
+// (2R+1)² reads as before, without four tests for every one.
 const PAINT_FRAG = /* glsl */ `
 uniform sampler2D tScene;
 uniform sampler2D tNoise;
 uniform vec2 uRes;
-uniform int uRadius;
 uniform float uWobble;
 uniform float uWobbleFreq;
 varying vec2 vUv;
@@ -23,31 +26,36 @@ void main() {
   vec2 nq = gl_FragCoord.xy / 512.0 * uWobbleFreq * 0.6;
   vec2 wob = vec2(texture2D(tNoise, nq).b, texture2D(tNoise, nq + vec2(0.37, 0.71)).b) - 0.5;
   vec2 uv = vUv + wob * uWobble * px;
-
-  if (uRadius <= 0) { gl_FragColor = texture2D(tScene, uv); return; }
-
-  vec3 m[4]; vec3 s[4];
-  for (int k = 0; k < 4; k++) { m[k] = vec3(0.0); s[k] = vec3(0.0); }
-  int r = uRadius;
-  for (int j = -r; j <= r; j++) {
-    for (int i = -r; i <= r; i++) {
-      vec3 c = texture2D(tScene, uv + vec2(float(i), float(j)) * px).rgb;
-      vec3 c2 = c * c;
-      if (i <= 0 && j <= 0) { m[0] += c; s[0] += c2; }
-      if (i >= 0 && j <= 0) { m[1] += c; s[1] += c2; }
-      if (i <= 0 && j >= 0) { m[2] += c; s[2] += c2; }
-      if (i >= 0 && j >= 0) { m[3] += c; s[3] += c2; }
+#if R < 1
+  gl_FragColor = texture2D(tScene, uv);
+#else
+  // m0..m3: the four (R+1)² quarters (up-left, up-right, down-left, down-right; the middle row and
+  // column count in each one they touch); s0..s3: their sums of squares.
+  vec3 m0 = vec3(0.0), m1 = vec3(0.0), m2 = vec3(0.0), m3 = vec3(0.0);
+  vec3 s0 = vec3(0.0), s1 = vec3(0.0), s2 = vec3(0.0), s3 = vec3(0.0);
+  for (int j = -R; j <= R; j++) {
+    float y = float(j) * px.y;
+    vec3 c = texture2D(tScene, uv + vec2(0.0, y)).rgb;
+    vec3 lm = c, ls = c * c, rm = c, rs = c * c; // (the middle column is in both halves)
+    for (int i = 1; i <= R; i++) {
+      vec3 a = texture2D(tScene, uv + vec2(-float(i) * px.x, y)).rgb;
+      vec3 b = texture2D(tScene, uv + vec2(float(i) * px.x, y)).rgb;
+      lm += a; ls += a * a; rm += b; rs += b * b;
     }
+    if (j <= 0) { m0 += lm; s0 += ls; m1 += rm; s1 += rs; }
+    if (j >= 0) { m2 += lm; s2 += ls; m3 += rm; s3 += rs; }
   }
-  float n = float((r + 1) * (r + 1));
-  float best = 1e9; vec3 outc = vec3(0.0);
-  for (int k = 0; k < 4; k++) {
-    vec3 mu = m[k] / n;
-    vec3 v = abs(s[k] / n - mu * mu);
-    float sig = v.r + v.g + v.b;
-    if (sig < best) { best = sig; outc = mu; }
-  }
+  const float n = float((R + 1) * (R + 1));
+  vec3 mu = m0 / n, v = abs(s0 / n - mu * mu);
+  float best = v.r + v.g + v.b; vec3 outc = mu;
+  mu = m1 / n; v = abs(s1 / n - mu * mu);
+  if (v.r + v.g + v.b < best) { best = v.r + v.g + v.b; outc = mu; }
+  mu = m2 / n; v = abs(s2 / n - mu * mu);
+  if (v.r + v.g + v.b < best) { best = v.r + v.g + v.b; outc = mu; }
+  mu = m3 / n; v = abs(s3 / n - mu * mu);
+  if (v.r + v.g + v.b < best) { outc = mu; }
   gl_FragColor = vec4(outc, 1.0);
+#endif
 }
 `;
 
@@ -203,17 +211,17 @@ export class WatercolorPipeline {
     this.sceneRT = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, samples: 0 });
     this.sceneRT.depthTexture = new THREE.DepthTexture(1, 1);
     this.sceneRT.depthTexture.type = THREE.UnsignedIntType;
-    this.paintRT = new THREE.WebGLRenderTarget(1, 1, rtOpts);
+    this.paintRT = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: false }); // (a flat picture: no depth to keep or clear)
     const noise = createPaperTexture();
 
     this.paintMat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: PAINT_FRAG,
+      defines: { R: 3 }, // (the blob radius: see syncUniforms)
       uniforms: {
         tScene: { value: this.sceneRT.texture },
         tNoise: { value: noise },
         uRes: { value: new THREE.Vector2() },
-        uRadius: { value: 3 },
         uWobble: { value: 4 },
         uWobbleFreq: { value: 1.6 },
       },
@@ -345,7 +353,8 @@ export class WatercolorPipeline {
   syncUniforms(camera) {
     const p = this.params, pu = this.paintMat.uniforms, cu = this.compMat.uniforms;
     if (this.effScale !== this._scale) this.setSize(this.outW, this.outH);
-    pu.uRadius.value = this.effRadius;
+    const R = this.effRadius; // (a new size means the shader for that size: made once, then reused)
+    if (this.paintMat.defines.R !== R) { this.paintMat.defines.R = R; this.paintMat.needsUpdate = true; }
     pu.uWobble.value = p.wobble;
     pu.uWobbleFreq.value = p.wobbleFreq;
     cu.uNear.value = camera.near;

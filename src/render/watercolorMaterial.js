@@ -90,8 +90,10 @@ vec3 wcSeason(vec3 base, vec3 p, vec3 n) {
   if (leaf && uAutumn + uBlossom > 0.001) { // (vWcRnd: this tree's own dice roll)
     float fine = wcNoise(p * 1.7);
     base = mix(base, wcAutumn(vWcRnd, fine) * (0.62 + lum * 1.3), uAutumn * green);
-    float bl = step(0.55, vWcRnd) * smoothstep(0.26, 0.5, wcNoise(p * 6.0 + 7.0));
-    base = mix(base, mix(uBlossomA, uBlossomB, fine), bl * uBlossom);
+    if (uBlossom > 0.001) { // (spring only: no blossom noise for every leaf in autumn)
+      float bl = step(0.55, vWcRnd) * smoothstep(0.26, 0.5, wcNoise(p * 6.0 + 7.0));
+      base = mix(base, mix(uBlossomA, uBlossomB, fine), bl * uBlossom);
+    }
   }
   // Fallen leaves (autumn) and petals (under the blossom, in spring): small, scattered, more in some places.
   if (!leaf && uAutumn + uBlossom > 0.001 && n.y > 0.7) {
