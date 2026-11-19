@@ -25,7 +25,7 @@
       (function () {
         var sent = 0, shown = {};
         function report(kind, msg, data) {
-          if (sent++ > 40) return;
+          if (sent++ > 40 || '%MODE%' === 'demo') return; // (the web demo has no game computer to tell)
           var body = JSON.stringify({ kind: kind, msg: String(msg == null ? '' : msg).slice(0, 500), data: data || null, page: location.pathname + location.search, t: Math.round(performance.now()) });
           try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/log', body))) fetch('/api/log', { method: 'POST', body: body, keepalive: true }); } catch (e) {}
         }

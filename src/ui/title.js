@@ -4,6 +4,7 @@ import { lanBase, fillShareBox } from '../net/links.js';
 import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { autoFullscreen, toggleFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
 import { watchPacks, renderPackRows } from '../net/packs.js';
+import { DEMO } from '../core/demo.js';
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
 
@@ -50,8 +51,8 @@ export function showTitle(save) {
           ${where ? `<button class="pill big" data-c="continue">▶ Continue in ${where}</button>` : ''}
           <button class="pill big" data-c="garden">🐾 New adventure <small>pick your dog · escape your garden</small></button>
           ${done
-            ? '<button class="pill big" data-c="town">🏘️ Skip to the neighbourhood <small>play with friends</small></button>'
-            : '<p class="locked">🏘️ The neighbourhood (and playing with friends) opens once you\u2019ve escaped a garden!</p>'}
+            ? '<button class="pill big" data-c="town">🏘️ Skip to the neighbourhood <small>' + (DEMO ? 'the woods, the farm, the beach…' : 'play with friends') + '</small></button>'
+            : '<p class="locked">🏘️ The neighbourhood' + (DEMO ? '' : ' (and playing with friends)') + ' opens once you\u2019ve escaped a garden!</p>'}
         </div>
         <div class="extras">
           <button class="link phone-btn">📱 Play on a phone or tablet</button> ·
@@ -59,7 +60,8 @@ export function showTitle(save) {
           <button class="link settings-btn">⚙️ Settings</button>
         </div>
         ${isTouchDevice() && innerHeight > innerWidth ? '<p class="tip">📱 Tip: turn your phone sideways for a bigger view!</p>' : ''}
-        <div class="phone hidden"><p>On the same Wi-Fi, scan this with the phone's camera:</p><div class="box"></div></div>
+        ${DEMO ? '<p class="tip">🐾 A web demo for one dog. At home, the whole family can play together in a pack!</p>' : ''}
+        <div class="phone hidden"><p>${DEMO ? 'Scan this with a phone’s camera:' : 'On the same Wi-Fi, scan this with the phone’s camera:'}</p><div class="box"></div></div>
         <div class="settings hidden">
           <label><input type="checkbox" data-s="debug" ${s.debug ? 'checked' : ''}> Show speed info (frames per second)</label>
           <label><input type="checkbox" data-s="styles" ${s.styles ? 'checked' : ''}> Show the art style picker</label>

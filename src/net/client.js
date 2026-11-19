@@ -1,4 +1,6 @@
 // Talks to the Dog Park server (server/rooms.js) over a WebSocket on the same host, path /ws.
+import { DEMO } from '../core/demo.js';
+
 export class NetClient {
   constructor() {
     this.ws = null;
@@ -12,6 +14,7 @@ export class NetClient {
   on(type, fn) { this.handlers[type] = fn; return this; }
 
   connect() {
+    if (DEMO) return Promise.reject(new Error('Packs are for playing together at home.'));
     return new Promise((resolve, reject) => {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       const ws = new WebSocket(`${proto}://${location.host}/ws`);

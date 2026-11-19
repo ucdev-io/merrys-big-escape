@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { DEMO } from '../core/demo.js';
 
 const LOCAL = ['localhost', '127.0.0.1', '[::1]', '::1'];
 let basePromise = null;
@@ -8,7 +9,7 @@ let basePromise = null;
  * ask the server for the computer's real network address (localhost means nothing to a phone).
  */
 export function lanBase() {
-  if (!LOCAL.includes(location.hostname)) return Promise.resolve(location.origin);
+  if (DEMO || !LOCAL.includes(location.hostname)) return Promise.resolve(location.origin);
   basePromise ??= fetch('/api/lan')
     .then((r) => r.json())
     .then((j) => j.urls?.[0] ?? location.origin)

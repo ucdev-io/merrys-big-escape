@@ -3,3 +3,5 @@ dist
 data
 data-dev
 dist-test
+dist-demo
+.wrangler

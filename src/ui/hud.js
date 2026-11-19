@@ -10,6 +10,7 @@ import { STATS, levelStats, outfitStats, boostText } from '../game/stats.js';
 import { EMOTES } from '../entities/dog.js';
 import { loadSave } from '../core/save.js';
 import { sfx } from '../core/audio.js';
+import { DEMO } from '../core/demo.js';
 import { buzz } from '../core/haptics.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
@@ -245,7 +246,7 @@ export class HUD {
         <li>Walk up to the <b>📋 Lost &amp; Found board</b> by your gate to pick a job: lost things, deliveries, kites stuck up high, runaway hens, things Pickles has pinched… Trickier jobs (🐾🐾🐾) earn more stars, and a twist (🤫 no barking, ⏱️ be quick…) earns a bonus. Walk back to the board to swap a job.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
-        <li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 family records.</li>
+        ${DEMO ? '' : '<li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 family records.</li>'}
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>
@@ -261,7 +262,7 @@ export class HUD {
         <li><b>🏖️ The Beach!</b> Over the dunes past another edge of town. Run from the waves (or chase them), build sandcastles with 🐾 (the whole pack can help; zoom into one to flatten it), dig up shells, woof the seagulls off the picnics' chips, help Sandy the lifeguard, and do a trick at the kiosk. A paddle in the sea washes the mud off.</li>
         <li><b>🚜 The Farm!</b> Out past another edge of town. Help <b>Farmer Mabel</b>, round the sheep into their pen (get behind them; friends can help), shoo Percy the pig home, climb the hay, and roll in the mud with the pigs. A paddle in the duck pond washes it off.</li>
         <li><b>🌦️ Seasons!</b> The town follows the real calendar (or pick one in ☰ → Seasons): snowmen, sledging and a frozen pond in winter, leaf piles and conkers in autumn, an egg hunt in spring, paddling pools in summer.</li>
-        <li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>
+        ${DEMO ? '' : '<li>Friends on the same Wi-Fi show up in <b>Friends playing now</b> \u2014 tap to join.</li>'}
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);
   }
 

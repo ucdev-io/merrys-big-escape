@@ -1,11 +1,13 @@
 import { BREEDS } from '../entities/breeds.js';
 import { townName } from '../world/town/generator.js';
+import { DEMO } from '../core/demo.js';
 
 // "Friends playing now": every open neighbourhood on this game server, so joining is one tap —
 // no codes to type, no QR codes to scan.
 
 /** { packs: playing now, worlds: saved neighbourhoods } — or null without a game server. */
 export async function fetchPacks() {
+  if (DEMO) return null;
   try {
     const r = await fetch('/api/packs', { cache: 'no-store' });
     if (!r.ok) return null;

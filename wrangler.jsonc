@@ -1,0 +1,15 @@
+// The web demo on Cloudflare (Workers static assets, free plan): plain files, no game server.
+//   npm run demo                 build it into dist-demo/
+//   npx wrangler login           once, signs in to your Cloudflare account in the browser
+//   npx wrangler deploy          upload dist-demo/ and serve it at merry.ucdev.io
+// (ucdev.io has to be a domain on the same Cloudflare account.)
+{
+  "name": "merry",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist-demo",
+    // Links like /pack/BONE-42 still open the game (which then just plays solo).
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "merry.ucdev.io", "custom_domain": true }]
+}

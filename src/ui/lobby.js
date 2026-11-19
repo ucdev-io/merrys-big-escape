@@ -1,6 +1,7 @@
 import { BREEDS, BREED_KEYS, BREED_GROUPS } from '../entities/breeds.js';
 import { watchPacks, renderPackRows, renderWorldRows } from '../net/packs.js';
 import { savedDogs } from '../game/progress.js';
+import { DEMO } from '../core/demo.js';
 
 /**
  * "Who's playing?" — pick one of your saved dogs (or make a new one: choose a breed and a name),
@@ -53,6 +54,7 @@ export function showLobby({ hud, profile, current = null, seed = null, townName 
   const t2 = wrap.querySelector('.town2'); if (t2) t2.textContent = townName;
   if (title) wrap.querySelector('h1').textContent = title;
   if (subtitle) wrap.querySelector('.sub').innerHTML = subtitle;
+  if (DEMO) wrap.querySelector('.code-link').classList.add('hidden'); // (packs are for home; friends and places stay hidden with no server)
   if (garden) {
     // Garden mode: just choose a dog and go — packs come after the escape.
     wrap.querySelectorAll('.join-row, .small, .friends, .places, .code-link').forEach((e) => e.remove());

@@ -1,6 +1,8 @@
 // Tiny helpers for the game server's web API (server/api.js). They throw if there's no server.
+import { DEMO } from '../core/demo.js';
 
 async function request(path, init, timeout) {
+  if (DEMO) throw new Error('No game server in the web demo.');
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeout);
   try {
