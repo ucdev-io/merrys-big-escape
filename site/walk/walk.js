@@ -80,16 +80,60 @@ addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') { e.preventDefault(); go(Math.round(scrollY / H()) - 1); }
 });
 // A mouse wheel or trackpad: one gesture, one stop (a whole gesture, inertia and all, counts once).
+// Trackpads can go sideways too: two fingers to the left goes on, like turning a page.
 let wheelUntil = 0;
 addEventListener('wheel', (e) => {
-  if (e.ctrlKey || open || Math.abs(e.deltaY) < Math.abs(e.deltaX)) return;
+  if (e.ctrlKey || open) return;
   e.preventDefault();
-  const now = performance.now();
+  const now = performance.now(), d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
   if (now < wheelUntil) { wheelUntil = Math.max(wheelUntil, now + 220); return; }
-  if (Math.abs(e.deltaY) < 3) return;
-  go(Math.round(scrollY / H()) + Math.sign(e.deltaY));
+  if (Math.abs(d) < 3) return;
+  go(Math.round(scrollY / H()) + Math.sign(d));
   wheelUntil = now + 700;
 }, { passive: false });
+
+// Touch: the walk follows your finger, whichever way you swipe. Left or up goes on, right or down
+// goes back (the card moves with your finger, like a page). A swipe that's mostly sideways counts as
+// sideways however much it drifts up or down, and the other way round. Let go a quarter of the way
+// along, or flick, to go to the next stop; less, and it settles back. Two fingers still zoom.
+const root = document.documentElement;
+let drag = null, settleT = 0;
+addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'touch' || !e.isPrimary || open) return;
+  clearTimeout(settleT);
+  drag = { x: e.clientX, y: e.clientY, y0: scrollY, axis: null, moved: 0, t: performance.now(), vt: performance.now(), vm: 0, v: 0 };
+}, { passive: true });
+addEventListener('pointermove', (e) => {
+  if (!drag || !e.isPrimary) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!drag.axis) {
+    if (Math.hypot(dx, dy) < 10) return; // (not a swipe yet: maybe a tap)
+    drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    root.classList.add('dragging');
+  }
+  // How far along, in stops: a screen's width sideways, or a screen's height up or down, is one stop.
+  const moved = drag.axis === 'x' ? -dx / innerWidth : -dy / innerHeight, now = performance.now();
+  drag.v = (moved - drag.vm) / Math.max(0.008, (now - drag.vt) / 1000);
+  drag.vm = moved; drag.vt = now; drag.moved = moved;
+  const top = Math.max(0, Math.min((N - 1) * H(), drag.y0 + moved * H()));
+  scrollTo({ top, behavior: 'instant' });
+}, { passive: true });
+// (iPhones: stop the page scrolling under the finger. One finger only, so pinching still zooms.)
+addEventListener('touchmove', (e) => { if (e.touches.length === 1 && !open) e.preventDefault(); }, { passive: false });
+function endDrag(e) {
+  if (!drag || !e.isPrimary) return;
+  const d = drag;
+  drag = null;
+  if (!d.axis) return; // a tap
+  const from = Math.round(d.y0 / H());
+  const flick = Math.abs(d.v) > 0.8 && Math.abs(d.moved) > 0.04 && Math.sign(d.v) === Math.sign(d.moved);
+  const step = Math.abs(d.moved) > 0.25 || flick ? Math.sign(d.moved) : 0;
+  go(from + step);
+  // (snapping stays off until she's arrived, so the page doesn't jump to the nearest stop first)
+  settleT = setTimeout(() => root.classList.remove('dragging'), still ? 50 : 750);
+}
+addEventListener('pointerup', endDrag);
+addEventListener('pointercancel', endDrag);
 // Tabbing into a card that isn't in front: walk there.
 document.addEventListener('focusin', (e) => {
   const i = stops.findIndex((t) => t.sec.contains(e.target));

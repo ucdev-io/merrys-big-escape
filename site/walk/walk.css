@@ -1,5 +1,8 @@
 /* "The Walk": Merry trots along a painted garden; each stop slides in from the right as you go. */
 html { scroll-snap-type: y mandatory; }
+/* Touch swipes are handled by walk.js (any direction walks Merry), so the page doesn't pan itself; pinching still zooms. */
+html, body { touch-action: pinch-zoom; }
+html.dragging { scroll-snap-type: none; }
 body { min-height: 100svh; }
 
 /* ---------- the garden behind everything ---------- */
@@ -97,7 +100,7 @@ body { min-height: 100svh; }
 .hint .arrow { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
 @keyframes nudge { 50% { transform: translateX(6px); } }
 .hint-touch { display: none; }
-@media (pointer: coarse) { .hint-touch { display: inline; } .hint-mouse { display: none; } }
+@media (pointer: coarse) { .hint-touch { display: inline; } .hint-mouse, .hint .arrow { display: none; } }
 body.walked .hint { opacity: 0; }
 
 /* ---------- phones ---------- */

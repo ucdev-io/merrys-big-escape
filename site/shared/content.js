@@ -7,7 +7,7 @@ export const PLAY_URL = '/play/';
 
 export const SHOTS = {
   garden: { src: '/shots/garden.jpg', alt: 'Merry the whippet in her back garden, beside a paddling pool and a picket fence' },
-  sniff: { src: '/shots/sniff.jpg', alt: 'Merry sniffing the pavement, with a trail of golden and pink scent puffs leading off down the street' },
+  sniff: { src: '/shots/sniff.jpg', alt: 'Merry sniffing the pavement, with a short trail of golden and pink scent puffs leading through a fence to a smell on the lawn' },
   bone: { src: '/shots/bone.jpg', alt: 'Merry looking up at a golden bone on top of a stack of crates' },
   town: { src: '/shots/town.jpg', alt: 'Merry on the pavement of a painted street of little houses' },
   heist: { src: '/shots/heist.jpg', alt: 'Merry creeping up on the baker’s stall of pastries while pigeons peck about' },

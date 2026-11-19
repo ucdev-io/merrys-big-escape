@@ -40,7 +40,7 @@ img { display: block; max-width: 100%; }
 .play:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), 0 6px 14px rgba(59, 43, 37, 0.2); }
 
 /* Merry's canvas: shown once she's painted her first picture (until then the still shows through). */
-canvas.merry { display: block; opacity: 0; transition: opacity 0.8s ease; touch-action: pan-y; }
+canvas.merry { display: block; opacity: 0; transition: opacity 0.8s ease; }
 canvas.merry.awake { opacity: 1; }
 
 /* Paint swatches, as in the game's dog picker. */
