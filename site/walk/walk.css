@@ -1,0 +1,139 @@
+/* "The Walk": Merry trots along a painted garden; each stop slides in from the right as you go. */
+html { scroll-snap-type: y mandatory; }
+body { min-height: 100svh; }
+
+/* ---------- the garden behind everything ---------- */
+.backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+.backdrop .wash { /* (what shows until Merry's painted: sky, hills and grass in flat washes) */
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 60% at 70% 105%, #8fb35f 0 40%, transparent 41%),
+    linear-gradient(to bottom, #f3e6cf 0%, #efe4cf 46%, #b9cf8f 46.5%, #9cbf6a 70%, #8fb35f 100%);
+}
+.backdrop canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.woof {
+  position: absolute; z-index: 2; padding: 4px 12px 6px; font-size: 24px; pointer-events: none;
+  background: #fffaf0; border: 2px solid var(--ink); border-radius: 18px; transform: translate(-50%, -120%) rotate(-4deg);
+  box-shadow: var(--shadow); animation: pop 0.25s ease-out;
+}
+.woof::after { content: ''; position: absolute; left: 22%; bottom: -10px; border: 8px solid transparent; border-top-color: var(--ink); }
+@keyframes pop { from { transform: translate(-50%, -100%) scale(0.6) rotate(-4deg); opacity: 0; } }
+
+/* ---------- top bar: home, the paw trail, play ---------- */
+.bar {
+  position: fixed; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+.bar > * { pointer-events: auto; }
+.home, .mini-play {
+  font-size: 19px; text-decoration: none; padding: 6px 14px 7px; border-radius: 999px;
+  background: var(--glass); border: 1.5px solid rgba(59, 43, 37, 0.35); white-space: nowrap;
+}
+.mini-play { background: linear-gradient(#f9d98e, #efb860); border-color: var(--ink); }
+.mini-play small { display: none; }
+.trail { flex: 1; display: flex; justify-content: center; gap: 4px; flex-wrap: nowrap; }
+.trail button {
+  width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(59, 43, 37, 0.3); background: var(--glass);
+  font-size: 16px; line-height: 1; cursor: pointer; padding: 0; position: relative;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.trail button[aria-current='step'] { background: #f9d98e; border-color: var(--ink); transform: scale(1.18); }
+.trail button:hover { transform: scale(1.12); }
+
+/* ---------- the stops ---------- */
+#journey { position: relative; z-index: 1; }
+.stop { height: 100svh; scroll-snap-align: start; scroll-snap-stop: always; }
+.card {
+  position: fixed; left: 0; right: 0; top: 0; height: 64svh; z-index: 2;
+  display: grid; grid-template-columns: minmax(280px, 30rem) 1fr; align-items: center; gap: 3vw;
+  padding: 76px max(5vw, 20px) 0; pointer-events: none;
+  transform: translate3d(var(--x, 100vw), 0, 0); opacity: var(--o, 0); visibility: var(--v, hidden);
+  will-change: transform, opacity;
+}
+.card.here { pointer-events: auto; }
+.words {
+  background: var(--glass); border-radius: 22px; padding: 22px 26px 24px; box-shadow: var(--shadow);
+  border: 1.5px solid rgba(59, 43, 37, 0.18); backdrop-filter: none;
+}
+.kicker { font-size: 18px; color: var(--tan); margin: 0 0 4px; }
+.title { font-size: clamp(34px, 4.4vw, 54px); margin-bottom: 10px; }
+.text { margin: 0; font-size: 17px; }
+.extra:empty { display: none; }
+.extra { margin-top: 16px; }
+
+/* Postcards, pinned into the scene (they move a little faster than the words: parallax). */
+.cards { position: relative; height: 100%; }
+.postcard {
+  position: absolute; width: min(36vw, 460px); left: var(--l, 10%); top: var(--t, 14%);
+  background: #fffaf0; padding: 9px 9px 30px; border-radius: 4px; box-shadow: 0 14px 28px rgba(59, 43, 37, 0.25);
+  transform: translate3d(var(--px, 0), 0, 0) rotate(var(--r, -3deg)); transform-origin: 50% 0;
+  cursor: zoom-in; border: none; text-align: left; font: inherit; color: inherit;
+}
+.postcard img { width: 100%; aspect-ratio: 1280 / 652; object-fit: cover; border-radius: 2px; }
+.postcard .cap { position: absolute; left: 14px; bottom: 5px; font-family: var(--hand); font-size: 18px; color: var(--ink-soft); }
+.postcard::before { /* a strip of tape */
+  content: ''; position: absolute; top: -12px; left: 50%; width: 90px; height: 26px; transform: translateX(-50%) rotate(2deg);
+  background: rgba(246, 208, 106, 0.55); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+.postcard.big { position: fixed; z-index: 20; cursor: zoom-out; }
+
+/* The welcome: big title, centred. */
+.stop[data-id='hello'] .card { grid-template-columns: 1fr; justify-items: center; text-align: center; align-content: start; height: auto; padding-top: max(70px, 8svh); }
+.stop[data-id='hello'] .words { background: transparent; box-shadow: none; border: none; max-width: 52rem; padding: 0; }
+.stop[data-id='hello'] .title { font-size: clamp(48px, 7vw, 100px); text-shadow: 0 3px 0 #fffaf0, 0 0 30px rgba(255, 250, 240, 0.9); }
+.stop[data-id='hello'] .text { font-size: 18px; background: var(--glass); border-radius: 16px; padding: 8px 16px; display: inline-block; max-width: 36rem; }
+.stop[data-id='hello'] .extra { margin-top: 12px; }
+.stop[data-id='hello'] .tagline { font-family: var(--hand); font-size: 26px; margin: 2px 0 10px; text-shadow: 0 0 12px #fffaf0, 0 0 4px #fffaf0; }
+.stop[data-id='play'] .card { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+.stop[data-id='play'] .words { max-width: 36rem; }
+.stop[data-id='play'] .play { font-size: 34px; margin: 6px 0 14px; }
+.about { font-size: 14px; color: var(--ink-soft); margin: 10px 0 0; }
+
+.hint {
+  position: fixed; z-index: 3; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  margin: 0; font-size: 22px; background: var(--glass); padding: 6px 16px 8px; border-radius: 999px; transition: opacity 0.4s;
+}
+.hint .arrow { display: inline-block; animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateX(6px); } }
+.hint-touch { display: none; }
+@media (pointer: coarse) { .hint-touch { display: inline; } .hint-mouse { display: none; } }
+body.walked .hint { opacity: 0; }
+
+/* ---------- phones ---------- */
+@media (max-width: 760px), (max-aspect-ratio: 4/5) {
+  .card { grid-template-columns: 1fr; align-content: start; height: auto; padding-top: 64px; gap: 10px; }
+  .words { padding: 16px 18px 18px; }
+  .title { font-size: clamp(30px, 8.4vw, 42px); }
+  .text { font-size: 16px; }
+  .cards { height: 30svh; }
+  .postcard { width: min(62vw, 340px); top: 4%; }
+  .trail { gap: 2px; }
+  .trail button { width: 26px; height: 26px; font-size: 12px; }
+  .home { display: none; }
+  .mini-play { font-size: 16px; padding: 5px 11px 6px; }
+  .mini-play .label { display: none; }
+  .mini-play::before { content: '▶ Play'; }
+  .stop[data-id='hello'] .card { padding-top: 62px; }
+  .stop[data-id='hello'] .title { font-size: clamp(42px, 12vw, 60px); }
+  .stop[data-id='hello'] .tagline { font-size: 20px; }
+  .stop[data-id='hello'] .text { font-size: 15px; }
+  .play { font-size: 24px; padding: 11px 24px 10px; }
+}
+@media (max-height: 520px) and (orientation: landscape) { /* phones held sideways */
+  .card { height: 100svh; padding-top: 58px; grid-template-columns: minmax(240px, 22rem) 1fr; }
+  .words { padding: 12px 16px 14px; }
+  .title { font-size: 30px; }
+  .text { font-size: 15px; }
+  .cards { height: 52svh; align-self: start; }
+  .postcard { width: min(30vw, 280px); top: 0; }
+  .stop[data-id='hello'] .card { justify-items: start; text-align: left; padding-left: max(5vw, 20px); padding-top: 56px; }
+  .stop[data-id='hello'] .words { max-width: 56vw; }
+  .stop[data-id='hello'] .title { font-size: 46px; }
+  .stop[data-id='hello'] .tagline { font-size: 19px; margin-bottom: 6px; }
+  .stop[data-id='hello'] .text { display: none; }
+  .stop[data-id='play'] .card { justify-items: start; text-align: left; }
+  .stop[data-id='play'] .words { max-width: 58vw; }
+  .hint { left: 30%; }
+}
+body.still .card { transition: opacity 0.3s; }

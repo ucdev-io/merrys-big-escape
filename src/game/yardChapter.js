@@ -5,7 +5,7 @@ import { sfx } from '../core/audio.js';
 import { buzz } from '../core/haptics.js';
 import { loadSave, writeSave } from '../core/save.js';
 import { showLobby } from '../ui/lobby.js';
-import { packPath } from '../net/links.js';
+import { packPath, HOME } from '../net/links.js';
 import { DogActions } from '../systems/dogActions.js';
 import { YARD } from '../world/yard.js';
 import { DigSpots } from './yard/digSpots.js';
@@ -309,12 +309,12 @@ export class YardChapter {
     const pack = loadSave().pendingPack;
     const go = pack
       ? [`Join pack ${pack} →`, () => { writeSave({ chapter: 'town', pendingPack: null }); location.href = packPath(pack); }]
-      : ['Into the neighbourhood →', () => { writeSave({ chapter: 'town' }); location.href = '/?town'; }];
+      : ['Into the neighbourhood →', () => { writeSave({ chapter: 'town' }); location.href = `${HOME}?town`; }];
     this.hud.showCard(`
       <h1 class="who"></h1>
       <p>With a squeaky duck, a smelly sock, an ancient biscuit<br>and a very muddy nose, <span class="who2"></span> is free!</p>
       <p>Beyond the fence lies <b>the Neighbourhood</b> — your friends, new smells, new adventures…</p>`,
-      [go, ['Play the garden again', () => { writeSave({ found: [], escaped: false, chapter: 'yard' }); location.href = '/'; }]]);
+      [go, ['Play the garden again', () => { writeSave({ found: [], escaped: false, chapter: 'yard' }); location.href = HOME; }]]);
     this.hud.card.querySelector('.who').textContent = `${this.dogName} escaped! 🎉`;
     this.hud.card.querySelector('.who2').textContent = this.dogName;
   }

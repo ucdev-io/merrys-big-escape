@@ -6,7 +6,7 @@ import { TOWN, PLACE_EMOJI, randomSeed } from '../world/town/generator.js';
 import { BREEDS } from '../entities/breeds.js';
 import { RemoteDogs } from '../net/remoteDogs.js';
 import { showLobby } from '../ui/lobby.js';
-import { packPath } from '../net/links.js';
+import { packPath, HOME } from '../net/links.js';
 import { waterAt } from '../world/water.js';
 import { DogActions } from '../systems/dogActions.js';
 import { GoldenBones } from './town/bones.js';
@@ -231,7 +231,7 @@ export class TownChapter {
         } catch (e) { lobby.setBusy(false); lobby.setError(e.message); }
       },
       onNewTown: () => { writeSave({ chapter: 'town', town: { seed: randomSeed(), discovered: [] } }); location.reload(); },
-      onGarden: () => { writeSave({ chapter: 'yard' }); location.href = '/'; },
+      onGarden: () => { writeSave({ chapter: 'yard' }); location.href = HOME; },
     });
     if (this.prefillCode) lobby.prefill(this.prefillCode);
   }

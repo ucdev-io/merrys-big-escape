@@ -60,7 +60,7 @@ export function showTitle(save) {
           <button class="link settings-btn">⚙️ Settings</button>
         </div>
         ${isTouchDevice() && innerHeight > innerWidth ? '<p class="tip">📱 Tip: turn your phone sideways for a bigger view!</p>' : ''}
-        ${DEMO ? '<p class="tip">🐾 A web demo for one dog. At home, the whole family can play together in a pack!</p>' : ''}
+        ${DEMO ? '<p class="tip">🐾 A web demo for one dog. In the home version, friends on the same Wi-Fi play together in a pack! · <a href="/">About Merry’s Big Escape</a></p>' : ''}
         <div class="phone hidden"><p>${DEMO ? 'Scan this with a phone’s camera:' : 'On the same Wi-Fi, scan this with the phone’s camera:'}</p><div class="box"></div></div>
         <div class="settings hidden">
           <label><input type="checkbox" data-s="debug" ${s.debug ? 'checked' : ''}> Show speed info (frames per second)</label>

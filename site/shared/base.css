@@ -1,0 +1,54 @@
+/* Merry's page: the game's paper, ink and handwriting. Shared by every design. */
+:root {
+  --paper: #f6efe0;
+  --paper-deep: #efe3cb;
+  --ink: #3b2b25;
+  --ink-soft: #6b5548;
+  --tan: #c98a4b;
+  --brindle: #7a4a2a;
+  --grass: #9cbf6a;
+  --sky: #8fb8d8;
+  --rose: #f2a0b4;
+  --sun: #f6d06a;
+  --glass: rgba(250, 244, 232, 0.82);
+  --shadow: 0 10px 30px rgba(59, 43, 37, 0.18);
+  --hand: 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif;
+  --body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); }
+body { font: 17px/1.5 var(--body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+h1, h2, h3, .hand { font-family: var(--hand); font-weight: 400; letter-spacing: 0.01em; line-height: 1.05; margin: 0; }
+a { color: inherit; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 3px solid var(--tan); outline-offset: 3px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* The big friendly button. */
+.play {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 14px 30px 12px; border-radius: 999px; text-decoration: none;
+  font-family: var(--hand); font-size: 28px; line-height: 1; color: var(--ink);
+  background: linear-gradient(#f9d98e, #efb860); border: 2px solid var(--ink);
+  box-shadow: 0 4px 0 var(--ink), 0 12px 24px rgba(59, 43, 37, 0.22);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: manipulation;
+}
+.play small { font-family: var(--body); font-size: 13px; opacity: 0.75; }
+.play:hover { transform: translateY(-2px) rotate(-1deg); box-shadow: 0 6px 0 var(--ink), 0 16px 28px rgba(59, 43, 37, 0.25); }
+.play:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink), 0 6px 14px rgba(59, 43, 37, 0.2); }
+
+/* Merry's canvas: shown once she's painted her first picture (until then the still shows through). */
+canvas.merry { display: block; opacity: 0; transition: opacity 0.8s ease; touch-action: pan-y; }
+canvas.merry.awake { opacity: 1; }
+
+/* Paint swatches, as in the game's dog picker. */
+.swatch { display: inline-flex; border-radius: 999px; overflow: hidden; border: 1.5px solid var(--ink); margin: 3px; }
+.swatch i { width: 12px; height: 18px; }
+
+.tip-small { font-size: 13px; color: var(--ink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}

@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Merry’s Big Escape</title>
+    <meta name="description" content="A muddy-pawed watercolour adventure for dogs who follow their noses. Play the free web demo in your browser." />
+    <meta name="theme-color" content="#7a5a43" />
+    <link rel="icon" type="image/png" href="/play/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/play/icons/icon-180.png" />
+    <meta property="og:title" content="Merry’s Big Escape" />
+    <meta property="og:description" content="A muddy-pawed adventure for dogs who follow their noses." />
+    <meta property="og:image" content="/shots/woods.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="./book.css" />
+  </head>
+  <body class="closed">
+    <div class="desk" aria-hidden="true">
+      <img class="loose l1" src="/shots/beach.jpg" alt="" />
+      <img class="loose l2" src="/shots/snow.jpg" alt="" />
+      <span class="pencil"></span>
+    </div>
+
+    <header class="bar">
+      <a class="home hand" href="https://ucdev.io" title="Back to Uncharted Curiosities">← ucdev.io</a>
+      <a class="mini-play hand" data-play href="/play/"><span class="label">▶ Play</span></a>
+    </header>
+
+    <main class="stage">
+      <div class="book">
+        <!-- The cover: a window cut through it, with Merry inside. -->
+        <section class="cover" aria-label="Cover">
+          <div class="cover-inner">
+            <p class="cover-kicker hand">The Sniff Book of</p>
+            <h1 class="cover-title"></h1>
+            <div class="window cover-window" aria-hidden="true"></div>
+            <p class="cover-tag"></p>
+            <div class="cover-btns">
+              <button class="open-book hand" type="button">Open the book →</button>
+              <a class="play" data-play href="/play/"><span class="label">▶ Play the demo</span><small>Free · in your browser</small></a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Inside: Merry's window on the left page, the story on the right. -->
+        <div class="spread" aria-hidden="true">
+          <section class="page left">
+            <div class="window page-window" aria-hidden="true"></div>
+            <p class="page-no hand"></p>
+            <h2 class="page-title"></h2>
+            <p class="caption hand"></p>
+          </section>
+          <section class="page right">
+            <div class="content" aria-live="polite"></div>
+            <div class="pager">
+              <button class="prev hand" type="button" aria-label="Previous page">←</button>
+              <span class="count hand"></span>
+              <button class="next hand" type="button" aria-label="Next page">→</button>
+            </div>
+          </section>
+          <nav class="tabs" aria-label="Pages"></nav>
+        </div>
+      </div>
+      <!-- Merry herself: one live picture that sits over whichever window is showing. -->
+      <div class="porthole" aria-hidden="true">
+        <img class="still" src="/shots/woods.jpg" alt="" />
+        <canvas class="merry" id="merry"></canvas>
+        <div class="woof hand" hidden>Woof!</div>
+      </div>
+    </main>
+
+    <script type="module" src="./book.js"></script>
+  </body>
+</html>

@@ -11,6 +11,7 @@ import { EMOTES } from '../entities/dog.js';
 import { loadSave } from '../core/save.js';
 import { sfx } from '../core/audio.js';
 import { DEMO } from '../core/demo.js';
+import { HOME } from '../net/links.js';
 import { buzz } from '../core/haptics.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
@@ -230,7 +231,7 @@ export class HUD {
       pic.textContent = picName(next);
       this.onPicture?.(next);
     });
-    item('🏠 Back to the title', () => { location.href = '/'; });
+    item('🏠 Back to the title', () => { location.href = HOME; });
   }
 
   showHelp() {

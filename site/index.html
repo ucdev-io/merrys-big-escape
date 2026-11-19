@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Merry’s Big Escape: page concepts</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/png" href="/play/icons/icon-192.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./shared/base.css" />
+    <style>
+      body { min-height: 100svh; display: grid; place-items: center; padding: 24px 16px; }
+      main { max-width: 760px; text-align: center; }
+      h1 { font-size: clamp(40px, 8vw, 72px); margin-bottom: 6px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; margin: 26px 0; }
+      .grid a { display: block; text-decoration: none; background: #fffaf0; border: 2px solid var(--ink); border-radius: 18px; padding: 10px 10px 16px; box-shadow: 0 4px 0 var(--ink); transition: transform 0.15s; }
+      .grid a:hover { transform: translateY(-3px) rotate(-1deg); }
+      .grid img { border-radius: 10px; aspect-ratio: 16 / 9; object-fit: cover; width: 100%; }
+      .grid h2 { font-size: 30px; margin: 10px 0 4px; }
+      .grid p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Merry’s page</h1>
+      <p>Two ideas for merry.ucdev.io, to try on a computer and a phone. (This chooser goes once one is picked.)</p>
+      <div class="grid">
+        <a href="./walk/"><img src="/shots/garden.jpg" alt="" /><h2>A · The Walk</h2><p>Merry trots along a painted garden; scroll or swipe and each part of the story slides past her.</p></a>
+        <a href="./book/"><img src="/shots/woods.jpg" alt="" /><h2>B · The Sniff Book</h2><p>A scrapbook on a desk: Merry in a painted window, pages that turn, polaroids to pick up.</p></a>
+      </div>
+      <p><a class="play" data-play href="/play/"><span class="label">▶ Play the demo</span></a></p>
+    </main>
+    <script type="module">
+      import { playButtons } from './shared/common.js';
+      playButtons();
+    </script>
+  </body>
+</html>

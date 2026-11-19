@@ -1,15 +1,17 @@
-// The web demo on Cloudflare (Workers static assets, free plan): plain files, no game server.
-//   npm run demo                 build it into dist-demo/
-//   npx wrangler login           once, signs in to your Cloudflare account in the browser
-//   npx wrangler deploy          upload dist-demo/ and serve it at merry.ucdev.io
-// (ucdev.io has to be a domain on the same Cloudflare account.)
+// merry.ucdev.io on Cloudflare (Workers static assets, free plan): plain files, no game server.
+//   /        Merry's page (site/)
+//   /play/   the one-dog web demo of the game
+// `npm run site` builds both into dist-site/. Deploying, when it's time:
+//   Cloudflare dashboard → Workers → connect this repo (Workers Builds): build command `npm run site`,
+//   deploy command `npx wrangler deploy`. Every push to main then republishes. No keys belong in here.
+// (ucdev.io must be a domain on the same Cloudflare account; this custom domain creates its own DNS record.)
 {
   "name": "merry",
   "compatibility_date": "2026-11-01",
   "assets": {
-    "directory": "./dist-demo",
-    // Links like /pack/BONE-42 still open the game (which then just plays solo).
-    "not_found_handling": "single-page-application"
+    "directory": "./dist-site",
+    // Unknown addresses get dist-site/404.html ("This page has wandered off") with a 404 status.
+    "not_found_handling": "404-page"
   },
   "routes": [{ "pattern": "merry.ucdev.io", "custom_domain": true }]
 }

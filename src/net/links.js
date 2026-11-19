@@ -17,12 +17,16 @@ export function lanBase() {
   return basePromise;
 }
 
-export const packPath = (code) => `/pack/${encodeURIComponent(code)}`;
+/** Where the game lives: '/' at home, '/play/' in the web demo (which has its own page at '/'). */
+export const HOME = import.meta.env?.BASE_URL ?? '/';
+
+export const packPath = (code) => `${HOME}pack/${encodeURIComponent(code)}`;
 export async function packLink(code) { return `${await lanBase()}${packPath(code)}`; }
 
 /** Read a pack code from a /pack/CODE link (or the old ?room=CODE style). */
 export function packCodeFromUrl() {
-  const m = location.pathname.match(/^\/pack\/([A-Za-z]{4}-?\d{2})\/?$/);
+  const path = location.pathname.startsWith(HOME) ? location.pathname.slice(HOME.length - 1) : location.pathname;
+  const m = path.match(/^\/pack\/([A-Za-z]{4}-?\d{2})\/?$/);
   if (m) return decodeURIComponent(m[1]).toUpperCase();
   return new URLSearchParams(location.search).get('room')?.toUpperCase() ?? null;
 }

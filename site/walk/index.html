@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Merry’s Big Escape</title>
+    <meta name="description" content="A muddy-pawed watercolour adventure for dogs who follow their noses. Play the free web demo in your browser." />
+    <meta name="theme-color" content="#f6efe0" />
+    <link rel="icon" type="image/png" href="/play/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/play/icons/icon-180.png" />
+    <meta property="og:title" content="Merry’s Big Escape" />
+    <meta property="og:description" content="A muddy-pawed watercolour adventure for dogs who follow their noses." />
+    <meta property="og:image" content="/shots/woods.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="./walk.css" />
+  </head>
+  <body>
+    <!-- The painted garden and Merry, behind everything. -->
+    <div class="backdrop" aria-hidden="true">
+      <div class="wash"></div>
+      <canvas class="merry" id="merry"></canvas>
+      <div class="woof hand" hidden>Woof!</div>
+    </div>
+
+    <header class="bar">
+      <a class="home hand" href="https://ucdev.io" title="Back to Uncharted Curiosities">← ucdev.io</a>
+      <nav class="trail" aria-label="Stops along the walk"></nav>
+      <a class="mini-play hand" data-play href="/play/"><span class="label">Play</span></a>
+    </header>
+
+    <!-- One stop per screen. Scrolling walks Merry from one to the next. -->
+    <main id="journey"></main>
+
+    <p class="hint hand" aria-hidden="true"><span class="hint-touch">Swipe up</span><span class="hint-mouse">Scroll</span> to walk with Merry <span class="arrow">→</span></p>
+
+    <template id="stop">
+      <section class="stop">
+        <div class="card">
+          <div class="words">
+            <p class="kicker hand"></p>
+            <h2 class="title"></h2>
+            <p class="text"></p>
+            <div class="extra"></div>
+          </div>
+          <div class="cards"></div>
+        </div>
+      </section>
+    </template>
+
+    <script type="module" src="./walk.js"></script>
+  </body>
+</html>

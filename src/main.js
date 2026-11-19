@@ -16,7 +16,7 @@ import { buildTown } from './world/town/builders.js';
 import { loadSave, writeSave } from './core/save.js';
 import { NetClient } from './net/client.js';
 import { showTitle } from './ui/title.js';
-import { packCodeFromUrl, packPath } from './net/links.js';
+import { packCodeFromUrl, packPath, HOME } from './net/links.js';
 import { getSettings, TEXTURE_LEVELS } from './core/settings.js';
 import { progress } from './game/progress.js';
 import { statsFor } from './game/stats.js';
@@ -118,7 +118,7 @@ if (inTown && packCode && save.profile) {
     writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
   } catch (e) {
     net = null;
-    history.replaceState(null, '', '/');
+    history.replaceState(null, '', HOME);
     console.warn('Could not join pack:', e.message);
     window.__packError = `Couldn\u2019t join pack ${packCode}: ${e.message}`;
   }

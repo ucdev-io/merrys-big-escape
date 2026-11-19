@@ -1,0 +1,180 @@
+/* "The Sniff Book": a scrapbook on a desk. Merry looks out through a window cut in the cover and every page. */
+html, body { height: 100%; overflow: hidden; }
+body { background: #6e4f3a; }
+:root { --win: min(290px, 38svh, 22vw); --page: #fbf5e8; --cloth: #5d8c55; --cloth-deep: #46703f; }
+
+/* ---------- the desk ---------- */
+.desk {
+  position: fixed; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 40%, rgba(30, 18, 10, 0.45) 100%),
+    repeating-linear-gradient(92deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 9px, rgba(0, 0, 0, 0.04) 9px 11px, transparent 11px 23px),
+    linear-gradient(180deg, #8a6248, #74523c 60%, #6a4a35);
+}
+.loose { position: absolute; width: 190px; padding: 8px 8px 26px; background: #fffaf0; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3); }
+.loose.l1 { left: 1.5vw; bottom: 5vh; transform: rotate(-11deg); }
+.loose.l2 { right: 1.5vw; top: 16vh; transform: rotate(8deg); }
+.pencil { position: absolute; right: 7vw; bottom: 9vh; width: 210px; height: 14px; transform: rotate(-28deg); border-radius: 3px;
+  background: linear-gradient(90deg, #3b2b25 0 6%, #f2d0a4 6% 14%, #f6d06a 14% 92%, #f2a0b4 92%); box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3); }
+@media (max-width: 1640px) { .loose { display: none; } }
+@media (max-width: 1180px) { .pencil { display: none; } }
+
+.bar { position: fixed; z-index: 30; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: max(10px, env(safe-area-inset-top)) 14px 0; pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.home, .mini-play { font-size: 19px; text-decoration: none; padding: 6px 14px 7px; border-radius: 999px; background: rgba(251, 245, 232, 0.9); border: 1.5px solid rgba(59, 43, 37, 0.4); }
+.mini-play { background: linear-gradient(#f9d98e, #efb860); border-color: var(--ink); }
+.mini-play small { display: none; }
+
+/* ---------- the book ---------- */
+.stage { position: fixed; inset: 0; display: grid; place-items: center; padding: 56px 12px 14px; }
+.book {
+  position: relative; width: min(1120px, 94vw); height: min(700px, calc(100svh - 84px));
+  perspective: 2400px; transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.closed .book { transform: translateX(-25%); }
+
+.spread { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.4)); }
+.page { position: relative; background: var(--page); overflow: hidden; }
+.page.left { border-radius: 14px 4px 4px 14px; background: linear-gradient(90deg, var(--page) 80%, #eee3cc); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 34px; gap: 6px; }
+.page.right { border-radius: 4px 14px 14px 4px; background: linear-gradient(270deg, var(--page) 82%, #ece0c8); display: flex; flex-direction: column; }
+body.closed .page.left { opacity: 0; }
+.page.left { transition: opacity 0.5s 0.5s; }
+.page::after { /* faint paper grain */
+  content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.35; mix-blend-mode: multiply;
+  background: repeating-radial-gradient(circle at 30% 20%, rgba(120, 90, 60, 0.05) 0 1px, transparent 1px 3px);
+}
+.window { width: var(--win); height: var(--win); flex: none; }
+.page-window { border-radius: 46% 46% 18px 18px / 40% 40% 18px 18px; box-shadow: inset 0 0 0 3px var(--ink); }
+.page-no { margin: 10px 0 0; color: var(--tan); font-size: 18px; }
+.page-title { font-size: clamp(32px, 3.4vw, 50px); }
+.caption { margin: 0; font-size: 19px; color: var(--ink-soft); min-height: 1.4em; }
+
+.content { flex: 1; overflow: auto; padding: 36px 40px 10px; scrollbar-width: thin; }
+.content .kicker { font-family: var(--hand); color: var(--tan); font-size: 19px; margin: 0 0 4px; }
+.content h3 { font-size: 34px; margin-bottom: 10px; }
+.content p { margin: 0 0 14px; }
+.pager { display: flex; align-items: center; justify-content: space-between; padding: 8px 26px 16px; }
+.pager button { font-size: 26px; width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid rgba(59, 43, 37, 0.35); background: #fffaf0; cursor: pointer; }
+.pager button:disabled { opacity: 0.3; cursor: default; }
+.count { font-size: 18px; color: var(--ink-soft); }
+
+/* Polaroids and sticky notes. */
+.snaps { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 6px; }
+.polaroid {
+  width: min(250px, 46%); flex: none; padding: 8px 8px 30px; background: #fff; border: none; cursor: zoom-in; position: relative;
+  box-shadow: 0 6px 16px rgba(59, 43, 37, 0.25); transform: rotate(var(--r, -2deg)); transition: transform 0.2s; font: inherit; color: inherit; text-align: left;
+}
+.polaroid:only-child { width: min(380px, 92%); }
+.polaroid:hover { transform: rotate(0deg) scale(1.03); }
+.polaroid img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.polaroid .cap { position: absolute; left: 12px; bottom: 5px; font-family: var(--hand); font-size: 18px; }
+.polaroid.big { position: fixed; z-index: 50; cursor: zoom-out; margin: 0; }
+.polaroid.big img { aspect-ratio: 1280 / 652; }
+.dim { position: fixed; inset: 0; z-index: 45; background: rgba(30, 18, 10, 0.55); opacity: 0; transition: opacity 0.3s; }
+.dim.on { opacity: 1; }
+.note {
+  display: inline-block; background: #fbe48a; padding: 12px 16px 14px; margin: 4px 8px 10px 0; transform: rotate(var(--r, 1.5deg));
+  font-family: var(--hand); font-size: 20px; box-shadow: 0 6px 12px rgba(59, 43, 37, 0.2); max-width: 100%;
+}
+.note.pink { background: #f8c5d1; } .note.blue { background: #bfdcef; } .note.green { background: #cfe3a8; }
+.stamp {
+  display: inline-flex; flex-direction: column; align-items: center; text-decoration: none; margin: 14px 0 18px;
+  font-family: var(--hand); font-size: 40px; line-height: 1; color: #b8433c; padding: 16px 30px 14px;
+  border: 5px double #b8433c; border-radius: 16px; transform: rotate(-6deg); background: rgba(255, 255, 255, 0.4);
+  transition: transform 0.15s;
+}
+.stamp small { font-size: 16px; font-family: var(--body); color: var(--ink-soft); margin-top: 4px; }
+.stamp:hover { transform: rotate(-3deg) scale(1.05); }
+.about { font-size: 14px; color: var(--ink-soft); }
+
+/* Ribbon tabs along the edge of the book. */
+.tabs { position: absolute; right: -34px; top: 26px; display: flex; flex-direction: column; gap: 6px; z-index: 3; }
+.tabs button {
+  width: 46px; height: 42px; border: none; border-radius: 0 10px 10px 0; cursor: pointer; font-size: 18px;
+  background: var(--c, #f2a0b4); box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.25); transform: translateX(-10px); transition: transform 0.2s;
+}
+.tabs button[aria-current='page'], .tabs button:hover { transform: translateX(0); }
+
+/* The turning page (computers). */
+.leaf { position: absolute; top: 0; bottom: 0; left: 50%; width: 50%; transform-origin: 0 50%; transform-style: preserve-3d; z-index: 4; pointer-events: none; }
+.leaf > div { position: absolute; inset: 0; backface-visibility: hidden; background: var(--page); overflow: hidden; }
+.leaf .front { border-radius: 4px 14px 14px 4px; box-shadow: inset 30px 0 40px -30px rgba(0, 0, 0, 0.18); }
+.leaf .back { transform: rotateY(180deg); border-radius: 14px 4px 4px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 26px 34px; }
+.leaf .back .window { visibility: hidden; }
+
+/* ---------- the cover ---------- */
+.cover {
+  position: absolute; z-index: 6; top: 0; bottom: 0; left: 50%; width: 50%;
+  transform-origin: 0 50%; transform-style: preserve-3d; transition: transform 1.1s cubic-bezier(0.45, 0, 0.2, 1);
+}
+body.open .cover { transform: rotateY(-178deg); pointer-events: none; }
+body.opened .cover { visibility: hidden; }
+.cover-inner, .cover::after { position: absolute; inset: 0; border-radius: 6px 16px 16px 6px; backface-visibility: hidden; }
+.cover-inner {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 26px; text-align: center;
+  color: #fbf1d8; background:
+    radial-gradient(90% 70% at 40% 30%, rgba(255, 255, 255, 0.12), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.04) 0 2px, transparent 2px 5px),
+    linear-gradient(160deg, var(--cloth), var(--cloth-deep));
+  box-shadow: inset 0 0 0 10px rgba(0, 0, 0, 0.08), inset 0 0 0 12px rgba(251, 241, 216, 0.5), 0 22px 40px rgba(0, 0, 0, 0.45);
+}
+.cover::after { content: ''; transform: rotateY(180deg); background: #e9dcc0; border-radius: 16px 6px 6px 16px; }
+.cover-kicker { margin: 0; font-size: 20px; opacity: 0.85; }
+.cover-title { font-size: clamp(40px, 4.4vw, 64px); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25); }
+.cover-window { border-radius: 50%; box-shadow: 0 0 0 6px #fbf1d8, 0 0 0 9px rgba(0, 0, 0, 0.25); }
+.cover-tag { margin: 4px 0 0; font-family: var(--hand); font-size: 21px; max-width: 26rem; }
+.cover-btns { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; margin-top: 6px; }
+.open-book { font-size: 24px; padding: 10px 22px 12px; border-radius: 999px; border: 2px solid #fbf1d8; background: transparent; color: #fbf1d8; cursor: pointer; }
+.open-book:hover { background: rgba(255, 255, 255, 0.12); }
+.cover .play { font-size: 24px; padding: 11px 22px 9px; }
+
+/* ---------- Merry's window ---------- */
+.porthole {
+  position: fixed; left: 0; top: 0; z-index: 8; width: var(--win); height: var(--win); overflow: hidden; border-radius: 50%;
+  transform: translate(var(--px, -999px), var(--py, -999px)); background: #e9e1cb; cursor: pointer;
+}
+.porthole.moving { transition: transform 1s cubic-bezier(0.45, 0, 0.2, 1), border-radius 1s; }
+.porthole.arch { border-radius: 46% 46% 18px 18px / 40% 40% 18px 18px; }
+.porthole .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 55% 40%; }
+.porthole canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.woof {
+  position: absolute; left: 50%; top: 18%; transform: translate(-50%, -50%) rotate(-5deg); padding: 3px 12px 5px; font-size: 22px;
+  background: #fffaf0; border: 2px solid var(--ink); border-radius: 16px; pointer-events: none;
+}
+
+/* ---------- phones: one page at a time ---------- */
+@media (max-width: 760px) {
+  :root { --win: min(62vw, 34svh); }
+  .book { width: 100%; height: calc(100svh - 70px); }
+  body.closed .book { transform: none; }
+  .cover { left: 0; width: 100%; }
+  .spread { grid-template-columns: 1fr; grid-template-rows: auto 1fr; border-radius: 14px; overflow: hidden; }
+  .page.left { border-radius: 14px 14px 0 0; padding: 14px 16px 4px; background: var(--page); gap: 2px; }
+  .page.right { border-radius: 0 0 14px 14px; background: var(--page); min-height: 0; }
+  .page-title { font-size: 30px; }
+  .caption { font-size: 16px; }
+  .page-no { margin-top: 6px; font-size: 15px; }
+  .content { padding: 10px 18px 6px; font-size: 16px; }
+  .content h3 { display: none; }
+  .pager { padding: 4px 12px 10px; }
+  .pager button { width: 42px; height: 42px; font-size: 22px; }
+  .tabs { display: none; }
+  .home { display: none; }
+  .bar { justify-content: flex-end; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  :root { --win: min(46svh, 220px); }
+  .book { height: calc(100svh - 60px); }
+  .stage { padding-top: 50px; }
+  .page.left { padding: 10px 16px; }
+  .page-title { font-size: 26px; }
+  .content { padding: 14px 20px 4px; font-size: 15px; }
+  .content h3 { font-size: 26px; }
+  .cover-title { font-size: 34px; }
+  .cover-tag { display: none; }
+  .tabs { right: -30px; top: 8px; gap: 3px; }
+  .tabs button { height: 30px; font-size: 14px; }
+}
+.instant .book, .instant .cover, .instant .page.left { transition: none !important; }
+.page-swap { animation: swap 0.45s ease; }
+@keyframes swap { 0% { transform: perspective(900px) rotateY(0); opacity: 1; } 45% { transform: perspective(900px) rotateY(-80deg); opacity: 0.2; } 55% { transform: perspective(900px) rotateY(80deg); opacity: 0.2; } 100% { transform: perspective(900px) rotateY(0); opacity: 1; } }
