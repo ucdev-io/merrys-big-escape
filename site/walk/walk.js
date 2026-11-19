@@ -50,13 +50,13 @@ const stops = STOPS.map((s, i) => {
     b.type = 'button';
     b.setAttribute('aria-label', `Bigger picture: ${SHOTS[k].alt}`);
     const spread = all.length > 1;
-    b.style.setProperty('--l', spread ? `${4 + j * 24}%` : '14%');
+    b.style.setProperty('--l', spread ? `${4 + j * (all.length === 2 ? 38 : 24)}%` : '14%');
     b.style.setProperty('--t', spread ? `${6 + (j % 2) * 26}%` : '12%');
     b.dataset.r = (spread ? [-6, 4, -2][j] : (i % 2 ? 3 : -3)).toString();
     b.dataset.k = (1.25 + j * 0.2).toString(); // (parallax: further postcards move faster)
     b.innerHTML = `<img alt="" loading="${i < 2 ? 'eager' : 'lazy'}" decoding="async"><span class="cap"></span>`;
     b.querySelector('img').src = SHOTS[k].src;
-    b.querySelector('.cap').textContent = { garden: 'Home sweet garden', town: 'The neighbourhood', heist: 'Shh… the bakery', woods: 'Conker woods', farm: 'The farm', beach: 'The beach', snow: 'Snow day!' }[k] ?? '';
+    b.querySelector('.cap').textContent = { garden: 'Home sweet garden', sniff: 'Follow that smell!', bone: 'A golden bone!', town: 'The neighbourhood', heist: 'Shh… the bakery', woods: 'Conker woods', farm: 'The farm', beach: 'The beach', snow: 'Snow day!' }[k] ?? '';
     pc.appendChild(b);
   });
   journey.appendChild(sec);
@@ -103,7 +103,7 @@ const portrait = () => innerWidth / innerHeight < 0.9;
 function frameMerry() {
   if (!stage) return;
   // Merry low on the screen, under the cards; on a tall phone, lower still and a little further off.
-  if (portrait()) stage.frame({ at: [0.25, 1.2, 0], from: [0, 0.45, 4.9], fit: false });
+  if (portrait()) stage.frame({ at: [-0.02, 1.2, 0], from: [0, 0.45, 4.9], fit: false });
   else if (innerHeight < 520) stage.frame({ at: [-0.85, 0.85, 0], from: [0, 0.4, 4.3], fit: false }); // (phones sideways: Merry on the right, words on the left)
   else stage.frame({ at: [0.45, 0.98, 0], from: [0, 0.75, 4.3] });
 }

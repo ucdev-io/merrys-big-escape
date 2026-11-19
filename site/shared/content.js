@@ -7,6 +7,8 @@ export const PLAY_URL = '/play/';
 
 export const SHOTS = {
   garden: { src: '/shots/garden.jpg', alt: 'Merry the whippet in her back garden, beside a paddling pool and a picket fence' },
+  sniff: { src: '/shots/sniff.jpg', alt: 'Merry sniffing the pavement, with a trail of golden and pink scent puffs leading off down the street' },
+  bone: { src: '/shots/bone.jpg', alt: 'Merry looking up at a golden bone on top of a stack of crates' },
   town: { src: '/shots/town.jpg', alt: 'Merry on the pavement of a painted street of little houses' },
   heist: { src: '/shots/heist.jpg', alt: 'Merry creeping up on the baker’s stall of pastries while pigeons peck about' },
   woods: { src: '/shots/woods.jpg', alt: 'Merry close up in autumn woods, with a fallen log and a red toadstool' },
@@ -31,6 +33,12 @@ export const STOPS = [
     title: 'Escape the garden',
     text: 'Every dog starts in their own back garden. Sniff out the buried treasure, find a way past the fence, and the whole neighbourhood is yours.',
     trick: 'spin',
+  },
+  {
+    id: 'nose', icon: '👃', label: 'Your nose', shots: ['sniff', 'bone'],
+    title: 'Follow your nose',
+    text: 'Hold sniff and the smells around you puff up, with a golden trail to the nearest one. Golden bones are hidden all over town, often somewhere high: climb a crate, a bench or a car to reach them, and some need a friend to stand on.',
+    trick: 'bow',
   },
   {
     id: 'town', icon: '🏘️', label: 'The town', shots: ['town'],

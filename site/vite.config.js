@@ -12,10 +12,10 @@ export default defineConfig({
     outDir: here('../dist-site'),
     emptyOutDir: true,
     rollupOptions: {
+      // What's published: the page ("The Walk") and the 404. Designs kept for later live in lab/
+      // (e.g. lab/book/, "The Sniff Book"): the dev server shows them, the build leaves them out.
       input: {
         index: here('index.html'),
-        walk: here('walk/index.html'),
-        book: here('book/index.html'),
         404: here('404.html'),
       },
     },

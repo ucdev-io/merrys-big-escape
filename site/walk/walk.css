@@ -109,7 +109,7 @@ body.walked .hint { opacity: 0; }
   .cards { height: 30svh; }
   .postcard { width: min(62vw, 340px); top: 4%; }
   .trail { gap: 2px; }
-  .trail button { width: 26px; height: 26px; font-size: 12px; }
+  .trail button { width: 24px; height: 24px; font-size: 11px; }
   .home { display: none; }
   .mini-play { font-size: 16px; padding: 5px 11px 6px; }
   .mini-play .label { display: none; }
