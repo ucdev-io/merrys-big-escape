@@ -91,7 +91,7 @@ function enter(p, room, msg) {
 
 // ---- games and challenges (see src/game/challenges.js): 🏁 races, ⚡ the zoomies dash, 🦴 bone rush,
 // 🐦 pigeon panic, 🦆 duck round-up and 🐾 tag. The server keeps score, so everyone sees the same
-// results, and puts the best on the 🏆 family records. Times go out as "in so many ms" (everyone's
+// results, and puts the best on the 🏆 pack records. Times go out as "in so many ms" (everyone's
 // clock is a bit different). The dog who starts a round-up runs the ducks for everyone (its "host").
 const publicGame = (g) => ({
   id: g.id, kind: g.kind, by: g.by, byName: g.byName, target: g.target, seed: g.seed, host: g.host, over: g.over,
@@ -126,7 +126,7 @@ function endGame(room) {
   broadcast(room, { t: 'game', a: 'end', game: publicGame(g) });
 }
 
-/** Results onto the 🏆 family records: { board (top 5), mine: { [dog id, or 'team']: { rank, record, best } } }. */
+/** Results onto the 🏆 pack records: { board (top 5), mine: { [dog id, or 'team']: { rank, record, best } } }. */
 function saveRecords(room, g) {
   const C = CHALLENGES[g.kind];
   if (!C.rank) return null;

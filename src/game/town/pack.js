@@ -153,7 +153,7 @@ export class Pack {
       <p class="pack-list"></p>
       <h3>🎮 Games &amp; challenges</h3>
       <div class="game-btns challenges"></div>
-      <p class="rec-link"><button class="pill g-records">🏆 Family records</button></p>
+      <p class="rec-link"><button class="pill g-records">🏆 Pack records</button></p>
       <h3>Other neighbourhoods</h3>
       <div class="list others"><p class="none">No one else is playing right now.</p></div>
       <details class="newphone"><summary>📱 Get the game on another phone or tablet</summary>

@@ -1,4 +1,4 @@
-// Saved dogs, neighbourhoods and 🏆 family records, kept as JSON files in data/ on the computer
+// Saved dogs, neighbourhoods and 🏆 pack records, kept as JSON files in data/ on the computer
 // running the game. A dog's stars, outfit and garden escape follow it from device to device, a
 // neighbourhood stays as everyone left it (places found, golden bones, whose house is whose), and
 // the best scores in each challenge are there for everyone to try and beat.
@@ -177,7 +177,7 @@ export function touchWorld(w) {
   saveSoon('worlds');
 }
 
-// ---- 🏆 family records ----
+// ---- 🏆 pack records ----
 
 const BOARD_MAX = 10;
 
@@ -185,7 +185,7 @@ const BOARD_MAX = 10;
  * Put a challenge's results on its board: each dog (or, for a team, each line-up) keeps just its best.
  * entries: [{ name, breed, profile, score?, ms? }] or, for a team, [{ team: [names], profiles: [ids], score, ms }].
  * Returns { key, board (the top 5), results: per entry { rank (1 = the record; null = not in the top
- * ten), record (a new family record), best (a new personal best) } }.
+ * ten), record (a new pack record), best (a new personal best) } }.
  */
 export function addResults(kind, town, entries) {
   load();

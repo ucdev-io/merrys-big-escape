@@ -1,6 +1,6 @@
-// Games and challenges, shared by the game and the server (which keeps score and the family records).
+// Games and challenges, shared by the game and the server (which keeps score and the pack records).
 //
-//   rank   how results compare on the 🏆 family records: 'score' (most), 'time' (quickest) or 'team'
+//   rank   how results compare on the 🏆 pack records: 'score' (most), 'time' (quickest) or 'team'
 //          (most, then quickest: one entry for the whole pack). None: no records (every race goes
 //          somewhere different).
 //   board  'all' = one board for every neighbourhood; 'town' = each neighbourhood has its own (its

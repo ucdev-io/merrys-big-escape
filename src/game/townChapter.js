@@ -112,7 +112,7 @@ export class TownChapter {
     });
     globalThis.__mark?.('setup: friends\u2019 dogs, pack');
 
-    // Games and challenges (from the 👥 card), and the 🏆 family records.
+    // Games and challenges (from the 👥 card), and the 🏆 pack records.
     const records = (focus = null) => showRecords(hud, { town: this.layout.seed, townName: this.layout.name, profile: progress.id, focus });
     this.games = new TownGames({
       scene, world, hud, player, pack: this.pack, remotes: this.remotes, layout: this.layout,

@@ -3,7 +3,7 @@
 //   GET  /api/packs     packs playing now + saved neighbourhoods
 //   GET  /api/profiles  saved dogs (for "Who's playing?")
 //   POST /api/profile   { action: 'create' | 'get' | 'sync', ... } → { profile }
-//   GET  /api/records?town=SEED&profile=ID   🏆 family records → { boards, mine }
+//   GET  /api/records?town=SEED&profile=ID   🏆 pack records → { boards, mine }
 //   POST /api/log       🩺 a device's note: an error, or how far a page got loading (see index.html)
 //   GET  /api/log       the last few hundred of those (also printed on this computer's console)
 import { listPacks, onlineProfiles, liveCodes } from './rooms.js';

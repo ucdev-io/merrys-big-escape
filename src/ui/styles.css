@@ -80,7 +80,7 @@ body.touch-mode .boosts { bottom: 177px; }
 .game-banner { position: absolute; left: 50%; top: calc(64px + var(--sa-t, 0px)); transform: translateX(-50%); background: var(--glass); border-radius: var(--wobbly); padding: 4px 16px; font-size: 20px; pointer-events: none; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15); white-space: nowrap; }
 .game-banner.big { top: 30%; font-size: 64px; padding: 8px 28px; }
 .big-card .results { text-align: left; display: inline-block; font-size: 19px; line-height: 1.6; list-style: none; padding-left: 0; }
-/* Games & challenges, and the 🏆 family records */
+/* Games & challenges, and the 🏆 pack records */
 .game-btns.challenges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); max-width: 520px; margin: 0 auto 8px; }
 .game-btns.challenges .pill { padding: 6px 8px; }
 .rec-link { margin: 4px 0 10px; }

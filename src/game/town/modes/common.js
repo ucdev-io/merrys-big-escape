@@ -20,7 +20,7 @@ export function scoreLine(ctx, g, scores, emoji) {
 
 /**
  * Results for a most-wins game: { html, mine (my score), won }. Winning means beating everyone else
- * outright, with friends playing (on your own, the family records say how you did).
+ * outright, with friends playing (on your own, the pack records say how you did).
  */
 export function scoreResults(ctx, g, scores, unit, none) {
   const me = ctx.me();

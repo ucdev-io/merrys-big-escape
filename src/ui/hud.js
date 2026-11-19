@@ -159,7 +159,7 @@ export class HUD {
       <div class="stats">${stat('🐦', 'pigeons scattered', 'pigeons')}${stat('🗺️', 'places found', 'places')}${stat('🦴', 'golden bones', 'bones')}
         ${stat('🎁', 'treasures dug up', 'treasures')}${stat('💦', 'splashes', 'splashes')}${stat('😈', 'naughty things', 'mischief')}
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
-        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'family records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
+        ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'pack records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
         ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}
         ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
@@ -247,7 +247,7 @@ export class HUD {
         <li>Walk up to the <b>📋 Lost &amp; Found board</b> by your gate to pick a job: lost things, deliveries, kites stuck up high, runaway hens, things Pickles has pinched… Trickier jobs (🐾🐾🐾) earn more stars, and a twist (🤫 no barking, ⏱️ be quick…) earns a bonus. Walk back to the board to swap a job.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
-        ${DEMO ? '' : '<li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 family records.</li>'}
+        ${DEMO ? '' : '<li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 pack records.</li>'}
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>

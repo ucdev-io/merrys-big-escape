@@ -6,11 +6,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 const medal = (i) => ['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`;
 
 /**
- * 🏆 Family records: the best in each challenge on this game computer (course ones per
+ * 🏆 Pack records: the best in each challenge on this game computer (course ones per
  * neighbourhood), plus your own bests. `focus`: a challenge to show first.
  */
 export async function showRecords(hud, { town, townName, profile, focus = null }) {
-  const title = '<h1>🏆 Family records</h1>';
+  const title = '<h1>🏆 Pack records</h1>';
   hud.showCard(`${title}<p>Opening the trophy cabinet…</p>`, [['OK', () => hud.hideCard()]]);
   let data;
   try {

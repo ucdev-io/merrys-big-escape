@@ -17,7 +17,7 @@ const clock = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStar
 
 /**
  * Games and challenges, with friends or on your own (see ../challenges.js): a countdown, the game,
- * then everyone's results and the 🏆 family records. The server keeps score. Each kind of game lives
+ * then everyone's results and the 🏆 pack records. The server keeps score. Each kind of game lives
  * in ./modes/: begin() · update(dt, live) → { compass, banner, clock } · handle(msg) ·
  * results(game) → { html, xp, won } · cleanup() (and maybe go(), onScatter(n), static pick(ctx)).
  */
@@ -100,7 +100,7 @@ export class TownGames {
     if (xp) progress.award(xp, `${C.name}!`);
     progress.stat('games');
     if (won || (rec.best && this.remotes.dogs.size === 0)) progress.stat('wins'); // (on your own, beating your best counts)
-    if (rec.record) { progress.stat('records'); progress.award(25, 'Family record!'); }
+    if (rec.record) { progress.stat('records'); progress.award(25, 'Pack record!'); }
     const newPrizes = prizes.filter((c) => !had.includes(c) && progress.isUnlocked(c.id)).map((c) => `<p class="rec-badge">🎁 You won the ${c.emoji} ${esc(c.name)}! Wear it from the ☰ menu.</p>`).join('');
     sfx.hooray?.();
     this.hud.showCard(html + (rec.badge ?? '') + newPrizes + (rec.board ?? ''), [
@@ -110,7 +110,7 @@ export class TownGames {
     ]);
   }
 
-  /** The 🏆 part of the results: the top of the family board, and whether we're on it. */
+  /** The 🏆 part of the results: the top of the pack board, and whether we're on it. */
   records(game) {
     const r = game.records, C = CHALLENGES[game.kind];
     if (!r?.board?.length) return {};
@@ -119,10 +119,10 @@ export class TownGames {
       const who = e.team ? e.team.join(' & ') : e.name;
       return `<li class="${mine?.rank === i + 1 ? 'me' : ''}">${medal(i)} ${BREEDS[e.breed]?.emoji ?? '🐕'} ${esc(who)} · ${esc(scoreText(game.kind, e))}</li>`;
     }).join('');
-    const badge = mine?.record ? '<p class="rec-badge">🎉 NEW FAMILY RECORD! 🎉</p>'
+    const badge = mine?.record ? '<p class="rec-badge">🎉 NEW PACK RECORD! 🎉</p>'
       : mine?.rank ? `<p class="rec-badge small">🏆 That’s the ${ord(mine.rank)} best ever!</p>`
         : mine?.best ? '<p class="rec-badge small">⭐ Your best ever!</p>' : '';
     const where = C.board === 'town' ? ` <small>(${esc(this.layout.name)})</small>` : '';
-    return { badge, board: `<h3>🏆 Family records${where}</h3><ol class="results records">${rows}</ol>`, record: !!mine?.record, best: !!mine?.best };
+    return { badge, board: `<h3>🏆 Pack records${where}</h3><ol class="results records">${rows}</ol>`, record: !!mine?.record, best: !!mine?.best };
   }
 }
