@@ -64,7 +64,12 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-thinking', slot: 'hat', name: 'Thinking cap', emoji: '🎓', color: 0x2f3a52, level: 1, friend: 'puzzles', jobs: 5, hint: 'Solve 5 puzzles', boost: { speed: 1, zoomies: 2 } },
 );
-export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
+// From the sewers: Nibbles' thank-you for bringing back what fell down the drains (the `nibbles` stat: lost things
+// handed over). A little brass lantern hanging at the chest; it glows, and down in the sewers it lights the way.
+COSMETICS.push(
+  { id: 'neck-lantern', slot: 'neck', name: 'Nibbles’ lantern', emoji: '🔦', color: 0xb08a3a, level: 1, friend: 'nibbles', jobs: 3, style: 'lantern', hint: 'Bring Nibbles 3 lost things (in the sewers)', boost: { speed: 1, zoomies: 2 } },
+);
+export const FRIEND_NAMES ={ gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };
 

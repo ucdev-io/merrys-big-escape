@@ -161,6 +161,8 @@ function splitJaw(geo, zc, tip, yf, rings = 40, radial = 32) {
 const MOUTH = new THREE.Color(0x9a4048), LIPS = new THREE.Color(0x3b2c2c); // inside the mouth; its dark edge
 
 const SPHERE = new THREE.SphereGeometry(1, 32, 22);
+// Nibbles' lantern's glass: aglow (and brighter somewhere dark, like the sewers' own lanterns turned up).
+const lanternGlow = (bright) => (bright ? paint(0xfff0c0, { emissive: 0xe0b050 }) : paint(0xffd98a, { emissive: 0x9a7020 }));
 
 /**
  * Fluffy coats: puff a part's surface out in soft, uneven tufts (curl > 0 adds tight curls).
@@ -496,6 +498,24 @@ export class Dog {
       mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.026, 12), 0xc9ced6, w, [0, -0.01, 0], [0, 0, Math.PI / 2]);
       mesh(new THREE.BoxGeometry(0.02, 0.008, 0.009), 0xc9ced6, w, [0.018, -0.005, 0]);
       mesh(new THREE.TorusGeometry(0.005, 0.0016, 4, 10), 0xc9ced6, w, [-0.006, 0.004, 0]);
+    } else if (c('neck')?.style === 'lantern') {
+      // Nibbles' lantern: a little brass one hanging on a cord at the front of the chest, its glass aglow.
+      const { NL, nr } = this.dims, cy = 0.07 * NL, cr = 0.052 * nr + F * 1.3, brass = c('neck').color, cord = 0x5a4632;
+      mesh(new THREE.TorusGeometry(cr, 0.0038, 6, 28), cord, keep(group(this.neck)), [0, cy, 0.006], [Math.PI / 2 + 0.45, 0, 0]);
+      const sp = this.spineF, o = sp === this.body ? [0, 0, 0] : sp.position.toArray();
+      const z = Math.max(0.255 * len + F * 1.4, (this.dims.chestZ ?? -1) + 0.004) + 0.022; // (just in front of the chest, as a bandana)
+      const l = keep(group(sp, [-o[0], 0.035 * gy - 0.035 - o[1], z - o[2]], [0.12, 0, 0]));
+      l.scale.setScalar(1.3);
+      mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.05, 5), cord, l, [0, 0.062, -0.004], [-0.15, 0, 0]);  // up to the cord round her neck
+      mesh(new THREE.TorusGeometry(0.0065, 0.0016, 5, 12), brass, l, [0, 0.036, 0]);                       // the ring it hangs from
+      mesh(new THREE.ConeGeometry(0.017, 0.013, 12), brass, l, [0, 0.024, 0]);                              // the roof
+      mesh(new THREE.CylinderGeometry(0.0175, 0.0175, 0.004, 12), brass, l, [0, 0.0165, 0]);
+      const glass = mesh(new THREE.CylinderGeometry(0.0125, 0.0125, 0.026, 12), 0xffd98a, l, [0, 0.002, 0]);
+      glass.material = lanternGlow(this.lanternBright);
+      glass.castShadow = false;
+      glass.userData.lanternGlass = true; // (somewhere dark, it's turned up: see brightenLantern)
+      for (let i = 0; i < 4; i++) { const a = (i + 0.5) * Math.PI / 2; mesh(new THREE.CylinderGeometry(0.0018, 0.0018, 0.027, 4), brass, l, [Math.cos(a) * 0.0135, 0.002, Math.sin(a) * 0.0135]); } // the frame
+      mesh(new THREE.CylinderGeometry(0.0155, 0.017, 0.006, 12), brass, l, [0, -0.0135, 0]);              // the base
     } else if (c('neck')?.style === 'scarf') {
       // A woolly scarf (from the flock's own wool): stripy, wound round the neck, two ends hanging down in front.
       const { NL, nr } = this.dims, cy = 0.085 * NL - 0.006, R = 0.049 * nr + F * 1.3 + 0.012, col = c('neck').color, cream = 0xf4ecdc;
@@ -614,6 +634,12 @@ export class Dog {
         for (let i = 0; i < 4; i++) mesh(SPHERE, 0xf6d06a, g, [Math.cos(i * 1.7) * 0.02, 0.04 + i * 0.022, Math.sin(i * 1.7) * 0.02 + 0.012], [0, 0, 0], [0.005, 0.005, 0.005]);
       }
     }
+  }
+
+  /** Somewhere dark (the sewers): Nibbles' lantern, if she's wearing it, shines brighter (false: back to normal). */
+  brightenLantern(on) {
+    this.lanternBright = !!on;
+    for (const m of this.lookMeshes ?? []) m.traverse((o) => { if (o.userData.lanternGlass) o.material = lanternGlow(on); });
   }
 
   /**
