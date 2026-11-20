@@ -145,7 +145,7 @@ class FairChapter extends TripChapter {
     const D = this.dodge, P = this.player, o = this.O;
     this.myCar.position.set(D.p.x, 0, D.p.z);
     this.myCar.rotation.y = D.heading;
-    seatAt(P, V(D.p.x + o.x - Math.sin(D.heading) * 0.1, 0.36, D.p.z + o.z - Math.cos(D.heading) * 0.1), D.heading);
+    seatAt(P, V(D.p.x + o.x - Math.sin(D.heading) * 0.05, 0.47, D.p.z + o.z - Math.cos(D.heading) * 0.05), D.heading); // (sat up high enough to see over the seat back)
     P.speed = D.vel.length(); // (the camera drifts round behind her as she goes)
   }
 

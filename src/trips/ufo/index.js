@@ -243,6 +243,9 @@ class UfoChapter extends TripChapter {
   }
 
   arrive() {
+    // A low camera, so the saucer behind her fits on a wide (sideways phone) screen too.
+    this.ctx.follow.pitch = 0.2;
+    this.ctx.follow.distance = Math.max(this.ctx.follow.distance, 8);
     const first = !this.saved.visited;
     if (first) {
       this.ctx.town.save({ visited: true });
