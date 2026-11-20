@@ -1,4 +1,6 @@
 import { BREEDS, BREED_KEYS, BREED_GROUPS } from '../entities/breeds.js';
+import { visitedTowns } from '../core/save.js';
+import { townName as townNameOf } from '../world/town/generator.js';
 import { watchPacks, renderPackRows, renderWorldRows } from '../net/packs.js';
 import { savedDogs } from '../game/progress.js';
 import { DEMO } from '../core/demo.js';
@@ -14,7 +16,7 @@ import { DEMO } from '../core/demo.js';
  * @param o.onLook   preview a saved dog's outfit
  * @returns {{ el, setError(msg), setBusy(b), close() }}
  */
-export function showLobby({ hud, profile, current = null, seed = null, townName = '', onBreed, onLook, onSolo, onJoin, onNewTown, onGarden, garden = false, title, subtitle }) {
+export function showLobby({ hud, profile, current = null, seed = null, townName = '', onBreed, onLook, onSolo, onJoin, onNewTown, onTown, onGarden, garden = false, title, subtitle }) {
   const wrap = document.createElement('div');
   wrap.className = 'lobby';
   wrap.innerHTML = `
@@ -39,6 +41,7 @@ export function showLobby({ hud, profile, current = null, seed = null, townName 
       </div>
       <div class="friends hidden"><h3>👥 Or join a friend</h3><div class="list"></div></div>
       <div class="places hidden"><h3>🏘️ Or go back to</h3><div class="list"></div></div>
+      <div class="mytowns hidden"><h3>🚌 Or catch the bus to</h3><div class="list"></div></div>
       <button class="link code-link">Have a pack code?</button>
       <div class="join-row hidden">
         <input class="code" maxlength="8" placeholder="Pack code e.g. BONE-42" autocomplete="off" spellcheck="false">
@@ -57,7 +60,7 @@ export function showLobby({ hud, profile, current = null, seed = null, townName 
   if (DEMO) wrap.querySelector('.code-link').classList.add('hidden'); // (packs are for home; friends and places stay hidden with no server)
   if (garden) {
     // Garden mode: just choose a dog and go — packs come after the escape.
-    wrap.querySelectorAll('.join-row, .small, .friends, .places, .code-link').forEach((e) => e.remove());
+    wrap.querySelectorAll('.join-row, .small, .friends, .places, .mytowns, .code-link').forEach((e) => e.remove());
     wrap.querySelector('.solo').textContent = 'Let’s go! 🐾';
   }
 
@@ -152,6 +155,7 @@ export function showLobby({ hud, profile, current = null, seed = null, townName 
     friends.classList.toggle('hidden', !n);
     const m = renderWorldRows(places.querySelector('.list'), worlds, { exclude: seed, onGo: (w) => onJoin(choice(), w.code) });
     places.classList.toggle('hidden', !m);
+    if (m) wrap.querySelector('.mytowns').classList.add('hidden'); // (the game server's list says it already: at home, that one)
   });
   wrap.querySelector('.code-link').onclick = () => { wrap.querySelector('.join-row').classList.toggle('hidden'); codeIn.focus(); };
   wrap.querySelector('.join').onclick = () => {
@@ -159,6 +163,19 @@ export function showLobby({ hud, profile, current = null, seed = null, townName 
     if (!/^[A-Z]{4}-?\d{2}$/.test(code)) { err.textContent = 'Pack codes look like BONE-42.'; return; }
     onJoin(choice(), code.includes('-') ? code : `${code.slice(0, 4)}-${code.slice(4)}`);
   };
+  // Towns you've been to on this device (newest first): each keeps its own finds.
+  const mine = visitedTowns().filter((t) => t.seed !== seed).slice(0, 5);
+  if (mine.length && onTown) {
+    const box = wrap.querySelector('.mytowns'), list = box.querySelector('.list');
+    for (const t of mine) {
+      const b = document.createElement('button');
+      b.className = 'pill town-chip';
+      b.textContent = `🏘️ ${townNameOf(t.seed)} · 🗺️ ${(t.discovered ?? []).length}`;
+      b.onclick = () => onTown(t.seed);
+      list.appendChild(b);
+    }
+    box.classList.remove('hidden');
+  }
   wrap.querySelector('.newtown').onclick = onNewTown;
   wrap.querySelector('.garden').onclick = onGarden;
   return api();

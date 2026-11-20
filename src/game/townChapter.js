@@ -14,6 +14,7 @@ import { Pack } from './town/pack.js';
 import { progress } from './progress.js';
 import { Smells } from './town/smells.js';
 import { Buried } from './town/buried.js';
+import { BusStop } from './town/busStop.js';
 import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
 import { NutAndMeg } from './town/squirrels.js';
@@ -199,6 +200,14 @@ export class TownChapter {
       scene, world, layout: this.layout, hud, tripState: (id) => this.state.trips[id] ?? {}, why: () => travelBlock(this),
       go: (trip, from) => this.goTrip(trip, from), prefetch: (trip) => this.trips?.prefetch(trip),
     });
+    // 🚌 The bus stop, on the edge of town with nothing out past it: buses to other towns.
+    this.busStop = new BusStop({
+      scene, hud, player, follow: this.follow, actions: this.actions, stop: world.busStop, seed: this.layout.seed, name: this.layout.name,
+      blocked: () => (this.catcher?.chasing ? 'No time for a bus: the warden’s right behind you!' : travelBlock(this)),
+      friends: () => this.remotes.dogs.size,
+    });
+    this.busStop.places = this.places.length;
+    hud.busStop = !!world.busStop;
     // 🚐 Doug the dog warden, when there's been too much mischief (on your own, with nothing else going on).
     this.catcher = new Catcher({
       scene, world, hud, player, actions: this.actions, dogName: () => this.profile().name,
@@ -281,7 +290,8 @@ export class TownChapter {
           this.begin();
         } catch (e) { lobby.setBusy(false); lobby.setError(e.message); }
       },
-      onNewTown: () => { setTown(randomSeed()); location.reload(); },
+      onNewTown: () => { setTown(randomSeed()); location.href = `${HOME}?town`; }, // (not a reload: the address may name the old town)
+      onTown: (seed) => { setTown(seed); location.href = `${HOME}?town`; },
       onGarden: () => { writeSave({ chapter: 'yard' }); location.href = HOME; },
     });
     if (this.prefillCode) lobby.prefill(this.prefillCode);
@@ -295,6 +305,7 @@ export class TownChapter {
     this.pack.watchOthers();
     const back = this.backFrom && this.portals.out(this.backFrom);
     if (back) { this.teleport(back.x, back.z, back.face); this.backFrom = null; }
+    else this.busStop.arrive(); // (just off the bus? Off she gets at the stop)
   }
 
   /** Joined a pack: the pack's progress becomes ours (shared adventure). */
@@ -336,7 +347,6 @@ export class TownChapter {
 
   // ---------- trips (see ../trips/) ----------
 
-  /** Off down a way in (the alley's drain…), if she can go just now. */
   /**
    * Not a moment for the dog warden to turn up: a game on, a card open, off on a trip or digging a tunnel, a
    * sledge, ducklings or Pepper in tow, a race against the clock. (A neighbour's job, or something in her
@@ -350,6 +360,7 @@ export class TownChapter {
       || (bj?.twistOk && bj.spec?.twist === 'timer'));
   }
 
+  /** Off down a way in (the alley's drain…), if she can go just now. */
   goTrip(trip, from) {
     const why = travelBlock(this);
     if (why) { this.hud.float(why, this.actions.anchor()); this.hud.showToastRaw('🐾', why, '', { tip: true }); return false; }
@@ -543,7 +554,7 @@ export class TownChapter {
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
-    const door = canAct && !paw ? this.portals.hint(pos, this.actions.nose()) : null; // (a way into a trip: the alley's drain…)
+    const door = canAct && !paw ? this.portals.hint(pos, this.actions.nose()) ?? this.busStop.prompt(pos) : null; // (a way into a trip: the alley's drain… or the bus stop)
     this.portals.update(pos);
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
     if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
@@ -569,9 +580,10 @@ export class TownChapter {
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.buried.onDig(n) || this.beach?.onDig(n) || this.seasons.onDig(n) });
+    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); this.busStop.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.busStop.onDig(pos) || this.buried.onDig(n) || this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
     this.puzzles.update(dt, canAct, acted.barked); // (woof at Pickles for a game)
+    this.busStop.update(dt);
     this.catcher.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }

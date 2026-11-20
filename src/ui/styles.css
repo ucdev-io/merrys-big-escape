@@ -630,3 +630,13 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 }
 /* (A friend's speech bubble from just before stays out of the way of a puzzle, or the menu.) */
 .big-card:not(.hidden):has(.pm-grid, .jg-board, .jg-card, .puzzles, .pm-offer, .menu-list) ~ .bubble { visibility: hidden; }
+
+/* 🚌 The bus stop's timetable, and your towns in the lobby. */
+.bus-sub { margin: 0 0 8px; }
+.bus-list h3 { margin: 10px 0 4px; font-size: 1rem; opacity: 0.8; }
+.bus-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed rgba(59, 43, 37, 0.15); }
+.bus-row .bus-name { flex: 1; font-weight: bold; font-size: 1.05rem; text-align: left; }
+.bus-row .bus-meta { font-size: 0.85rem; opacity: 0.75; white-space: nowrap; }
+.bus-row .bus-go { padding: 4px 12px; }
+.lobby .mytowns .list { display: flex; flex-wrap: wrap; gap: 6px; }
+.lobby .town-chip { font-size: 0.9rem; padding: 4px 10px; }

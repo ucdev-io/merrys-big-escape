@@ -336,7 +336,7 @@ export class HUD {
     if (act === this._pawAct) return;
     this._pawAct = act;
     const b = document.querySelector('.touch [data-b="dig!"]');
-    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!', nudge: 'Nudge!' }[act] ?? 'Dig'}`;
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!', nudge: 'Nudge!', bus: 'Bus!' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */
@@ -427,9 +427,10 @@ export class HUD {
       const travel = !!this.onTravel; // (in town: 🐾 Go digs a tunnel straight to a place you've found)
       const go = (id) => (travel ? `<button class="pill go" data-go="${id}">🐾 Go</button>` : '');
       const home = travel ? `<div class="slot got home"><div class="emoji">🏡</div><div class="name">Home</div><div class="blurb">Back to my own garden gate.</div>${go('home')}</div>` : '';
+      const bus = travel && this.busStop ? `<div class="slot got home"><div class="emoji">🚌</div><div class="name">Bus stop</div><div class="blurb">Buses to other towns!</div>${go('bus')}</div>` : '';
       this.book.innerHTML = `<div class="page"><button class="close pill">✕</button><h2>Merry's Sniff Book</h2>
         <p class="intro">Places my amazing nose has discovered.${travel ? ' Tap 🐾 Go to dig a tunnel there!' : ''}</p>
-        <div class="slots">${home}${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div>${p.found ? go(p.id) : ''}</div>`).join('')}</div></div>`;
+        <div class="slots">${home}${bus}${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div>${p.found ? go(p.id) : ''}</div>`).join('')}</div></div>`;
       return;
     }
     const keys = ['duck', 'sock', 'biscuit', 'tunnel'];

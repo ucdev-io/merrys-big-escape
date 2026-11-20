@@ -11,10 +11,11 @@ import { TOWN } from './generator.js';
 import {
   HOUSE_WALLS, HOUSE_ROOFS, DOORS, bench, lamppost, wheelieBin, crate, cardboardBox, puddle, birdbath, mailbox,
   kennel, swingSet, slide, lawnmower, bbq, cafeTable, shop, brickBuilding, car, hedge, pathRibbon,
+  busShelter, busSign,
 } from './townProps.js';
 import { bakeryHeist, butcherHeist } from './heistProps.js';
 import { groundAt } from '../areas/terrain.js';
-import { areaBounds, areaAt, toWorld } from '../areas/areas.js';
+import { areaBounds, areaAt, toWorld, freeSide } from '../areas/areas.js';
 import { layoutAreas, areaFlats, areaGround, buildAreas, areaClear } from '../areas/build.js';
 
 const H = TOWN.BLOCK / 2;          // 15: half block
@@ -88,6 +89,27 @@ function ground(flats, tint = null) {
   const m = new THREE.Mesh(geo, paint(0xffffff, { vertexColors: true }));
   m.receiveShadow = true;
   return m;
+}
+
+/**
+ * 🚌 The bus stop: a shelter and a sign on the pavement of the one edge of town with nothing out past it.
+ * Returns where it is: { side, x, z, face (looking in at the road), out (where a dog waits), road (where the
+ * bus stops), along (the way the bus drives, on the left), dir (outwards) }, or null.
+ */
+function placeBusStop(root, layout, col) {
+  const f = freeSide(layout.areas);
+  if (!f) return null;
+  const U = 20, at = (u, v) => toWorld(f, u, v); // (between the ends of two roads; v: out from the middle of town)
+  const face = Math.atan2(-f.dir[0], -f.dir[1]);
+  const [x, z] = at(U, 86.2);
+  root.add(busShelter(x, z, face));
+  for (const du of [-1.2, -0.4, 0.4, 1.2]) { const [cx, cz] = at(U + du, 86.85); col.circle(cx, cz, 0.32, 2.4, false); } // the glass back
+  for (const du of [-0.75, 0.45]) { const [cx, cz] = at(U + du, 86.55); col.circle(cx, cz, 0.36, 0.52); }               // the bench (hop up!)
+  const [sx, sz] = at(U + 2.3, 84.0);
+  root.add(busSign(sx, sz, face));
+  col.circle(sx, sz, 0.1, 2.6);
+  const [ox, oz] = at(U, 84.7), [rx, rz] = at(U - 0.5, 81.25);
+  return { side: f.side, x, z, face, out: { x: ox, z: oz, face }, road: { x: rx, z: rz }, along: [-f.dir[1], f.dir[0]], dir: f.dir };
 }
 
 function streets(g, layout, rng, col, bones) {
@@ -478,6 +500,7 @@ export function buildTown(layout) {
   // The areas themselves: after everything else, so the town's own colliders and dice are just as they were.
   globalThis.__mark?.('build: countryside');
   const areas = buildAreas(root, layout, areaData, col, extra, TOWN.SIZE / 2 + 4, flats);
+  const busStop = placeBusStop(root, layout, col); // (last: its solid bits are round ones, after everyone else's)
 
   const sky = skyDome(190);
   root.add(sky);
@@ -523,6 +546,7 @@ export function buildTown(layout) {
     homes: [{ pos: spawn.clone(), face: spawnFace, garden: extra.gardens.find((gd) => gd.home) }, ...new RNG(`homes:${layout.seed}`).shuffle(otherHomes)],
     bounds: areaBounds(layout.areas, half), // (the town, and its areas)
     areas: areas.list, // what's where in each area (the woods' den, owl, mud…)
+    busStop, // 🚌 (see game/town/busStop.js)
     layout,
     landmarks,
     props: {},

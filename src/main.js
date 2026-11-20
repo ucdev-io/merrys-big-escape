@@ -24,6 +24,7 @@ import { music } from './core/music.js';
 import { autoFullscreen } from './ui/fullscreen.js';
 import { localSeason } from './game/season.js';
 import { Trips } from './trips/manager.js';
+import { busArrivalNote } from './game/town/busStop.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
 window.addEventListener('click', (e) => { if (e.target.closest?.('.pill.big, .lobby .solo, .lobby .host, .lobby .join')) autoFullscreen(); }, true);
@@ -109,7 +110,7 @@ const inTown = params.has('town') || params.has('seed') || (!!packCode && yardDo
 // listening for its news (heists, the season…) nothing may wait on the browser, or that news is missed.
 const loadNote = document.createElement('div');
 loadNote.className = 'loading-note';
-loadNote.textContent = inTown ? '🐾 Building the neighbourhood…' : '🐾 Opening the garden…';
+loadNote.textContent = inTown ? busArrivalNote() ?? '🐾 Building the neighbourhood…' : '🐾 Opening the garden…';
 document.body.appendChild(loadNote);
 await new Promise((r) => { requestAnimationFrame(() => setTimeout(r, 0)); setTimeout(r, 120); }); // (on screen before the build)
 

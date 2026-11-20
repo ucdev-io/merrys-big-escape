@@ -47,6 +47,12 @@ export function setTown(seed, found = null) {
   const t = townSave(seed);
   const discovered = found ? [...new Set([...(t.discovered ?? []), ...found])] : t.discovered ?? [];
   writeTown(seed, { discovered });
+  if (!loadSave().firstTown) writeSave({ firstTown: visitedTowns().at(-1)?.seed ?? seed }); // (the oldest one you've been to)
+}
+
+/** The first town you ever went to (the bus can always take you back there). */
+export function firstTown() {
+  return loadSave().firstTown ?? visitedTowns().at(-1)?.seed ?? null;
 }
 
 /** The towns you've been to, newest first: [{ seed, discovered, …, at }]. */
