@@ -73,6 +73,10 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'neck-lantern', slot: 'neck', name: 'Nibbles’ lantern', emoji: '🔦', color: 0xb08a3a, level: 1, friend: 'nibbles', jobs: 3, style: 'lantern', hint: 'Bring Nibbles 3 lost things (in the sewers)', boost: { speed: 1, zoomies: 2 } },
 );
+// From a day out at Wagtail Wonderland (the theme park, by bus): for going on 5 rides.
+COSMETICS.push(
+  { id: 'collar-balloon', slot: 'collar', name: 'Funfair balloon', emoji: '🎈', color: 0xd9534f, level: 1, friend: 'rides', jobs: 5, style: 'balloon', hint: 'Go on 5 rides at Wagtail Wonderland (by bus)', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

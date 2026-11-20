@@ -130,6 +130,8 @@ export const sfx = {
     tone('sine', 220, 880, 1.6, 0.12); tone('sine', 223, 886, 1.6, 0.08, 0.02);
     for (let i = 0; i < 8; i++) tone('triangle', 1200 + i * 160, 1500 + i * 160, 0.12, 0.035, 0.2 + i * 0.16);
   },
+  // 🎢 The rollercoaster's chain on the lift hill: click.
+  clack() { noise(0.03, 0.14, 'bandpass', 2600, 3); tone('square', 900, 700, 0.02, 0.03); },
   // ✨ A star-spark picked up: a quick bright arpeggio.
   spark() { [880, 1109, 1319, 1760].forEach((f, i) => tone('triangle', f, f, 0.14, 0.09, i * 0.05)); },
   // 👽 An alien's voice: a wobbly little warble (pitch: higher for the little ones).
