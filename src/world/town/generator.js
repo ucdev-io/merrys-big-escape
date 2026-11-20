@@ -10,6 +10,16 @@ export function randomSeed() {
   return `${ADJ[r() % ADJ.length]}-${NOUN[r() % NOUN.length]}-${10 + (r() % 90)}`;
 }
 
+/** 🚌 The towns the bus goes to from this one: always the same few for a town (its own dice). */
+export function neighbourSeeds(seed, n = 3) {
+  const rng = new RNG(`bus:${seed}`), out = [];
+  while (out.length < n) {
+    const s = `${rng.pick(ADJ)}-${rng.pick(NOUN)}-${rng.int(10, 99)}`;
+    if (s !== seed && !out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
 /** Turn a seed into a friendly town name: "SOGGY-WAFFLE-42" → "Soggy Waffleton". */
 export function townName(seed) {
   const [a = 'Sunny', b = 'Bark'] = seed.split('-');

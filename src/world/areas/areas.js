@@ -70,6 +70,13 @@ const KIND_ORDER = ['woods', 'beach', 'farm'];
 /** Which kinds of area a town gets: all of them (a lot to do in one town), one per edge. */
 function chooseKinds(/* seed, townName */) { return KIND_ORDER.filter((k) => AREA_KINDS[k]); }
 
+/** The edge of town with no area out past it (where the bus stop is): { side, dir, across }, or null. */
+export function freeSide(areas = []) {
+  const used = new Set(areas.map((a) => a.side));
+  const side = Object.keys(SIDES).find((s) => !used.has(s));
+  return side ? { side, ...SIDES[side] } : null;
+}
+
 /** Area-local (u along the edge, v outwards) → world [x, z]. */
 export function toWorld(a, u, v) { return [a.across[0] * u + a.dir[0] * v, a.across[1] * u + a.dir[1] * v]; }
 /** World → area-local [u, v]. */

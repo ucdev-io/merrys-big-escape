@@ -247,3 +247,34 @@ export function pathRibbon(points, width, color, { edge = Infinity } = {}) {
   m.receiveShadow = true;
   return m;
 }
+
+/** 🚌 A bus shelter: a roof on four posts, a glass back with the timetable on it, and a bench. Open to the front (+Z). */
+export function busShelter(x, z, ry) {
+  const g = G(x, z, ry);
+  g.userData.season = 'world'; // (snow on the roof in winter)
+  g.userData.occluder = true;   // (the camera sees through it, like a house)
+  for (const sx of [-1.4, 1.4]) for (const sz of [-0.65, 0.55]) mesh(RB(0.08, 2.3, 0.08, 0.02), 0x3f5a4a, g, [sx, 1.15, sz]);
+  mesh(RB(3.1, 0.1, 1.55, 0.03), 0x5d8c55, g, [0, 2.33, -0.05]);                 // the roof
+  mesh(RB(2.75, 1.7, 0.04, 0.01), 0xcfe3ea, g, [0, 1.15, -0.65]);                // glass at the back
+  mesh(RB(0.04, 1.7, 1.1, 0.01), 0xcfe3ea, g, [-1.4, 1.15, -0.1]);               // and one side
+  mesh(RB(0.7, 0.9, 0.03, 0.01), 0xf6efe0, g, [0.75, 1.35, -0.61]);              // the timetable
+  for (let i = 0; i < 4; i++) mesh(RB(0.55, 0.04, 0.02, 0.005), 0x6b7a8a, g, [0.75, 1.65 - i * 0.18, -0.59]);
+  mesh(RB(2.2, 0.08, 0.38, 0.02), 0xc79b6d, g, [-0.15, 0.48, -0.42]);            // the bench
+  for (const sx of [-1.0, 0.7]) mesh(RB(0.06, 0.46, 0.3), 0x4a4a52, g, [sx, 0.23, -0.42]);
+  return g;
+}
+
+/** The bus stop sign: a pole with a round red-and-white sign (a little bus on it) and a name board. */
+export function busSign(x, z, ry) {
+  const g = G(x, z, ry);
+  mesh(new THREE.CylinderGeometry(0.04, 0.05, 2.5, 8), 0x3f4a55, g, [0, 1.25, 0]);
+  const disc = new THREE.Group();
+  disc.position.set(0, 2.45, 0);
+  g.add(disc);
+  mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.04, 20), 0xd9534f, disc, [0, 0, 0], [Math.PI / 2, 0, 0]);
+  mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.05, 20), 0xf6efe0, disc, [0, 0, 0], [Math.PI / 2, 0, 0]);
+  mesh(RB(0.3, 0.13, 0.06, 0.02), 0xd9534f, disc, [0, 0.015, 0]);               // the little bus
+  for (const sx of [-0.09, 0.09]) mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.065, 10), 0x2b2b2b, disc, [sx, -0.055, 0], [Math.PI / 2, 0, 0]);
+  mesh(RB(0.5, 0.14, 0.04, 0.02), 0xf6efe0, g, [0, 2.0, 0]);
+  return g;
+}

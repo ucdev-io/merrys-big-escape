@@ -33,6 +33,7 @@ export function travelBlock(ch) {
 /** Where to pop up for a place (or 'home'): { x, z, face }, somewhere clear and out of everyone's way. */
 export function landingFor(ch, id) {
   const { world, layout } = ch;
+  if (id === 'bus') { const o = world.busStop?.out; return o ? { x: o.x, z: o.z, face: o.face } : null; }
   if (id === 'home') {
     const homes = world.homes ?? [];
     const h = homes[(ch.homeSlot ?? 0) % Math.max(1, homes.length)];
