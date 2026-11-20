@@ -139,7 +139,7 @@ function wake() {
   for (let i = 0; i < p.count; i++) { const v = p.getY(i) + 0.5, x = p.getX(i); p.setXYZ(i, x * (9 + v * 46), 0, SHIP.STERN - 1 + v * 110); }
   geo.computeBoundingSphere();
   const mat = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, fog: false,
+    transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide,
     uniforms: { uTime: { value: 0 }, uFoam: { value: new THREE.Color(0xf7f8f2) } },
     vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
