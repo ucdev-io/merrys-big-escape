@@ -46,9 +46,15 @@ canvas.addEventListener('webglcontextrestored', () => location.reload());
 const loading = (what) => { try { if (what) sessionStorage.setItem('doggoLoading', what); else sessionStorage.removeItem('doggoLoading'); } catch { /* private mode */ } };
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
-// Phones have ~3x screens; 2x keeps them crisp. Auto quality may step this down (a little, and only
-// as a last resort) if the device struggles, and gives it back when things are quick again.
-const bestRatio = Math.min(window.devicePixelRatio, isMobile ? 2 : 1.5), ratioFloor = Math.min(bestRatio, isMobile ? 1.5 : 1.25);
+// Phones have ~3x screens; 2x keeps them crisp. Computers draw at up to 2x too, even on a plain 1x
+// monitor, and the browser shrinks it to fit: the paint blobs, ink lines and wobble are all sized in
+// pixels, so at 1x everything looked soft. (Up to about 4K's worth of pixels: a big window gets less.)
+// Auto quality may step this down if the device struggles — on a computer, the extra pixels go first,
+// before the paint — and gives it back when things are quick again.
+const nativeRatio = Math.min(window.devicePixelRatio, 2);
+const desktopBest = () => Math.min(2, Math.max(nativeRatio, Math.floor(Math.sqrt(8.3e6 / Math.max(1, innerWidth * innerHeight)) * 4) / 4));
+let bestRatio = isMobile ? nativeRatio : desktopBest();
+const ratioFloor = Math.min(nativeRatio, isMobile ? 1.5 : 1.25);
 let pixelRatio = bestRatio;
 
 const pipeline = new WatercolorPipeline(renderer, { quality: isMobile ? 'low' : 'high' });
@@ -161,6 +167,11 @@ follow.setOccluders(world.occluders);
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
+  if (!isMobile) { // (a bigger window, fewer extra pixels)
+    const was = bestRatio;
+    bestRatio = desktopBest();
+    if (pixelRatio > bestRatio || pixelRatio === was) pixelRatio = bestRatio;
+  }
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(w, h, false);
   pipeline.setSize(Math.floor(w * pixelRatio), Math.floor(h * pixelRatio));
@@ -177,6 +188,8 @@ pipeline.onFast = () => {
   if (pixelRatio >= bestRatio) return false;
   pixelRatio = Math.min(bestRatio, pixelRatio + 0.25); resize(); return true;
 };
+// More pixels than the screen has (drawn big and shrunk to fit)? Then those go first, and come back last.
+pipeline.extraPixels = (down) => (down ? pixelRatio > nativeRatio + 1e-6 : pixelRatio >= nativeRatio - 1e-6);
 // Storybook is the chosen look; add ?styles to the URL to compare the others.
 if (location.search.includes('styles') || getSettings().styles) createStylePicker(pipeline, () => window.__gui?.controllersRecursive().forEach((c) => c.updateDisplay()));
 else applyStyle(pipeline, 'storybook');

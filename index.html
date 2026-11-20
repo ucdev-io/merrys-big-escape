@@ -50,6 +50,7 @@
         for (var bi = 0; bi < 3000000; bi++) bx = (Math.imul(bx, 1103515245) + 12345) | 0;
         var cpuMs = Math.round((performance.now() - b0) * 10) / 10 + (bx === 42 ? 0.01 : 0);
         window.addEventListener('error', function (e) {
+          if (/ResizeObserver loop/.test(e.message || '')) return; // (a harmless browser notice, not a real error)
           var where = e.filename ? ' (' + String(e.filename).split('/').pop() + ':' + e.lineno + ')' : '';
           report('error', (e.message || 'error') + where, { stack: e.error && String(e.error.stack || '').slice(0, 600) });
           note('Oops, something went wrong: ' + (e.message || 'error') + where);

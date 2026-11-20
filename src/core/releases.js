@@ -17,6 +17,8 @@ export const RELEASES = [
       '🕳️ The drain says why you can’t go down just now (Pepper can’t come too!), and it’s easier to reach.',
       '🌳 No more trees in the road at the edge of town, and a pavement along the far side of the outer road.',
       '🐈 Pickles sits properly on the fence, and the park paths meet the pavement neatly.',
+      '🖌️ A sharper picture on computers (it’s painted bigger, then shrunk to fit).',
+      '📱 No more “Oops, something went wrong” about a ResizeObserver on phones (it was harmless).',
     ],
   },
   {

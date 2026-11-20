@@ -341,8 +341,12 @@ export class WatercolorPipeline {
   step(dir, med, only = null) {
     let lever = null;
     if (dir < 0) {
-      if (only !== 'pixels' && this.level < this.floor) { this.level++; lever = 'paint'; }
+      if (only !== 'paint' && this.extraPixels?.(true) && this.onTooSlow?.()) lever = 'pixels'; // (drawing bigger than the screen: that goes first)
+      else if (only !== 'pixels' && this.level < this.floor) { this.level++; lever = 'paint'; }
       else if (only !== 'paint' && this.onTooSlow?.()) lever = 'pixels';
+    } else if (this.extraPixels?.(false)) { // at the screen's own pixels or more: the full paint first, then extra pixels
+      if (only !== 'pixels' && this.level > 0) { this.level--; lever = 'paint'; }
+      else if (only !== 'paint' && this.onFast?.()) lever = 'pixels';
     } else if (only !== 'paint' && this.onFast?.()) lever = 'pixels';
     else if (only !== 'pixels' && this.level > 0) { this.level--; lever = 'paint'; }
     this.fastStreak = 0;
