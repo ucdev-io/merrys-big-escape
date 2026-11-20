@@ -213,6 +213,21 @@ export class TownChapter {
       friends: () => this.remotes.dogs.size,
     });
     this.busStop.places = this.places.length;
+    // A day out on the bus (the theme park): at the end of the ride the trip takes over, behind the bus's paper.
+    this.busStop.onTrip = (id, fade) => {
+      if (!this.trips) return;
+      this.trips.paper().style.opacity = '1';
+      fade?.remove();
+      this.trips.go(id, { id: 'bus', style: 'bus' }).then((ok) => {
+        if (ok || this.away) return;
+        // (It couldn't go just now: back at the stop, the paper lifts.)
+        const o = this.busStop.outSpot(), P = this.player;
+        if (o) this.teleport(o.x, o.z, o.face);
+        P.object.visible = true;
+        P.frozen = false;
+        this.trips.fadeTo(0, 0.3);
+      });
+    };
     hud.busStop = !!world.busStop;
     // 🚐 Doug the dog warden, when there's been too much mischief (on your own, with nothing else going on).
     this.catcher = new Catcher({
@@ -309,7 +324,7 @@ export class TownChapter {
     this.follow.yaw = this.player.heading + Math.PI;
     this.player.frozen = false;
     this.pack.watchOthers();
-    const back = this.backFrom && this.portals.out(this.backFrom);
+    const back = this.backFrom && (this.portals.out(this.backFrom) ?? (this.backFrom === 'bus' ? this.busStop.outSpot() : null));
     if (back) { this.teleport(back.x, back.z, back.face); this.backFrom = null; }
     else this.busStop.arrive(); // (just off the bus? Off she gets at the stop)
   }
@@ -423,13 +438,16 @@ export class TownChapter {
   /** Back from a trip, out at `exit` (the way in she took, or another: the beach pipe…). */
   resume(exit) {
     const home = exit === 'home' && this.world.homes?.[this.homeSlot ?? 0]; // (out at your own garden gate)
-    const o = home ? { x: home.pos.x, z: home.pos.z, face: home.face } : this.portals.out(exit) ?? { x: this.awayAs?.pos.x ?? 0, z: this.awayAs?.pos.z ?? 0, face: this.awayAs?.heading ?? 0 };
+    const bus = exit === 'bus' && this.busStop.outSpot(); // (back on the bus from a day out)
+    const o = home ? { x: home.pos.x, z: home.pos.z, face: home.face } : bus || (this.portals.out(exit) ?? { x: this.awayAs?.pos.x ?? 0, z: this.awayAs?.pos.z ?? 0, face: this.awayAs?.heading ?? 0 });
     this.away = null;
+    this.player.object.visible = true; // (in case she went by bus)
     this.hud.setAway(false);
     this.teleport(o.x, o.z, o.face ?? 0);
     this.musicPlace = null; // (the town's tune again, or its area's)
     music.setAmbient({ birds: 1 });
     this.portals.refresh(); // (the beach pipe's grille, if the sluice was opened)
+    if (bus) { this.busStop.dropOff(); this.follow.yaw = o.face + Math.PI; }
     this.hud.setPlaces?.(this.placeList());
     this.refreshObjective();
   }

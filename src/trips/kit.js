@@ -31,6 +31,7 @@ export function tripWorld(origin) {
  * A trip's chapter: the dog's actions in the trip's own scene, its ways out, and the prompt. Trips extend it:
  *   goal()        where the scent trail leads (or null)
  *   hint()        { text, paw } for what 🐾 would do here (or null)
+ *   heldHint()    the same while she's held still (on a ride, say: the trip reads 🐾 itself then)
  *   onDig(nose)   true if the trip handled a 🐾 press
  *   onBark()      a woof
  *   tick(dt, o)   everything else, every frame ({ canAct, barked })
@@ -54,9 +55,9 @@ export class TripChapter {
     const P = this.player, canAct = !P.frozen;
     const ex = canAct ? this.exitAt(P.pos) : null;
     if (ex?.walk) { ex.onTake?.(); this.ctx.leave(ex.id, ex.style); return; }
-    const h = canAct ? (ex ? { text: ex.text, paw: ex.paw ?? 'squeeze' } : this.hint?.()) : null;
+    const h = canAct ? (ex ? { text: ex.text, paw: ex.paw ?? 'squeeze' } : this.hint?.()) : this.heldHint?.() ?? null;
     this.hud.setPawAction(h?.paw ?? 'dig');
-    if (canAct) this.hud.setPrompt(h?.text ?? '');
+    if (canAct || h) this.hud.setPrompt(h?.text ?? '');
     const acted = this.actions.update(dt, {
       canAct, goal: this.goal?.() ?? null,
       onDig: (n) => { if (ex) { ex.onTake?.(); this.ctx.leave(ex.id, ex.style); return true; } return this.onDig?.(n) ?? true; },

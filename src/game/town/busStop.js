@@ -17,6 +17,9 @@ import { progress } from '../progress.js';
  * core/save.js). You get off at that town's bus stop.
  *
  * In a pack, the bus takes just you (your friends stay in this town): it asks first.
+ *
+ * Days out: the bus also goes to Wagtail Wonderland, the theme park (a trip: trips/fair/). That ride doesn't load
+ * another town: onTrip(id, paper) takes over at the end of it, and dropOff() brings her back to the stop.
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -94,10 +97,12 @@ export class BusStop {
     const line = (t) => `<div class="bus-row"><span class="bus-name">${t.tag === 'first' ? '🏡' : t.tag === 'back' ? '↩️' : '🏘️'} ${esc(t.name)}</span>
       <span class="bus-meta">${t.been ? `🗺️ ${t.found}/${total}` : '✨ New!'}</span><button class="pill bus-go" data-town="${esc(t.seed)}">🚌 Go</button></div>`;
     const section = (title, list) => (list.length ? `<h3>${title}</h3>${list.map(line).join('')}` : '');
+    const days = this.onTrip ? `<h3>Days out</h3><div class="bus-row"><span class="bus-name">🎡 Wagtail Wonderland</span><span class="bus-meta">🎢 Rides!</span><button class="pill bus-go" data-trip="fair">🚌 Go</button></div>` : '';
     this.hud.showCard(`<h1>🚌 All aboard!</h1><p class="bus-sub">Buses from <b>${esc(this.name)}</b>. Every town keeps its own finds.</p>
-      <div class="bus-list">${section('Next stops', next)}${section('Back to', [back, first].filter(Boolean))}${section('Towns you’ve been to', others)}</div>`,
+      <div class="bus-list">${days}${section('Next stops', next)}${section('Back to', [back, first].filter(Boolean))}${section('Towns you’ve been to', others)}</div>`,
     [['Not today', () => this.hud.hideCard()]]);
     for (const b of this.hud.card.querySelectorAll('[data-town]')) b.onclick = () => this.choose(b.dataset.town);
+    for (const b of this.hud.card.querySelectorAll('[data-trip]')) b.onclick = () => this.chooseTrip(b.dataset.trip);
   }
 
   /** A town picked: in a pack, check first (the bus only takes you). */
@@ -110,9 +115,19 @@ export class BusStop {
     ]);
   }
 
-  /** The bus pulls in, on she hops, and off it goes (and then the next town). */
-  ride(seed) {
-    const S = this.stop, P = this.player, fresh = !townSave(seed).discovered && !visitedTowns().some((t) => t.seed === seed);
+  /** A day out picked (the theme park): in a pack, check first, as for a town. */
+  chooseTrip(id) {
+    const n = this.friends?.() ?? 0;
+    if (!n) { this.hud.hideCard(); this.ride(null, id); return; }
+    this.hud.showCard(`<h1>🚌 Off to Wagtail Wonderland?</h1><p class="bus-sub">Your pack stays here in <b>${esc(this.name)}</b>. (The bus brings you back to this stop.)</p>`, [
+      ['🚌 Hop on', () => { this.hud.hideCard(); this.ride(null, id); }],
+      ['Stay with my pack', () => this.hud.hideCard()],
+    ]);
+  }
+
+  /** The bus pulls in, on she hops, and off it goes (and then the next town, or a day out: `trip`). */
+  ride(seed, trip = null) {
+    const S = this.stop, P = this.player, fresh = !!seed && !townSave(seed).discovered && !visitedTowns().some((t) => t.seed === seed);
     this.bus = this.bus ?? busModel();
     const al = V(S.along[0], 0, S.along[1]);
     this.bus.rotation.y = Math.atan2(al.x, al.z);
@@ -121,8 +136,25 @@ export class BusStop {
     P.vel.set(0, 0);
     this.hud.setPrompt('');
     sfx.honk?.(0.7);
-    this.anim = { kind: 'go', t: 0, seed, fresh, from: P.pos.clone() };
+    this.anim = { kind: 'go', t: 0, seed, trip, fresh, from: P.pos.clone() };
     this.place(-38);
+  }
+
+  /** Where she gets off at this stop: { x, z, face } (looking along the road the way the bus goes). */
+  outSpot() {
+    const S = this.stop;
+    return S ? { x: S.out.x, z: S.out.z, face: Math.atan2(S.along[0], S.along[1]) } : null;
+  }
+
+  /** Back from a day out: she's at the stop, and the bus pulls away. */
+  dropOff() {
+    const S = this.stop;
+    if (!S) return;
+    this.bus = this.bus ?? busModel();
+    this.bus.rotation.y = Math.atan2(S.along[0], S.along[1]);
+    this.scene.add(this.bus);
+    this.place(0);
+    this.anim = { kind: 'away', t: 0 };
   }
 
   /** The bus at s metres along the road from the stop (its door level with the stop at 0). */
@@ -180,7 +212,12 @@ export class BusStop {
         P.pos.copy(this.bus.userData.door.getWorldPosition(V(0, 0, 0))).setY(1.4); // (the camera follows the bus)
         if (k > 0.8 && !a.fade) { a.fade = document.createElement('div'); a.fade.className = 'travel-fade'; this.hud.root.prepend(a.fade); sfx.honk?.(0.4); }
         if (a.fade) a.fade.style.opacity = Math.min(1, (k - 0.8) / 1.2).toFixed(2);
-        if (k > 2.2 && !a.gone) {
+        if (k > 2.2 && !a.gone && a.trip) { // (a day out: the trip takes over from here, behind the paper)
+          a.gone = true;
+          this.anim = null;
+          this.bus.removeFromParent();
+          this.onTrip(a.trip, a.fade);
+        } else if (k > 2.2 && !a.gone) {
           a.gone = true;
           try { sessionStorage.setItem(RIDE, JSON.stringify({ seed: a.seed, name: townName(a.seed), fresh: a.fresh })); } catch { /* private mode */ }
           setTown(a.seed);

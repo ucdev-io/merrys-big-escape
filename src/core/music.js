@@ -21,6 +21,8 @@ const THEMES = {
   sewer: { bpm: 100, root: 57, prog: [[0, 4, 7], [5, 9, 12], [-1, 2, 7], [0, 4, 7]], seed: 'sewer', shaker: false, vol: 0.85, lead: 'bloop' },
   // …and out in space it's slow and dreamy (a floaty theremin in Eb over drifting chords, Imaj7 IVmaj7 vi V).
   space: { bpm: 76, root: 63, prog: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [-5, -1, 2, 7]], seed: 'space', shaker: false, vol: 0.85, lead: 'theremin' },
+  // The funfair: a bouncy steam-organ tune in C (I IV V I), a reedy calliope on top.
+  fair: { bpm: 132, root: 60, prog: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], seed: 'fair', shaker: true, vol: 0.9, lead: 'calliope' },
 };
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic: always sounds friendly
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
@@ -158,6 +160,7 @@ class Music {
     o.start(t); o.stop(t + dur + 0.1);
     this.osc(A, 'triangle', f * 2, t, dur * 0.3, vol * 0.18, 0.004);
   }
+  calliope(A, f, t, dur, vol) { this.osc(A, 'square', f, t, dur * 0.6, vol * 0.32, 0.01); this.osc(A, 'triangle', f * 2, t, dur * 0.5, vol * 0.4, 0.01); this.osc(A, 'sine', f, t, dur * 0.8, vol * 0.6, 0.01); } // (a reedy steam organ)
   theremin(A, f, t, dur, vol) { // (a wobbly, swooping sine: a little slide up into each note, then vibrato)
     const o = A.ctx.createOscillator(), g = A.ctx.createGain(), lfo = A.ctx.createOscillator(), depth = A.ctx.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(f * 0.94, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.09);

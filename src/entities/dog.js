@@ -482,6 +482,15 @@ export class Dog {
     if (this.topknot) this.topknot.visible = !c('hat'); // the bow comes off for a hat
 
     if (c('collar')) keep(this.makeCollar(c('collar').color, 0xf2c14e));
+    if (c('collar')?.style === 'balloon') {
+      // A funfair balloon tied to the collar, bobbing up over her back on its string.
+      const { NL, nr } = this.dims, cy = 0.085 * NL, cr = 0.049 * nr + (F ?? 0) * 1.3, g = keep(group(this.neck, [0, cy, -cr]));
+      const string = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.01, 0.12, -0.04), new THREE.Vector3(-0.01, 0.24, -0.05), new THREE.Vector3(0.0, 0.34, -0.06)]);
+      mesh(new THREE.TubeGeometry(string, 10, 0.0025, 4, false), 0xf3ead8, g, [0, 0, 0]);
+      mesh(SPHERE, c('collar').color, g, [0.0, 0.41, -0.06], [0, 0, 0], [0.06, 0.072, 0.06]);
+      mesh(new THREE.ConeGeometry(0.012, 0.018, 8), c('collar').color, g, [0.0, 0.335, -0.06], [Math.PI, 0, 0]);
+      mesh(SPHERE, 0xffffff, g, [0.022, 0.43, -0.02], [0, 0, 0], [0.012, 0.018, 0.008]); // (a shine)
+    }
 
     if (c('neck')?.style === 'bowtie') {
       // A dapper bow tie under the chin.

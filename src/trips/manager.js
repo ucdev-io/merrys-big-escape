@@ -93,13 +93,14 @@ export class Trips {
     const P = this.player, town = this.town, geo0 = this.renderer.info.memory.geometries, t0 = performance.now();
     const mod = T.load(); // (already on its way if she came near the drain)
     this.hold();
-    if (from.style === 'beam') sfx.beam?.(); else sfx.tunnel();
+    if (from.style === 'beam') sfx.beam?.(); else if (from.style !== 'bus') sfx.tunnel();
     buzz(30);
     // Squeeze in, nose first (or, scooped up in a net: just away she goes; or up a beam of light, slowly turning).
     const y0 = P.pos.y, sx = P.pos.x, sz = P.pos.z, at = from.at ?? { x: sx, z: sz };
     let t = 0;
     const f = this.paper();
     if (from.style === 'net') await this.fadeTo(1, 0.6);
+    else if (from.style === 'bus') await this.fadeTo(1, 0.01); // (off on the bus: the paper's already up)
     else if (from.style === 'beam') {
       await this.play(step((dt) => {
         t += dt;
@@ -153,6 +154,7 @@ export class Trips {
     const s = world.spawn(from.id);
     P.pos.set(s.x, s.y ?? 0, s.z);
     P.heading = s.face; P.object.rotation.y = s.face; P.dog.body.rotation.x = 0;
+    P.object.visible = true; // (she was tucked inside the bus)
     this.follow.snap(P.pos);
     this.follow.yaw = s.face + Math.PI;
     this.follow.manualHold = 0;
@@ -186,7 +188,7 @@ export class Trips {
     this.busy = true;
     const P = this.player, town = this.town;
     this.hold();
-    if (style === 'beam') sfx.beam?.(); else sfx.tunnel();
+    if (style === 'beam') sfx.beam?.(); else if (style === 'bus') sfx.honk?.(0.6); else sfx.tunnel();
     buzz(20);
     await this.fadeTo(1, 0.4);
     // Back across: the sun and the dog to the town, the camera free again, and the trip thrown away.
