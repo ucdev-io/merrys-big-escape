@@ -3,15 +3,17 @@ import { paint } from '../../render/watercolorMaterial.js';
 import { blocked } from '../../world/spots.js';
 import { toWorld } from '../../world/areas/areas.js';
 import { groundY } from '../seasons/common.js';
+import { UfoSite } from './ufo.js';
 
 /*
  * 🕳️ The ways into trips from town: the manhole in the alley (down to the sewers, any time), and the old outfall
  * pipe in the beach's dunes (the sewers' other end: grilled shut until the sluice inside is turned, and from then
- * on a shortcut, alley ↔ beach). They're put down when the town's set up, never built into it, so every town is
+ * on a shortcut, alley ↔ beach), and the crop circle under the flying saucer over the Farm's field (up a beam of
+ * light to Planet Boing). They're put down when the town's set up, never built into it, so every town is
  * built just as it always was.
  *
  * Each: { id, trip, x, z (the hole), face, out: { x, z, face } (where she comes back out), r (how close for 🐾),
- *         open(): bool, text, shut (what it says when it's locked) }
+ *         open(): bool, text, shut (what it says when it's locked), paw?, style? ('beam': up, not down) }
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -36,7 +38,24 @@ export class Portals {
     if (alley) this.list.push(alley);
     const pipe = this.beachPipe();
     if (pipe) this.list.push(pipe);
+    const ufo = this.ufo();
+    if (ufo) this.list.push(ufo);
   }
+
+  /** The crop circle in the Farm's field, under the hovering flying saucer. */
+  ufo() {
+    const site = new UfoSite(this.group, this.world.areas?.find((a) => a.kind === 'farm'), this.world);
+    if (!site.spot) return null;
+    this.site = site;
+    const s = site.spot;
+    return {
+      id: 'farm', trip: 'ufo', x: s.x, z: s.z, face: 0, r: 2.0, out: site.out, style: 'beam', paw: 'beam',
+      open: () => true, text: '🐾 Beam me up!',
+    };
+  }
+
+  /** The saucer's beam on for `secs` (on the way up, or back down). */
+  beam(secs) { this.site?.beam(secs); }
 
   /** In the alley, just off the middle (not on the pigeons' spot, the bins or the crates). */
   alley() {
@@ -148,7 +167,7 @@ export class Portals {
     if (!p) return null;
     if (!p.open()) return { text: p.shut, paw: 'dig' };
     const why = this.blocked();
-    return why ? { text: `🕳️ ${why}`, paw: 'dig' } : { text: p.text, paw: 'squeeze' };
+    return why ? { text: `${p.style === 'beam' ? '🛸' : '🕳️'} ${why}`, paw: 'dig' } : { text: p.text, paw: p.paw ?? 'squeeze' };
   }
 
   /** 🐾 pressed: down the way in she's at (true if there was one). */
@@ -156,12 +175,13 @@ export class Portals {
     const p = this.at(pos, nose);
     if (!p) return false;
     if (!p.open()) { this.hud.float('Locked! 🔒', V(pos.x, 1.2, pos.z)); return true; }
-    this.go(p.trip, { id: p.id, at: p.at ?? { x: p.x, z: p.z } });
+    if (this.go(p.trip, { id: p.id, at: p.at ?? { x: p.x, z: p.z }, style: p.style }) && p.style === 'beam') this.beam(2.4);
     return true;
   }
 
-  /** Getting close to a way in: start fetching the trip, so it's ready when she gets there. */
-  update(pos) {
+  /** Getting close to a way in: start fetching the trip, so it's ready when she gets there. (And the saucer bobs.) */
+  update(pos, dt = 1 / 60) {
+    this.site?.update(dt, pos);
     for (const p of this.list) {
       if (this.fetched.has(p.trip)) continue;
       if ((pos.x - p.x) ** 2 + (pos.z - p.z) ** 2 < 15 * 15) { this.fetched.add(p.trip); this.prefetch(p.trip); }

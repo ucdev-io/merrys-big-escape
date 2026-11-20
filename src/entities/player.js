@@ -63,6 +63,7 @@ export class Player {
     this.shakeIn = 0;
     this.wetTime = 0;
     this.grip = 1;           // how well paws grip (ice: hardly at all — wheee!)
+    this.gravity = 1;        // how hard she's pulled down (less on other planets: big floaty jumps, same take-off)
   }
 
   /** Swap to a different dog (lobby), keeping position and facing. */
@@ -166,7 +167,7 @@ export class Player {
       const free = this.boost.zoomies > 0 || this.boost.speed > 0;
       if (free || this.stamina >= HUGE_COST) {
         // Up to the same height whenever you tap: from the ground, the top of the jump, or on the way down.
-        const climbed = this.pos.y - this.jumpY;
+        const climbed = (this.pos.y - this.jumpY) * this.gravity; // (in low gravity everything's that much higher)
         this.vy = Math.max(this.vy, launch(Math.max(0.35, (superJump ? SUPER_HUGE : HUGE) - climbed)));
         if (!free) this.stamina -= HUGE_COST;
         this.jumpBuffer = 0;
@@ -198,7 +199,7 @@ export class Player {
       if (wtr && !wtr.wade) base = (wtr.surface - (this.dog.bodyY + 0.03) * this.dog.breed.size) * wtr.depth;
       const ground = world ? world.colliders.surfaceAt(this.pos.x, this.pos.z, this.pos.y, this.grounded ? 0.3 : 0.05, this.platforms, undefined, base) : 0;
       impact = Math.max(speed, -this.vy);
-      this.vy -= GRAVITY * dt;
+      this.vy -= GRAVITY * this.gravity * dt;
       this.pos.y += this.vy * dt;
       const onDog = !!world?.colliders.onExtra, hit = world?.colliders.extraHit;
       if (this.pos.y <= ground && this.vy <= 0) { // only land on the way down

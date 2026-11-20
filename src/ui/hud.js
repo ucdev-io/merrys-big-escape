@@ -172,7 +172,7 @@ export class HUD {
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
         ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'pack records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
         ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}
-        ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}${stat('🧩', 'puzzles solved', 'puzzles')}</div>`,
+        ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}${stat('🧩', 'puzzles solved', 'puzzles')}${stat('✨', 'star-sparks', 'sparks')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -336,7 +336,7 @@ export class HUD {
     if (act === this._pawAct) return;
     this._pawAct = act;
     const b = document.querySelector('.touch [data-b="dig!"]');
-    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!', nudge: 'Nudge!', bus: 'Bus!' }[act] ?? 'Dig'}`;
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!', nudge: 'Nudge!', bus: 'Bus!', beam: 'Beam!', fly: 'Fly!' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */

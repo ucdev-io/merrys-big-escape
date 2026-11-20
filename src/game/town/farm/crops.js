@@ -5,6 +5,7 @@ import { paint } from '../../../render/watercolorMaterial.js';
 import { dressSeason } from '../../../world/merge.js';
 import { bake } from '../../../entities/shapes.js';
 import { pumpkinGeometry } from '../../seasons/models.js';
+import { ufoSpot } from '../ufo.js';
 
 /*
  * 🌱🌾🎃 What's growing on the Farm, season by season: green shoots in rows in spring; tall golden wheat
@@ -49,7 +50,11 @@ export class Crops {
     this.mid = new THREE.Vector3((F.rect.x0 + F.rect.x1) / 2, 0, (F.rect.z0 + F.rect.z1) / 2);
     this.radius = Math.hypot(F.rect.x1 - F.rect.x0, F.rect.z1 - F.rect.z0) / 2;
     this.wheat = false;
+    this.circle = ufoSpot(area); // (the crop circle under the flying saucer: nothing grows there)
   }
+
+  /** In the crop circle? (the area's own (u, v)) */
+  inCircle(u, v) { const c = this.circle; return !!c && (u - c.u) ** 2 + (v - c.v) ** 2 < (c.r + 0.35) ** 2; }
 
   add(o) { o.castShadow = false; o.receiveShadow = true; this.scene.add(o); this.objects.push(o); return o; }
 
@@ -62,7 +67,7 @@ export class Crops {
     let du = 0.68, dv = step;
     while (((u1 - u0) / du) * ((v1 - v0) / dv) > max) { du += 0.34; dv *= 1.06; }
     const spots = [];
-    for (let u = u0; u <= u1; u += du) for (let v = v0 + rng.float(0, dv); v <= v1; v += dv) if (!skip?.(u, v)) spots.push([u, v]);
+    for (let u = u0; u <= u1; u += du) for (let v = v0 + rng.float(0, dv); v <= v1; v += dv) if (!skip?.(u, v) && !this.inCircle(u, v)) spots.push([u, v]);
     const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true }), Math.max(1, spots.length));
     spots.forEach(([u, v], i) => {
       const [x, z] = W(u + rng.float(-0.08, 0.08), v + rng.float(-0.15, 0.15)), k = h * rng.float(0.85, 1.12);
@@ -90,9 +95,9 @@ export class Crops {
       const n = 70, stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.01, 1, 3), paint(0x6f9a52), n), heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xd9433a), n);
       const F = this.field;
       for (let i = 0; i < n; i++) {
-        const [x, z] = A.W(rng.float(F.u0 + 1, F.u1 - 1), rng.float(F.v0 + 1, F.v1 - 1)), h = rng.float(0.85, 1.1);
-        stems.setMatrixAt(i, _m.makeScale(1, h, 1).setPosition(x, h / 2, z));
-        heads.setMatrixAt(i, _m.makeScale(0.06, 0.035, 0.06).setPosition(x, h, z));
+        const pu = rng.float(F.u0 + 1, F.u1 - 1), pv = rng.float(F.v0 + 1, F.v1 - 1), [x, z] = A.W(pu, pv), h = rng.float(0.85, 1.1), k = this.inCircle(pu, pv) ? 0 : 1; // (none in the crop circle)
+        stems.setMatrixAt(i, _m.makeScale(k, h * k, k).setPosition(x, h / 2, z));
+        heads.setMatrixAt(i, _m.makeScale(0.06 * k, 0.035 * k, 0.06 * k).setPosition(x, h, z));
       }
       stems.computeBoundingSphere(); heads.computeBoundingSphere();
       this.add(stems); this.add(heads);

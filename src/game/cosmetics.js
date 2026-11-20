@@ -64,6 +64,10 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-thinking', slot: 'hat', name: 'Thinking cap', emoji: '🎓', color: 0x2f3a52, level: 1, friend: 'puzzles', jobs: 5, hint: 'Solve 5 puzzles', boost: { speed: 1, zoomies: 2 } },
 );
+// A present from Zib on Planet Boing (up the flying saucer's beam, over the Farm's field).
+COSMETICS.push(
+  { id: 'hat-boppers', slot: 'hat', name: 'Space boppers', emoji: '👽', color: 0x8fe0c8, level: 1, friend: 'saucer', jobs: 1, hint: 'Fill the flying saucer with star-sparks', boost: { speed: 1, zoomies: 2 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

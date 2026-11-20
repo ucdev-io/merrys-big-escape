@@ -125,6 +125,15 @@ export const sfx = {
   howl(pitch = 1, vol = 1) { const o = 330 * pitch; tone('sine', o, o * 1.5, 0.6, 0.12 * vol); tone('sine', o * 1.5, o * 1.42, 0.9, 0.1 * vol, 0.55); tone('sine', o * 1.42, o * 0.9, 0.6, 0.08 * vol, 1.4); },
   // Power-up running out.
   fizzle() { tone('sine', 600, 200, 0.3, 0.12); },
+  // 🛸 A flying saucer's beam of light: a rising, shimmering whooo-eee (and a sparkle on top).
+  beam() {
+    tone('sine', 220, 880, 1.6, 0.12); tone('sine', 223, 886, 1.6, 0.08, 0.02);
+    for (let i = 0; i < 8; i++) tone('triangle', 1200 + i * 160, 1500 + i * 160, 0.12, 0.035, 0.2 + i * 0.16);
+  },
+  // ✨ A star-spark picked up: a quick bright arpeggio.
+  spark() { [880, 1109, 1319, 1760].forEach((f, i) => tone('triangle', f, f, 0.14, 0.09, i * 0.05)); },
+  // 👽 An alien's voice: a wobbly little warble (pitch: higher for the little ones).
+  blip(pitch = 1) { const f = 520 * pitch; tone('sine', f, f * 1.6, 0.09, 0.08); tone('sine', f * 1.5, f * 0.9, 0.12, 0.07, 0.09); },
   hooray() {
     const notes = [523, 587, 659, 784, 659, 784, 1047];
     notes.forEach((f, i) => tone('triangle', f, f, 0.2, 0.18, i * 0.13));

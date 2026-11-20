@@ -34,7 +34,8 @@ export function tripWorld(origin) {
  *   onDig(nose)   true if the trip handled a 🐾 press
  *   onBark()      a woof
  *   tick(dt, o)   everything else, every frame ({ canAct, barked })
- * world.exits: [{ id, rect, open(): bool, walk?: true (leave just by going in), text, paw, onTake?() (just before she goes) }]
+ * world.exits: [{ id, rect, open(): bool, walk?: true (leave just by going in), text, paw, onTake?() (just before she goes),
+ *                 style?: 'beam' (back down a flying saucer's beam of light, rather than popping out of a hole) }]
  */
 export class TripChapter {
   constructor(ctx, { scene, world }) {
@@ -52,13 +53,13 @@ export class TripChapter {
     this.time += dt;
     const P = this.player, canAct = !P.frozen;
     const ex = canAct ? this.exitAt(P.pos) : null;
-    if (ex?.walk) { ex.onTake?.(); this.ctx.leave(ex.id); return; }
+    if (ex?.walk) { ex.onTake?.(); this.ctx.leave(ex.id, ex.style); return; }
     const h = canAct ? (ex ? { text: ex.text, paw: ex.paw ?? 'squeeze' } : this.hint?.()) : null;
     this.hud.setPawAction(h?.paw ?? 'dig');
     if (canAct) this.hud.setPrompt(h?.text ?? '');
     const acted = this.actions.update(dt, {
       canAct, goal: this.goal?.() ?? null,
-      onDig: (n) => { if (ex) { ex.onTake?.(); this.ctx.leave(ex.id); return true; } return this.onDig?.(n) ?? true; },
+      onDig: (n) => { if (ex) { ex.onTake?.(); this.ctx.leave(ex.id, ex.style); return true; } return this.onDig?.(n) ?? true; },
       onBark: () => this.onBark?.(),
     });
     this.tick?.(dt, { canAct, barked: acted.barked });

@@ -608,6 +608,14 @@ export class Dog {
         mesh(SPHERE, 0xe0b04a, g, [0, 0.036, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
         mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.074, 5), 0xe0b04a, g, [0.037, 0.0355, -0.004], [0, 0, Math.PI / 2]); // the cord
         mesh(new THREE.CylinderGeometry(0.0035, 0.0065, 0.034, 6), 0xe0b04a, g, [0.074, 0.0175, -0.004]);                   // the tassel
+      } else if (hat.id === 'hat-boppers') {
+        // Space boppers (Zib's present): a headband with two springy stalks, a glowing bobble on each.
+        mesh(new THREE.TorusGeometry(0.044, 0.006, 6, 24, Math.PI), hat.color, g, [0, -0.03, -0.004]); // (the band, ear to ear)
+        for (const s of [-1, 1]) {
+          const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(s * 0.03, 0.0, -0.004), new THREE.Vector3(s * 0.045, 0.06, 0.004), new THREE.Vector3(s * 0.036, 0.095, -0.006), new THREE.Vector3(s * 0.05, 0.125, 0.002)]);
+          mesh(new THREE.TubeGeometry(curve, 10, 0.0035, 5, false), 0x5a6a7a, g, [0, 0, 0]);
+          mesh(SPHERE, s < 0 ? 0xffb0d0 : 0xfff17a, g, [s * 0.05, 0.13, 0.002], [0, 0, 0], [0.014, 0.014, 0.014]);
+        }
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);

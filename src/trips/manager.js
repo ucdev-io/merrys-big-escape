@@ -82,7 +82,8 @@ export class Trips {
   }
 
   /**
-   * Go on trip `id`. from: { id (which way in, e.g. 'alley'), at: { x, z } (the hole to squeeze into, in town) }.
+   * Go on trip `id`. from: { id (which way in, e.g. 'alley'), at: { x, z } (the hole to squeeze into, in town),
+   * style?: 'net' (scooped up by the warden) | 'beam' (floated up into a flying saucer) }.
    * False if she can't just now (or it's already happening).
    */
   async go(id, from) {
@@ -92,14 +93,24 @@ export class Trips {
     const P = this.player, town = this.town, geo0 = this.renderer.info.memory.geometries, t0 = performance.now();
     const mod = T.load(); // (already on its way if she came near the drain)
     this.hold();
-    sfx.tunnel();
+    if (from.style === 'beam') sfx.beam?.(); else sfx.tunnel();
     buzz(30);
-    // Squeeze in, nose first (or, scooped up in a net: just away she goes).
+    // Squeeze in, nose first (or, scooped up in a net: just away she goes; or up a beam of light, slowly turning).
     const y0 = P.pos.y, sx = P.pos.x, sz = P.pos.z, at = from.at ?? { x: sx, z: sz };
     let t = 0;
     const f = this.paper();
     if (from.style === 'net') await this.fadeTo(1, 0.6);
-    else {
+    else if (from.style === 'beam') {
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 1.9), m = Math.min(1, k * 2.5), e = m * m * (3 - 2 * m);
+        P.pos.set(sx + (at.x - sx) * e, y0 + 6 * k * k, sz + (at.z - sz) * e); // (into the middle of the beam, and up)
+        P.heading += dt * (1 + 4 * k);
+        P.dog.body.rotation.x = -0.25 * Math.sin(k * Math.PI);
+        f.style.opacity = Math.max(0, (k - 0.6) / 0.4).toFixed(3);
+        return k >= 1;
+      }));
+    } else {
       await this.play(step((dt) => {
         t += dt;
         const k = Math.min(1, t / 0.8), e = k * k * (3 - 2 * k);
@@ -118,12 +129,13 @@ export class Trips {
       built = m.build({
         id, from: from.id, origin: tripOrigin(T.n),
         hud: this.hud, input: this.input, player: P, pipeline: this.pipeline, follow: this.follow, camera: this.camera,
-        town: town.tripInfo(id), leave: (exit) => this.leave(exit),
+        town: town.tripInfo(id), leave: (exit, style) => this.leave(exit, style),
       });
       built.ms = performance.now() - tb;
     } catch (e) {
       console.warn('Trip failed:', e);
       clearTimeout(slow); this.clearNote();
+      P.gravity = 1;
       if (town.away) town.resume(from.id);
       this.release(y0);
       await this.fadeTo(0, 0.3);
@@ -167,14 +179,14 @@ export class Trips {
     return true;
   }
 
-  /** Back to town, out at `exit` (a way out: 'alley', 'beach'…). */
-  async leave(exit) {
+  /** Back to town, out at `exit` (a way out: 'alley', 'beach'…), style 'beam': down a flying saucer's beam. */
+  async leave(exit, style = null) {
     const x = this.cur;
     if (!x || this.busy) return false;
     this.busy = true;
     const P = this.player, town = this.town;
     this.hold();
-    sfx.tunnel();
+    if (style === 'beam') sfx.beam?.(); else sfx.tunnel();
     buzz(20);
     await this.fadeTo(1, 0.4);
     // Back across: the sun and the dog to the town, the camera free again, and the trip thrown away.
@@ -184,6 +196,7 @@ export class Trips {
     this.follow.setLimits(null);
     x.chapter.dispose?.();
     x.world.dispose?.();
+    P.gravity = 1; // (back on Earth)
     disposeTree(x.scene, town.scene); // (never anything the town's still using)
     this.cur = null;
     this.restoreLook();
@@ -193,7 +206,23 @@ export class Trips {
     const leaked = this.renderer.info.memory.geometries - x.geo0;
     window.__report?.('trip-out', `${x.id} → ${exit}`, { leaked, geometries: this.renderer.info.memory.geometries });
     console.info(`🧳 trip-out ${x.id} → ${exit}: ${leaked} shapes more than before`);
-    await this.fadeTo(0, 0.35);
+    if (style === 'beam') {
+      // Down the beam from high up, gently turning, as the paper clears.
+      const H = 6, f = this.paper(), y1 = P.pos.y;
+      let t = 0;
+      town.beam?.(2.6);
+      P.pos.y = y1 + H;
+      this.follow.snap(P.pos);
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 2.1), e = 1 - (1 - k) * (1 - k);
+        P.pos.y = y1 + H * (1 - e);
+        P.heading += dt * (3.5 - 3 * k);
+        f.style.opacity = Math.max(0, 1 - t / 0.45).toFixed(3);
+        return k >= 1;
+      }));
+      P.pos.y = y1;
+    } else await this.fadeTo(0, 0.35);
     sfx.pop();
     this.release(P.pos.y);
     P.dog.shake?.();

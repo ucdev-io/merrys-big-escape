@@ -398,6 +398,9 @@ export class TownChapter {
     this.awayAs = { pos: new THREE.Vector3(at.x, 0, at.z), heading: at.face ?? 0, speed: 0, digTimer: 0, grounded: true, inWater: false, swim: 0, sledging: false };
   }
 
+  /** The flying saucer's beam on for `secs` (she's coming back down it: see trips/manager.js leave). */
+  beam(secs) { this.portals.beam(secs); }
+
   /** Still in the pack while she's away: friends are told which trip (an older server just shows her dog at the drain). */
   awayTick(dt, n) {
     this.awayAs.mudLevel = this.player.mudLevel;
@@ -555,7 +558,7 @@ export class TownChapter {
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
     const door = canAct && !paw ? this.portals.hint(pos, this.actions.nose()) ?? this.busStop.prompt(pos) : null; // (a way into a trip: the alley's drain… or the bus stop)
-    this.portals.update(pos);
+    this.portals.update(pos, dt);
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
     if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
