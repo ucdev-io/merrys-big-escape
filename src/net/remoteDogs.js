@@ -23,6 +23,7 @@ export class RemoteDogs {
     this.hud = hud;
     this.getListener = getListener; // → my dog's position, for distance-based volume
     this.dogs = new Map();
+    this.rides = null; // (friends riding cars: see rideCars.js, set up by the town)
   }
 
   add(p) {
@@ -50,6 +51,7 @@ export class RemoteDogs {
   remove(id) {
     const r = this.dogs.get(id);
     if (!r) return;
+    this.rides?.drop(id);
     this.scene.remove(r.dog.root);
     r.tag.remove();
     this.dogs.delete(id);
@@ -123,9 +125,11 @@ export class RemoteDogs {
       // Away on a trip (down a drain…): no dog to see here until they're back.
       const away = (c.f >> 8) & 15;
       if (away !== (r.away ?? 0)) { r.away = away; this.onAway?.(r, away); }
-      if (away) { root.visible = false; r.tag.style.opacity = 0; continue; }
+      if (away) { root.visible = false; r.tag.style.opacity = 0; this.rides?.update(dt, r.id, root.position, { grounded: false }); continue; } // (and any car she was on drives off)
       root.visible = true;
       root.position.set(a.x + (c.x - a.x) * k, a.y + (c.y - a.y) * k, a.z + (c.z - a.z) * k);
+      // On top of one of their own cars (we've none of those here: every game drives its own)? One of ours, under them.
+      this.rides?.update(dt, r.id, root.position, { grounded: !(c.f & 4), own: c.v, other: !!(c.f & (8 | 32)) });
       const h = a.h + wrap(c.h - a.h) * k;
       const turn = wrap(h - r.heading) / Math.max(dt, 1e-3);
       r.heading = h;
@@ -150,5 +154,6 @@ export class RemoteDogs {
       r.tag.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%) scale(${far.toFixed(2)})`;
       r.tag.style.opacity = s.behind ? 0 : over ? 0.22 : 0.9;
     }
+    this.rides?.tick(dt, this.dogs);
   }
 }
