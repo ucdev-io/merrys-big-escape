@@ -382,6 +382,13 @@ export class WatercolorPipeline {
   }
 
   render(scene, camera) {
+    this.paintPicture(scene, camera);
+    // A one-off look at the finished picture, while it's still there to read (the 📮 postcard jigsaw):
+    // snap = (canvas) → … copies it straight away.
+    if (this.snap) { const f = this.snap; this.snap = null; f(this.renderer.domElement); }
+  }
+
+  paintPicture(scene, camera) {
     const r = this.renderer;
     if (!this.params.enabled) {
       r.setRenderTarget(null);

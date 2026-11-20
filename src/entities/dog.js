@@ -601,6 +601,13 @@ export class Dog {
         mesh(new THREE.CylinderGeometry(0.0436, 0.0436, 0.011, 20, 1, true), 0xd9534f, g, [0, 0.007, -0.004]);
         mesh(SPHERE, 0xfbf7ee, g, [0.043, 0.008, 0.008], [0, 0, 0], [0.004, 0.009, 0.009]);
         mesh(SPHERE, 0xf2c14e, g, [0.046, 0.008, 0.008], [0, 0, 0], [0.003, 0.004, 0.004]);
+      } else if (hat.id === 'hat-thinking') {
+        // A mortarboard (for solving puzzles): a flat square on a little cap, with a gold tassel over the side.
+        mesh(new THREE.SphereGeometry(0.044, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.75, 1]);
+        mesh(new THREE.BoxGeometry(0.105, 0.007, 0.105), hat.color, g, [0, 0.031, -0.004], [0, Math.PI / 4, 0]);
+        mesh(SPHERE, 0xe0b04a, g, [0, 0.036, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
+        mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.074, 5), 0xe0b04a, g, [0.037, 0.0355, -0.004], [0, 0, Math.PI / 2]); // the cord
+        mesh(new THREE.CylinderGeometry(0.0035, 0.0065, 0.034, 6), 0xe0b04a, g, [0.074, 0.0175, -0.004]);                   // the tassel
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);

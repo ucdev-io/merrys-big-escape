@@ -68,7 +68,7 @@ export class DuckRoundUp {
       this.sendT -= dt;
       if (this.sendT <= 0) {
         this.sendT = SEND;
-        this.ctx.pack.sendGame({ a: 'ducks', d: this.ducks.flatMap((d) => [d.pos.x, d.pos.z, d.duck.root.rotation.y]) });
+        this.ctx.send({ a: 'ducks', d: this.ducks.flatMap((d) => [d.pos.x, d.pos.z, d.duck.root.rotation.y]) });
       }
     }
     // The compass points at the nearest duck still out of the water.
@@ -117,7 +117,7 @@ export class DuckRoundUp {
     if (this.inPond(d.pos.x, d.pos.z)) { // safe! (and which dog shooed it in)
       d.home = true;
       this.home.push(d.i);
-      this.ctx.pack.sendGame({ a: 'home', i: d.i, by: close < SCARE + 2 ? by?.id : d.lastDog });
+      this.ctx.send({ a: 'home', i: d.i, by: close < SCARE + 2 ? by?.id : d.lastDog });
     }
   }
 

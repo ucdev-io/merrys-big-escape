@@ -166,7 +166,7 @@ export class Pack {
       const b = document.createElement('button');
       b.className = 'pill big';
       b.innerHTML = `${C.emoji} ${C.name}<small>${dogs > 1 ? C.blurb : C.solo}</small>`;
-      b.disabled = !this.net || dogs < (C.min ?? 1);
+      b.disabled = dogs < (C.min ?? 1);
       b.onclick = () => { this.hud.hideCard(); this.onStartGame?.(kind); };
       btns.appendChild(b);
     }

@@ -1,24 +1,33 @@
 import { getJson } from '../net/api.js';
 import { BREEDS } from '../entities/breeds.js';
 import { CHALLENGES, scoreText } from '../game/challenges.js';
+import { getRecords } from '../game/localRecords.js';
+import { DEMO } from '../core/demo.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const medal = (i) => ['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`;
 
 /**
  * 🏆 Pack records: the best in each challenge on this game computer (course ones per
- * neighbourhood), plus your own bests. `focus`: a challenge to show first.
+ * neighbourhood), plus your own bests. `focus`: a challenge to show first. `local` (no pack server:
+ * on your own, or the web demo): 🏆 Your records instead, the ones kept on this device.
  */
-export async function showRecords(hud, { town, townName, profile, focus = null }) {
+export async function showRecords(hud, { town, townName, profile, dogName, focus = null, local = false }) {
+  const mine = () => getRecords(town, profile, dogName);
+  if (local || DEMO) { render(hud, '<h1>🏆 Your records</h1>', mine(), { townName, focus }); return; }
   const title = '<h1>🏆 Pack records</h1>';
   hud.showCard(`${title}<p>Opening the trophy cabinet…</p>`, [['OK', () => hud.hideCard()]]);
   let data;
   try {
     data = await getJson(`/api/records?town=${encodeURIComponent(town)}&profile=${encodeURIComponent(profile ?? '')}`);
   } catch {
-    hud.showCard(`${title}<p>Couldn’t reach the game computer just now. Try again in a moment!</p>`, [['OK', () => hud.hideCard()]]);
+    render(hud, '<h1>🏆 Your records</h1><p class="small">Couldn’t reach the game computer just now: here are the ones on this device.</p>', mine(), { townName, focus });
     return;
   }
+  render(hud, title, data, { townName, focus });
+}
+
+function render(hud, title, data, { townName, focus }) {
   const kinds = Object.keys(data.boards).sort((a, b) => (b === focus) - (a === focus));
   const html = kinds.map((kind) => {
     const C = CHALLENGES[kind], rows = data.boards[kind], mine = data.mine?.[kind];

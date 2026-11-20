@@ -29,6 +29,7 @@ import { Farm } from './town/farm/index.js';
 import { Mud } from './town/mud.js';
 import { Beach } from './town/beach/index.js';
 import { travelBlock, landingFor, digTravel } from './town/travel.js';
+import { TownPuzzles } from './town/puzzles.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -114,7 +115,7 @@ export class TownChapter {
     globalThis.__mark?.('setup: friends\u2019 dogs, pack');
 
     // Games and challenges (from the 👥 card), and the 🏆 pack records.
-    const records = (focus = null) => showRecords(hud, { town: this.layout.seed, townName: this.layout.name, profile: progress.id, focus });
+    const records = (focus = null) => showRecords(hud, { town: this.layout.seed, townName: this.layout.name, profile: progress.id, dogName: this.profile().name, focus, local: !this.pack.net || !!this.games.game?.local }); // (no pack server: this device's)
     this.games = new TownGames({
       scene, world, hud, player, pack: this.pack, remotes: this.remotes, layout: this.layout,
       anchor: () => this.actions.anchor(), glow: () => this.actions.glow, pigeons: () => this.actions.pigeons,
@@ -185,6 +186,19 @@ export class TownChapter {
     // 🐾 Fast travel from the Sniff Book: dig a tunnel to any place you've found (or home).
     hud.onTravel = (id) => this.travelTo(id);
     hud.travelReason = () => travelBlock(this);
+    // 🎮 ☰ → Games (the challenges, on your own or with the pack) and 🧩 ☰ → Puzzles: Pickles' Paw Match
+    // on your garden fence, and the 📮 postcard jigsaw.
+    hud.onGames = () => this.games.showCard();
+    const inPlace = (q, pos) => (q.rect ? pos.x > q.rect.x0 && pos.x < q.rect.x1 && pos.z > q.rect.z0 && pos.z < q.rect.z1 : Math.abs(pos.x - q.x) < TOWN.BLOCK / 2 && Math.abs(pos.z - q.z) < TOWN.BLOCK / 2);
+    this.puzzles = new TownPuzzles({
+      scene, world, hud, player, pipeline,
+      busy: () => !this.hud.card.classList.contains('hidden') || this.games.active || !!this.travelling,
+      why: () => (this.games.active ? 'Not in the middle of a game!' : this.travelling ? 'Already digging!' : null),
+      where: () => this.places.find((q) => this.state.discovered.includes(q.id) && inPlace(q, this.player.pos))?.name ?? this.layout.name,
+      found: () => this.state.discovered.length,
+      catAway: () => !!this.friends.board?.job?.cat, // (Pickles is off on a bin with someone's things)
+      board: () => this.friends.board?.pos,
+    });
     hud.setPlaces?.(this.placeList());
     this.refreshObjective();
     this.player.frozen = true;
@@ -415,8 +429,9 @@ export class TownChapter {
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
-    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt);
+    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
+    this.puzzles.update(dt, canAct);
 
     // Discover places by walking into them (an area's place: by going in past its gate).
     for (const p of this.places) {

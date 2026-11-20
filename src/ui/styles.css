@@ -558,3 +558,51 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
   .buttons button.jump { height: 50px; }
   .toasts { max-width: min(300px, 42vw); }
 }
+
+/* 🧩 Puzzles (src/ui/puzzles/): big things to tap, no blur. */
+.puzzles .p-play { margin-top: 8px; font-size: 20px; padding: 4px 18px; }
+.big-card .btns .pill small { display: block; font-size: 13px; opacity: 0.75; }
+.big-card .page p.pm-cat { margin: 2px 0 8px; font-size: 18px; }
+.pm-who { opacity: 0.7; }
+.pm-grid { display: grid; grid-template-columns: repeat(4, minmax(60px, 1fr)); gap: 8px; max-width: 400px; margin: 0 auto; }
+.pm-card {
+  pointer-events: auto; cursor: pointer; aspect-ratio: 1; min-height: 60px; padding: 0; font-size: 30px; line-height: 1;
+  border: 2px solid rgba(59, 43, 37, 0.3); border-radius: var(--wobbly); background: var(--accent); box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
+  display: flex; align-items: center; justify-content: center; transition: transform 0.12s;
+}
+.pm-card:active { transform: scale(0.95); }
+.pm-card .pm-face { display: none; flex-direction: column; align-items: center; }
+.pm-card .pm-face small { font-size: 12px; margin-top: 3px; opacity: 0.75; }
+.pm-card.up { background: #fffaf0; }
+.pm-card.up .pm-back { display: none; }
+.pm-card.up .pm-face { display: flex; }
+.pm-card.done { background: #e2edd0; border-color: #8fae6a; }
+.big-card .page p.pm-moves { margin: 8px 0 0; }
+.jg-card, .jg-board { width: min(100%, calc((100vh - 210px) * var(--ar))); aspect-ratio: var(--ar); margin: 8px auto; }
+.jg-card {
+  background-size: cover; background-position: center; border: 6px solid #fffaf0; border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(59, 43, 37, 0.2), 0 3px 0 rgba(59, 43, 37, 0.2); transform: rotate(-1.2deg);
+}
+.jg-card.done { transform: rotate(1deg); }
+.jg-board { display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); gap: 3px; transition: gap 0.4s; }
+.jg-board.solved { gap: 0; }
+.jg-tile {
+  pointer-events: auto; cursor: pointer; border: 0; padding: 0; min-width: 0; min-height: 0; border-radius: 3px;
+  background-color: var(--accent); background-size: calc(var(--n) * 100%) calc(var(--n) * 100%); transition: transform 0.12s;
+}
+.jg-tile.sel { outline: 4px solid #f2c14e; outline-offset: -4px; transform: scale(0.92); }
+.jg-tile.ok { cursor: default; }
+.jg-board.solved .jg-tile { border-radius: 0; }
+@media (max-height: 520px) {
+  .big-card .page:has(.pm-grid, .jg-board, .jg-card) { padding: 10px 16px; }
+  .big-card .page:has(.pm-grid, .jg-board, .jg-card) h1 { font-size: 26px; }
+  .big-card .page:has(.pm-grid, .jg-board, .jg-card) .btns { margin-top: 6px; }
+  .pm-grid { grid-template-columns: repeat(6, minmax(52px, 1fr)); max-width: 480px; gap: 6px; }
+  .pm-card { min-height: 52px; font-size: 24px; }
+  .big-card .page p.pm-cat { font-size: 16px; margin-bottom: 4px; }
+  .big-card .page:has(.pm-grid, .jg-board, .jg-card) p { margin: 4px 0; }
+  .jg-card, .jg-board { width: min(100%, calc((100vh - 190px) * var(--ar))); margin: 4px auto; }
+  .jg-card.done, .jg-card.pick { width: min(100%, calc((100vh - 250px) * var(--ar))); }
+}
+/* (A friend's speech bubble from just before stays out of the way of a puzzle, or the menu.) */
+.big-card:not(.hidden):has(.pm-grid, .jg-board, .jg-card, .puzzles, .pm-offer, .menu-list) ~ .bubble { visibility: hidden; }

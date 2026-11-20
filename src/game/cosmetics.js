@@ -60,6 +60,10 @@ COSMETICS.push(
   { id: 'hat-straw', slot: 'hat', name: 'Farmer Mabel’s straw hat', emoji: '👒', color: 0xe8cf86, level: 1, friend: 'farmer', jobs: 3, hint: 'Help Farmer Mabel 3 times', boost: { speed: 1, zoomies: 2 } },
   { id: 'neck-woolly', slot: 'neck', name: 'Woolly scarf', emoji: '🧣', color: 0xd9534f, level: 1, friend: 'flock', jobs: 5, hint: 'Round up the sheep 5 times', style: 'scarf', boost: { speed: 2, zoomies: 1 } },
 );
+// For solving puzzles (☰ → 🧩 Puzzles: Pickles' Paw Match, the postcard jigsaw).
+COSMETICS.push(
+  { id: 'hat-thinking', slot: 'hat', name: 'Thinking cap', emoji: '🎓', color: 0x2f3a52, level: 1, friend: 'puzzles', jobs: 5, hint: 'Solve 5 puzzles', boost: { speed: 1, zoomies: 2 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

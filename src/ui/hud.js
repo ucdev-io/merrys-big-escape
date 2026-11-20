@@ -171,7 +171,7 @@ export class HUD {
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
         ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'pack records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
         ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}
-        ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}</div>`,
+        ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}${stat('🧩', 'puzzles solved', 'puzzles')}</div>`,
       [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
@@ -209,6 +209,8 @@ export class HUD {
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
     item('🐶 My dog', () => this.showMyDog());
     item('❓ How to play', () => this.showHelp());
+    if (this.onGames) item('🎮 Games', () => this.onGames());
+    if (this.onPuzzles) item('🧩 Puzzles', () => this.onPuzzles());
     if (this.onSeasons) item('🌦️ Seasons', () => this.onSeasons());
     if (fullscreenButtonUseful()) item(isFullscreen() ? '⛶ Leave full screen' : '⛶ Full screen', () => { this.hideCard(); toggleFullscreen(this); });
     const sound = item(isMuted() ? '🔇 Sound: off' : '🔊 Sound: on', () => {
@@ -257,7 +259,8 @@ export class HUD {
         <li>Walk up to the <b>📋 Lost &amp; Found board</b> by your gate to pick a job: lost things, deliveries, kites stuck up high, runaway hens, things Pickles has pinched… Trickier jobs (🐾🐾🐾) earn more stars, and a twist (🤫 no barking, ⏱️ be quick…) earns a bonus. Walk back to the board to swap a job.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
-        ${DEMO ? '' : '<li><b>🎮 Games &amp; challenges</b> (tap 👥 at the top): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up to do together, and tag. They all work on your own too (except tag), and the best go on the 🏆 pack records.</li>'}
+        <li><b>🎮 Games &amp; challenges</b> (☰ → Games${DEMO ? '' : ', or tap 👥 at the top'}): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up${DEMO ? '' : ' to do together, and tag'}. ${DEMO ? 'Beat your best: your 🏆 records are kept on this device.' : 'They all work on your own too (except tag), and the best go on the 🏆 pack records.'}</li>
+        <li><b>🧩 Puzzles</b> (☰ → Puzzles): Pickles sits on your garden fence and dares you to a <b>Paw Match</b>, and a <b>📮 postcard jigsaw</b> turns the view into a puzzle. No running about needed!</li>
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>
@@ -429,13 +432,17 @@ export class HUD {
     this.floaters.push({ e, pos: pos.clone(), t: 0, dx: (Math.random() - 0.5) * 30 });
   }
 
-  showCard(html, buttons = []) {
+  /** opts.onClose: called once when this card goes (hidden, or another card takes its place). */
+  showCard(html, buttons = [], { onClose = null } = {}) {
+    this.closed();
     this.card.innerHTML = `<div class="page">${html}<div class="btns"></div></div>`;
     const row = this.card.querySelector('.btns');
     for (const [label, fn] of buttons) { const b = el('button', 'pill big', label); b.onclick = fn; row.appendChild(b); }
     this.card.classList.remove('hidden');
+    this._onClose = onClose;
   }
-  hideCard() { this.card.classList.add('hidden'); }
+  hideCard() { this.card.classList.add('hidden'); this.closed(); }
+  closed() { const f = this._onClose; this._onClose = null; f?.(); }
 
   project(p) {
     _v.copy(p).project(this.camera);

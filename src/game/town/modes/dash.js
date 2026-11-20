@@ -97,7 +97,7 @@ export class Dash {
   }
 
   update(dt, live) {
-    const { player, pack, hud } = this.ctx, P = player.pos, N = this.hoops.length;
+    const { player, hud } = this.ctx, P = player.pos, N = this.hoops.length;
     const t = performance.now() - this.g.startAt;
     const nh = this.hoops[this.next];
     if (nh) nh.h.userData.ring.rotation.z += dt * 2;
@@ -106,7 +106,7 @@ export class Dash {
       this.paint();
       sfx.pop?.(); buzz(20);
       hud.float(this.next < N ? `${this.next}/${N}!` : 'Finish! ⚡', this.ctx.anchor());
-      if (this.next >= N) { this.doneMs = t; pack.sendGame({ a: 'done' }); sfx.hooray?.(); }
+      if (this.next >= N) { this.doneMs = t; this.ctx.send({ a: 'done' }); sfx.hooray?.(); }
     }
     const aim = this.hoops[this.next];
     return {
