@@ -3,6 +3,7 @@ import { paint } from '../../render/watercolorMaterial.js';
 import { sfx } from '../../core/audio.js';
 import { buzz } from '../../core/haptics.js';
 import { progress } from '../../game/progress.js';
+import { COSMETICS } from '../../game/cosmetics.js';
 import { waterAt } from '../../world/water.js';
 import { TripChapter } from '../kit.js';
 import { buildSewer, S } from './build.js';
@@ -51,7 +52,7 @@ export function build(ctx) {
     { id: 'alley', rect: R(-1.1, S.NORTH - 1.4, 1.1, S.NORTH), open: () => true, text: '🐾 Climb back up to the alley!', paw: 'squeeze' },
     { id: 'beach', rect: R(S.L - 2.2, -S.WALK, S.L, S.WALK), open: () => !!chapter.open, text: '🐾 Out the pipe to the beach!', paw: 'squeeze' },
   ];
-  world.update = () => {};
+  world.update = (t) => world.animate?.(t); // (glints on the water, dust in the daylight)
   world.dispose = () => {};
   const chapter = new SewerChapter(ctx, { scene, world, dyn, state });
   return {
@@ -77,7 +78,26 @@ class SewerChapter extends TripChapter {
     // Three lost things this visit (somewhere different each time).
     const spots = SPOTS.slice().sort(() => Math.random() - 0.5).slice(0, 3), kinds = LOST.slice().sort(() => Math.random() - 0.5);
     this.lost = spots.map(([x, z, b], i) => { const p = this.W(x, z); return this.actions.carry.add(kinds[i], p.x, p.z, { buried: b ? 2 : 0, job: 'nibbles' }); });
+    // 🔦 Nibbles' lantern, if she's wearing it: turned up down here, with a warm pool of light round her.
+    this.glow = new THREE.Group(); // (two soft rings of it, brighter in the middle)
+    for (const [r, o] of [[1.15, 0.1], [0.6, 0.12]]) {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(r, 28), paint(0xffe3a0, { transparent: true, opacity: o }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.y = r < 1 ? 0.002 : 0;
+      this.glow.add(m);
+    }
+    this.glow.visible = false;
+    this.scene.add(this.glow);
     this.objective();
+  }
+
+  /** Nibbles' lantern: on when she's wearing it (she might dress up down here, too). */
+  tickLantern() {
+    const P = this.player, lit = progress.look.neck === 'neck-lantern';
+    if (lit !== this.lit) { this.lit = lit; P.dog.brightenLantern?.(lit); this.glow.visible = lit; }
+    if (!lit) return;
+    this.glow.position.set(P.pos.x, Math.max(P.pos.y, 0.08) + 0.012, P.pos.z);
+    this.glow.scale.setScalar(1 + Math.sin(this.time * 7.3) * 0.025 + Math.sin(this.time * 3.1) * 0.02); // (a little flicker)
   }
 
   arrive(from) {
@@ -273,6 +293,7 @@ class SewerChapter extends TripChapter {
     }
     this.tickDucks(dt);
     this.tickSmells(dt, canAct);
+    this.tickLantern();
   }
 
   meet() {
@@ -292,7 +313,9 @@ class SewerChapter extends TripChapter {
     n.done++;
     n.saved++;
     this.ctx.town.save({ nibbles: n.saved });
+    const before = progress.stats.nibbles ?? 0;
     progress.stat('nibbles');
+    const prize = COSMETICS.find((c) => c.friend === 'nibbles' && before < c.jobs && before + 1 >= c.jobs); // (🔦 his spare lantern)
     sfx.found?.();
     buzz([20, 30, 20]);
     this.actions.sparkle(this.rat.at().add(V(0, -0.4, 0)), 18);
@@ -303,6 +326,10 @@ class SewerChapter extends TripChapter {
       progress.award(25, '🐀 Everything back!');
       sfx.hooray?.();
       this.say(`That’s all three! You’re a marvel. Come again: things are ALWAYS falling down the drains.`, this.rat.at, 4.5);
+    }
+    if (prize) {
+      this.hud.showToastRaw(prize.emoji, `New: ${prize.name}!`, 'A thank-you from Nibbles. It glows, and down here it lights the way! Wear it from ☰ → My dog → Dress up.');
+      setTimeout(() => { if (this.rat) this.say('Oh, and take my spare lantern, dear. Ever so handy in a dark tunnel!', this.rat.at, 4.2); }, n.done < n.total ? 2600 : 4600);
     }
     it.obj.traverse((o) => o.geometry?.dispose()); // (handed over: gone)
     this.objective();
@@ -392,6 +419,7 @@ class SewerChapter extends TripChapter {
     const it = this.actions.carry.consume();
     it?.obj.traverse((o) => o.geometry?.dispose());
     this.rat = null;
+    this.player.dog.brightenLantern?.(false);
     super.dispose();
   }
 }

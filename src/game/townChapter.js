@@ -35,6 +35,7 @@ import { Portals } from './town/portals.js';
 import { Catcher } from './town/catcher.js';
 import { tripByN } from '../trips/registry.js';
 import { TownPuzzles } from './town/puzzles.js';
+import { RideCars } from '../net/rideCars.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -112,6 +113,11 @@ export class TownChapter {
     this.remotes.onSplash = (p, power) => fx.splash(p, surfaceAt(p), power, false);
     this.remotes.onRipple = (p) => fx.ring(p, surfaceAt(p), 0.6);
     this.remotes.onShake = (dog, p) => fx.shake(dog, p, false);
+    // A friend riding on one of their cars: one of ours turns up under them (not just a dog floating along).
+    this.remotes.rides = new RideCars(scene, {
+      groundAt: (x, z, y) => world.colliders.surfaceAt(x, z, y, 0.1, this.remotes.platforms(this.myBack()), 0.25, world.heightAt?.(x, z) ?? 0),
+      onScreen: (p) => { const s = hud.project(p); return !s.behind && s.x > -60 && s.x < innerWidth + 60 && s.y > -60 && s.y < innerHeight + 60; },
+    });
 
     this.pack = new Pack({
       hud, remotes: this.remotes,
@@ -132,7 +138,7 @@ export class TownChapter {
       teleport: (x, z, face) => this.teleport(x, z, face), showRecords: records, away: () => !!this.away,
     });
     this.pack.onGame = (m) => {
-      if (this.away) { if (m.a === 'start') this.hud.showToastRaw('🎮', 'Your pack started a game!', 'Come back up in time for the next one.'); return; } // (off on a trip)
+      if (this.away) { if (m.a === 'start') this.hud.showToastRaw('🎮', 'Your pack started a game!', 'Come back up in time for the next one.', { always: true }); return; } // (off on a trip)
       this.games.handle(m);
     };
     this.pack.onStartGame = (kind) => this.games.start(kind);
@@ -346,6 +352,13 @@ export class TownChapter {
   }
 
   // ---------- trips (see ../trips/) ----------
+
+  /** My dog's back, as something a friend's dog could be standing on (out = a list to add it to). */
+  myBack(out = []) {
+    const P = this.player, s = P.dog.breed.size;
+    out.push({ x: P.pos.x, z: P.pos.z, r: 0.32 * s, top: P.pos.y + (P.dog.bodyY + 0.08) * s });
+    return out;
+  }
 
   /**
    * Not a moment for the dog warden to turn up: a game on, a card open, off on a trip or digging a tunnel, a

@@ -18,14 +18,15 @@ const CRUISE = 5.2, ACCEL = 2.6, BRAKE = 10, TURN = 2.2;
 const CAR = [{ hw: 0.85, hl: 1.8, at: 0, top: 0.85 }, { hw: 0.75, hl: 1.0, at: -0.2, top: 1.33 }];
 const VAN = [{ hw: 0.9, hl: 1.9, at: 0, top: 1.78 }];
 const SCRABBLE = 0.12; // (a dog that only just makes it up scrabbles the rest of the way)
-const COLORS = [0xd9534f, 0x5b86c4, 0xf6d06a, 0x6f9a52, 0xf1e8d8, 0x8e6fb0, 0xe39a52];
+export const CAR_COLORS = [0xd9534f, 0x5b86c4, 0xf6d06a, 0x6f9a52, 0xf1e8d8, 0x8e6fb0, 0xe39a52];
+const COLORS = CAR_COLORS;
 const SAY = ['Beep beep!', 'Out of the road, pup!', 'Shoo, doggy!', 'Silly dog! Off you go!', 'Morning, doggo! Now MOVE, please.', 'Honk honk!', 'Mind the car, sausage!'];
 const SORRY = ['Oops! Sorry, pup!', 'Whoa! You OK, little one?', 'Careful, doggy!', 'Bonk! Sorry!'];
 const ROOF = ['There’s a DOG on my car!', 'Hold on tight, pup!', 'Next stop: the bakery!', 'Fares, please! …No? Go on then.', 'Is that a dog on the roof?!', 'Wheee! Where to, doggy?'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 /** The ice-cream van: cream and pink, a serving hatch on the pavement side, a giant cone on the roof. */
-function iceCreamVan() {
+export function iceCreamVan() {
   const g = new THREE.Group();
   const RB = (w, h, d, r = 0.15) => new RoundedBoxGeometry(w, h, d, 3, r);
   mesh(RB(1.8, 1.45, 3.8, 0.25), 0xf6f1e8, g, [0, 1.05, 0]);

@@ -68,6 +68,11 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-boppers', slot: 'hat', name: 'Space boppers', emoji: '👽', color: 0x8fe0c8, level: 1, friend: 'saucer', jobs: 1, hint: 'Fill the flying saucer with star-sparks', boost: { speed: 1, zoomies: 2 } },
 );
+// From the sewers: Nibbles' thank-you for bringing back what fell down the drains (the `nibbles` stat: lost things
+// handed over). A little brass lantern hanging at the chest; it glows, and down in the sewers it lights the way.
+COSMETICS.push(
+  { id: 'neck-lantern', slot: 'neck', name: 'Nibbles’ lantern', emoji: '🔦', color: 0xb08a3a, level: 1, friend: 'nibbles', jobs: 3, style: 'lantern', hint: 'Bring Nibbles 3 lost things (in the sewers)', boost: { speed: 1, zoomies: 2 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };
