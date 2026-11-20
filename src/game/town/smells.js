@@ -14,6 +14,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const H = TOWN.BLOCK / 2;
 const COUNT = 110;               // smells around town at any one time
 const QUIET = [240, 420];        // seconds before a sniffed spot smells of something new
+const BURIED = 0.5;              // the chance a spot on soft ground is something buried (see ./buried.js)
+const SOFT = { woods: 'woods', farm: 'farm' }; // (areas with soft ground, and what's buried there)
 const DOG_NAMES = Object.values(BREEDS).map((b) => b.dogName);
 const now = () => performance.now() / 1000;
 // Out in the town's areas, spots smell of things from the area's own list (where: the area's kind).
@@ -28,18 +30,22 @@ Object.assign(INFO, FARM_SMELLS);
  * Smells all over the neighbourhood: news on lamp posts, dropped chips, hedgehog trails, lost
  * socks… Sniffing shows little wisps rising from the ones nearby, and the golden trail leads to
  * the closest. Get your nose right up to it to find out what it is. A few minutes later the
- * same spot smells of something new, so there's always more to find.
+ * same spot smells of something new, so there's always more to find. On soft ground (gardens, the
+ * park, the woods, the farm) it's often something buried: then the nose finds the spot, and 🐾 digs
+ * it up (./buried.js).
  */
 export class Smells {
   constructor(world, seed) {
     const rng = (this.rng = new RNG(`smells:${seed}`));
+    this.digRng = new RNG(`buried:${seed}`); // (its own stream: the smells stay just where they always were)
     this.spots = [];
     this.bags = {};
     const b0 = world.bounds;
-    const add = (x, z, where) => {
+    const inGarden = (x, z) => (world.gardens ?? []).some((g) => x > g.rect.x0 && x < g.rect.x1 && z > g.rect.z0 && z < g.rect.z1);
+    const add = (x, z, where, soil = null) => {
       if (x < b0.x0 + 1 || x > b0.x1 - 1 || z < b0.z0 + 1 || z > b0.z1 - 1 || blocked(world, x, z)) return false;
       if (this.spots.some((s) => (s.x - x) ** 2 + (s.z - z) ** 2 < 9)) return false; // spread them out
-      const s = { x, z, pos: V(x, 0.05, z), where, kind: null, quietUntil: 0 };
+      const s = { x, z, pos: V(x, 0.05, z), where, soil, kind: null, buried: null, quietUntil: 0 };
       this.reroll(s);
       this.spots.push(s);
       return true;
@@ -59,13 +65,17 @@ export class Smells {
       if (rng.chance(0.45)) { // pavement
         const along = rng.float(-H, H), off = (H + 1) * (rng.chance(0.5) ? 1 : -1);
         if (rng.chance(0.5)) add(b.x + off, b.z + along, 'any'); else add(b.x + along, b.z + off, 'any');
-      } else add(b.x + rng.float(-H + 1, H - 1), b.z + rng.float(-H + 1, H - 1), 'any');
+      } else {
+        const x = b.x + rng.float(-H + 1, H - 1), z = b.z + rng.float(-H + 1, H - 1);
+        add(x, z, 'any', inGarden(x, z) || b.type === 'park' || b.type === 'pond' ? 'town' : null); // (gardens and the park: soft ground)
+      }
     }
     // And out in the areas (the woods…): their spots are worked out with the area.
-    for (const a of world.areas ?? []) for (const [x, z] of a.smellSpots ?? []) add(x, z, a.kind);
+    for (const a of world.areas ?? []) for (const [x, z] of a.smellSpots ?? []) add(x, z, a.kind, SOFT[a.kind] ?? null);
   }
 
   reroll(s) {
+    s.buried = s.soil && this.digRng.chance(BURIED) ? s.soil : null; // (something buried here this time?)
     if (s.where === 'post') s.kind = 'news';
     else if (s.where === 'pond') s.kind = this.rng.pick(POND_SMELLS[season.is('winter') ? 'winter' : 'other']);
     else {
@@ -77,6 +87,13 @@ export class Smells {
       for (const [k, w] of Object.entries(weights)) { r -= w; if (r <= 0) { s.kind = k; break; } }
       s.kind ??= 'chips';
     }
+  }
+
+  /** Something buried here's been dug up (or forgotten): a while later it'll smell of something new. */
+  dugUp(s) {
+    s.dug = false;
+    s.quietUntil = now() + QUIET[0] + Math.random() * (QUIET[1] - QUIET[0]);
+    this.reroll(s);
   }
 
   /** The closest smell that's ready to be found (or null). */
@@ -106,12 +123,13 @@ export class Smells {
         glow.burst(1, () => ({
           pos: s.pos.clone().add(V(Math.random() * 0.4 - 0.2, 0.05, Math.random() * 0.4 - 0.2)),
           vel: V(Math.random() * 0.2 - 0.1, 0.45 + Math.random() * 0.4, Math.random() * 0.2 - 0.1),
-          life: 1.1, size: 0.05, gravity: -0.25, drag: 1.2, color: s.kind === 'news' ? 0xf6d06a : 0xb6e07a,
+          life: 1.1, size: 0.05, gravity: -0.25, drag: 1.2, color: s.buried ? 0xfff2b0 : s.kind === 'news' ? 0xf6d06a : 0xb6e07a,
         }));
       }
-      if (!found && d2 < 1.3 * 1.3) found = s;
+      if (!found && !s.dug && d2 < 1.3 * 1.3) found = s;
     }
     if (!found) return null;
+    if (found.buried) { found.dug = true; return { buried: found }; } // (the nose has found the spot: now dig!)
     const info = INFO[found.kind];
     this.bags[found.kind] ??= new LineBag(info.lines);
     const others = DOG_NAMES.filter((n) => n !== myName);

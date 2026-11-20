@@ -38,13 +38,17 @@ export class Colliders {
 
   /**
    * Height of the highest surface under (x, z) that a dog with feet at `feet` can stand on
-   * (anything no higher than feet + stepUp). `extra` adds moving platforms, e.g. other dogs' backs.
+   * (anything no higher than feet + stepUp). `extra` adds moving platforms: circles { x, z, r, top } (other
+   * dogs' backs) or turned boxes { x, z, hw, hl, rot, top } (a car's roof: half-width, half-length, heading).
+   * reach: a platform's top can be this much above (a scrabble up onto a car's bonnet). ride: what it's part of
+   * (a car), so the dog can ride along: then it's not a friend's back. Afterwards, extraHit: the one stood on.
    */
   surfaceAt(x, z, feet, stepUp = 0.3, extra = null, margin = 0.16, base = 0) {
     // margin: paws reach a little past the dog's centre, so landing on an edge counts.
     // base: the ground itself (below 0 in deep water, where a dog floats instead of standing).
     let best = base;
     this.onExtra = false; // was the highest surface one of `extra` (another dog's back)?
+    this.extraHit = null; // (and which)
     const lim = feet + stepUp + 0.01, m = margin;
     for (const c of this.circles) {
       if (c.top === Infinity || c.stand === false || c.top > lim || c.top <= best) continue;
@@ -55,8 +59,13 @@ export class Colliders {
       if (x > b.x0 - m && x < b.x1 + m && z > b.z0 - m && z < b.z1 + m) best = b.top;
     }
     if (extra) for (const c of extra) {
-      if (c.top > lim || c.top <= best) continue;
-      if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2) { best = c.top; this.onExtra = true; }
+      if (c.top > lim + (c.reach ?? 0) || c.top <= best) continue;
+      let on;
+      if (c.hw) { // a turned box
+        const dx = x - c.x, dz = z - c.z, s = Math.sin(c.rot), k = Math.cos(c.rot);
+        on = Math.abs(dx * k - dz * s) < c.hw + m && Math.abs(dx * s + dz * k) < c.hl + m;
+      } else on = (x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + m) ** 2;
+      if (on) { best = c.top; this.onExtra = !c.ride; this.extraHit = c; }
     }
     return best;
   }

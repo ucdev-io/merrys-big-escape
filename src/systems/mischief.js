@@ -118,6 +118,17 @@ export class Mischief {
     }
   }
 
+  /** Something dug up (buried treasure): in somebody's garden, that's a hole in their lawn. True if it was. */
+  dugUp(x, z) {
+    const g = this.gardenAt(x, z);
+    if (!g) return false;
+    this.makeHole(x, z);
+    this.onAct?.({ a: 'hole', x, z });
+    this.addPoint();
+    this.yell(g, 'dig');
+    return true;
+  }
+
   makeHole(x, z) {
     const g = new THREE.Group();
     g.position.set(x, 0.065, z);

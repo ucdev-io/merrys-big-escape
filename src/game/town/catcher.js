@@ -7,14 +7,18 @@ import { waterAt } from '../../world/water.js';
 import { sfx } from '../../core/audio.js';
 import { buzz } from '../../core/haptics.js';
 import { progress } from '../progress.js';
+import { Nav } from './nav.js';
 
 /*
  * 🚐 Doug the dog warden. Mischief (bins tipped, lawns dug, flowerbeds flattened) fills the 😈 naughty meter (the
  * HUD's pill, in town): every bit of mischief adds one, and it calms down again a little at a time if you behave.
  * Fill it and somebody phones him: his van pulls up at the kerb nearby and out he hops with a big butterfly net. He's quicker than a
- * walk but slower than zoomies. Get away (zoomies, over a hedge, into the pond: he won't get his boots wet, home
- * through your own gate, or down a drain) and he gives up, puffed out. Get caught and it's off to the Sunny Paws
- * rescue centre (a trip: ../../trips/pound/), and a great escape home. Nobody ever loses a star.
+ * trot but slower than zoomies, and he walks round hedges and walls to get to you (./nav.js). While he can see you
+ * the meter stays full; get out of sight (zoomies, round a corner, behind a building) and it drains, and once it's
+ * empty he gives up, puffed out. The pond's no hiding place (he won't get his boots wet, but he'll wait at the edge
+ * for as long as he can see you); home through your own gate is (he won't follow you in), and so is a drain. Get
+ * caught and it's off to the Sunny Paws rescue centre (a trip: ../../trips/pound/), and a great escape home.
+ * Nobody ever loses a star.
  *
  * Only when you're playing on your own (friends wouldn't see him), never during a job, a game or a heist, and not
  * out in the woods, the farm or the beach.
@@ -26,14 +30,18 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const MAX = 4;           // the naughty meter: this much recent mischief and he's called
 const COOL_HEAT = 45;    // seconds for one bit of mischief to be forgiven
 const TIP = 'merry.tips.wanted'; // (the meter's been explained on this device)
-const SPEED = 3.5;       // m/s: faster than a walk (2.6), slower than zoomies (up to 6.8)
+const SPEED = 3.5;       // m/s: faster than a walk (2.6) or a trot (3.4), slower than zoomies (up to 6.8)
+const SIGHT = 16;        // he can see her this far off (if there's no building in the way)
+const LOSE = 7;          // seconds out of his sight (or safe at home) for the meter to empty: then he gives up
 const KERB = TOWN.BLOCK / 2 + TOWN.ROAD / 2 - 1.3; // where a parked van sits, from the middle of a block
 
 const LINES = {
   arrive: ['Now then! Somebody’s been a VERY naughty dog…', 'Reports of bins tipped all over town! Was it YOU, {name}?', 'Petunias dug up! Lawns flattened! Right, you…'],
   chase: ['Come back here!', 'Here, doggy doggy!', 'You can’t run for ever!', 'Hold still, you rascal!', 'Wait for me!'],
   puffed: ['Phew! Puffed out. I’ll get you next time!', 'Too fast for me! Off you go, then.', 'Hmph. Lost the little scamp.'],
-  water: ['I am NOT getting my boots wet!', 'Out of the pond this minute! …No? Fine.'],
+  water: ['I am NOT getting my boots wet!', 'Out of the pond this minute! I’ll wait right here!', 'You’ve got to come out some time!'],
+  lost: ['Where’d that dog go?', 'Now where’s the little scamp got to?', 'Here, doggy… doggy?', 'I know you’re round here somewhere…'],
+  spotted: ['THERE you are!', 'Aha! I see you!', 'Spotted you!', 'Oi! Come back here!'],
   garden: ['Hmph. Home safe, eh? Behave yourself!', 'Can’t follow you in there. Be good!'],
   woof: ['Eek! Good doggy… nice doggy…', 'Woof yourself!'],
   caught: ['Gotcha! Off to Sunny Paws with you!', 'Got you at last! Hop in the van, pup!'],
@@ -79,12 +87,14 @@ const seen = () => { try { return !!localStorage.getItem(TIP); } catch { return 
 
 export class Catcher {
   /** busy(): something's on (a job, a game, a heist…). solo(): no friends here (he only comes then). go(): off to the pound. */
-  constructor({ scene, world, hud, player, actions, dogName, busy, solo, go, homeGarden }) {
-    Object.assign(this, { scene, world, hud, player, actions, dogName, busy, solo, go, homeGarden });
+  /** interrupt(): something that sends him off mid-chase (a game, a trip, fast travel). */
+  constructor({ scene, world, hud, player, actions, dogName, busy, interrupt, solo, go, homeGarden }) {
+    Object.assign(this, { scene, world, hud, player, actions, dogName, busy, interrupt, solo, go, homeGarden });
     this.heat = 0;         // the naughty meter, 0…MAX
     this.called = false;   // full: he's on his way (he comes as soon as she's in the streets with nothing else on)
     this.time = 0;
-    this.s = 'off';        // off · arrive · chase · wait (water, a garden) · leave · caught
+    this.s = 'off';        // off · arrive · chase · leave · caught
+    this.seeing = false;   // (chasing: can he see her right now?)
     this.t = 0;
     this.blocks = world.layout.blocks;
     const xs = this.blocks.map((b) => b.x), zs = this.blocks.map((b) => b.z);
@@ -128,24 +138,42 @@ export class Catcher {
       face = Math.atan2(dx, dz);
       if (this.t > 1.6) this.set('chase');
     } else if (this.s === 'chase') {
-      const home = this.homeGarden?.(), wet = P.inWater || waterAt(this.world.water, P.pos.x, P.pos.z);
+      if (this.interrupt?.()) return this.giveUp(null); // (a game started, or she's off somewhere: he's off too)
+      const nav = this.navFor();
+      const home = this.homeGarden?.(), wet = P.inWater || !!waterAt(this.world.water, P.pos.x, P.pos.z);
+      const safe = !!home && P.pos.x > home.x0 && P.pos.x < home.x1 && P.pos.z > home.z0 && P.pos.z < home.z1;
       if (barked && d < 6 && this.woofT <= 0) { this.woofT = 6; this.stun = 0.9; this.say(pick(LINES.woof), 1.6); }
       this.woofT = (this.woofT ?? 0) - dt;
       this.stun = Math.max(0, (this.stun ?? 0) - dt);
-      if (this.busy()) return this.giveUp(null); // (a game or a job started: he's off)
-      if (wet) return this.set('wait', pick(LINES.water));
-      if (home && P.pos.x > home.x0 && P.pos.x < home.x1 && P.pos.z > home.z0 && P.pos.z < home.z1) return this.set('wait', pick(LINES.garden));
-      // Lost her? (Too far ahead, or he's stuck behind a hedge.)
-      this.lost = d > 15 || (this.best !== undefined && d > this.best - 0.5 && this.t - this.bestT > 5) ? (this.lost ?? 0) + dt : 0;
-      if (d < (this.best ?? Infinity) - 0.5) { this.best = d; this.bestT = this.t; }
-      if (this.lost > 3.5 || this.t > 45) return this.giveUp(pick(LINES.puffed));
-      if (this.t - (this.shoutT ?? 0) > 5 && d < 14) { this.shoutT = this.t; this.say(pick(LINES.chase), 2); }
-      if (d < 1.05 && P.grounded && P.pos.y < 0.6 && canAct && this.stun <= 0) return this.catch();
-      face = Math.atan2(dx, dz);
-      speed = this.stun > 0 ? 0 : SPEED;
-    } else if (this.s === 'wait') { // at the pond's edge, or your gate, arms folded
-      face = Math.atan2(dx, dz);
-      if (this.t > 3.5) this.giveUp(null);
+      // Can he see her? (Not too far off, and no building in the way: hedges and fences he can see over.)
+      const sees = d < SIGHT && nav.sees(pos.x, pos.z, P.pos.x, P.pos.z);
+      if (sees && !this.seeing && this.lostT > 2) this.say(pick(LINES.spotted), 1.8);
+      this.seeing = sees;
+      if (safe) { // home through her own gate: he won't follow her in
+        if (!this.wasSafe) this.say(pick(LINES.garden), 2.8);
+        this.heat -= (dt * MAX) / LOSE;
+      } else if (sees) { // the meter stays full while he's got his eye on her (the pond's no hiding place)
+        this.heat = MAX;
+        this.last = { x: P.pos.x, z: P.pos.z };
+        this.lostT = 0;
+        if (wet && !this.wasWet) this.say(pick(LINES.water), 2.6);
+      } else { // out of sight: off to where he saw her last, and the meter drains
+        this.heat -= (dt * MAX) / LOSE;
+        this.lostT = (this.lostT ?? 0) + dt;
+        if (this.lostT > 1.2 && !this.saidLost) { this.saidLost = true; this.say(pick(LINES.lost), 2.2); }
+      }
+      if (sees) this.saidLost = false;
+      this.wasSafe = safe; this.wasWet = wet;
+      if (this.heat <= 0) { this.heat = 0; return this.giveUp(safe ? null : pick(LINES.puffed)); }
+      if (this.t - (this.shoutT ?? 0) > 5 && sees && !safe && !wet && d < 14) { this.shoutT = this.t; this.say(pick(LINES.chase), 2); }
+      if (d < 1.05 && P.grounded && P.pos.y < 0.6 && canAct && this.stun <= 0 && !wet && !safe) return this.catch();
+      // Where to: straight for her if he can see her (as near as he can get: the pond's edge, her gate), or
+      // where she was last seen. Round hedges and walls by the paths.
+      const goal = sees || safe ? P.pos : this.last ?? P.pos;
+      const to = nav.nearestFree(goal.x, goal.z) ?? goal;
+      const step = this.follow(nav, pos, to, dt);
+      if (step) { face = Math.atan2(step.x - pos.x, step.z - pos.z); speed = this.stun > 0 || !canAct ? 0 : SPEED; }
+      else face = sees ? Math.atan2(dx, dz) : face + Math.sin(this.t * 1.3) * dt * 1.6; // (there: looking round for her)
     } else if (this.s === 'leave') { // back to the van, and away
       const v = this.van.position, lx = v.x - pos.x, lz = v.z - pos.z, l = Math.hypot(lx, lz);
       if (l > 0.8) { face = Math.atan2(lx, lz); speed = 2.2; }
@@ -168,11 +196,34 @@ export class Catcher {
     w.arms[1].rotation.x = this.s === 'chase' ? -1.2 + Math.sin(this.t * 3) * 0.15 : -0.3; // (net held out in front)
   }
 
+  /** The town's way-finding grid (built the first time he's out; again if home moves). */
+  navFor() {
+    const home = this.homeGarden?.() ?? null, key = home ? `${home.x0},${home.z0}` : '-';
+    if (!this.nav || this.navKey !== key) { this.nav = new Nav(this.world, this.town, [home]); this.navKey = key; }
+    return this.nav;
+  }
+
+  /** The next point to walk towards on the way to `to` (null: he's there). Paths are worked out now and then. */
+  follow(nav, pos, to, dt) {
+    this.repath = (this.repath ?? 0) - dt;
+    const moved = !this.pathTo || Math.hypot(to.x - this.pathTo.x, to.z - this.pathTo.z) > 1.2;
+    if (moved || this.repath <= 0 || !this.route?.length) {
+      this.route = nav.path(pos.x, pos.z, to.x, to.z) ?? [{ x: to.x, z: to.z }];
+      this.pathTo = { x: to.x, z: to.z };
+      this.repath = 0.7;
+    }
+    while (this.route.length > 1 && Math.hypot(this.route[0].x - pos.x, this.route[0].z - pos.z) < 0.45) this.route.shift();
+    const next = this.route[0];
+    if (!next || Math.hypot(next.x - pos.x, next.z - pos.z) < 0.5) return null;
+    return next;
+  }
+
   /** The HUD's 😈 pill: the meter (on your own), or just the mischief count (with friends: he doesn't come then). */
   meter() {
     const solo = this.solo();
     if (!solo && this.called) { this.called = false; this.heat = 0; }
-    this.hud.setWanted?.(solo ? { level: this.heat, max: MAX, state: this.s === 'off' ? (this.called ? 'called' : 'calm') : this.s === 'leave' ? 'calm' : 'chase' } : null);
+    const state = this.s === 'off' ? (this.called ? 'called' : 'calm') : this.s === 'leave' ? 'calm' : this.s === 'chase' && !this.seeing ? 'search' : 'chase';
+    this.hud.setWanted?.(solo ? { level: this.heat, max: MAX, state } : null);
   }
 
   set(s, line = null) {
@@ -204,9 +255,12 @@ export class Catcher {
     this.who.root.position.set(vx - n[0] * 1.4, 0, vz - n[1] * 1.4); // (on the pavement side)
     this.who.root.rotation.y = Math.atan2(P.x - vx, P.z - vz);
     this.scene.add(this.who.root);
-    this.best = undefined;
-    this.lost = 0;
     this.heat = MAX;
+    this.seeing = true;
+    this.last = { x: P.x, z: P.z };
+    this.lostT = 0;
+    this.saidLost = this.wasSafe = this.wasWet = false;
+    this.route = this.pathTo = null;
     this.set('arrive', pick(LINES.arrive));
     sfx.honk?.(0.8);
     buzz([20, 30, 20]);
@@ -259,6 +313,7 @@ export class Catcher {
     }
     this.van = this.who = this.netMesh = null;
     this.s = 'off';
+    this.seeing = false;
     this.heat = 0; // (a clean slate)
     this.called = false;
     this.meter();

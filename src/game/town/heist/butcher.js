@@ -169,6 +169,7 @@ export class SausageHeist {
     }
     if (held?.links) {
       const e = held.links.e, off = S.at === 'hook';
+      if (off) this.H.onNaughty?.(); // (the whole string, off the butcher's rail!)
       held.obj.visible = true;
       S.ends[e] = me; S.at = 'out'; // (we'll hear if someone beat us to it)
       this.string.unhook();

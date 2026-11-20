@@ -13,6 +13,7 @@ import { GoldenBones } from './town/bones.js';
 import { Pack } from './town/pack.js';
 import { progress } from './progress.js';
 import { Smells } from './town/smells.js';
+import { Buried } from './town/buried.js';
 import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
 import { NutAndMeg } from './town/squirrels.js';
@@ -76,6 +77,7 @@ export class TownChapter {
     globalThis.__mark?.('setup: dog actions, bones');
     // Things to sniff out all over town, and cars pottering round the streets.
     this.smells = new Smells(world, this.layout.seed);
+    this.buried = new Buried({ scene, hud, player, actions: this.actions, smells: this.smells });
     globalThis.__mark?.('setup: smells');
     this.traffic = new Traffic(scene, { seed: this.layout.seed, hud, avoid: world.spawn });
     globalThis.__mark?.('setup: traffic');
@@ -87,6 +89,7 @@ export class TownChapter {
       busy: () => !this.hud.card.classList.contains('hidden') || !!this.games?.active,
     });
     this.friends.onChange = () => this.refreshObjective();
+    this.buried.onUnearth = (x, z) => this.actions.mischief.dugUp(x, z); // (out of somebody's lawn? Naughty!)
     this.actions.onMischief = () => { this.friends.onMischief(); this.catcher?.onMischief(); };
     // More friends in the park: Nut & Meg, squirrel twins who love hide-and-seek, and Pepper the
     // hedgehog, who'd love a walk to the flowerbeds if it weren't for the robot lawnmower.
@@ -201,10 +204,13 @@ export class TownChapter {
       scene, world, hud, player, actions: this.actions, dogName: () => this.profile().name,
       busy: () => !!(this.games.active || this.heists.target() || this.friends.objective() || this.actions.carry.held || this.away || this.travelling
         || !this.hud.card.classList.contains('hidden')),
+      interrupt: () => !!(this.games.active || this.away || this.travelling),
       solo: () => !this.remotes.dogs.size, // (friends wouldn't see him: only when you're on your own)
       go: async (from) => !!(await this.trips?.go('pound', from)),
       homeGarden: () => this.world.homes?.[this.homeSlot ?? 0]?.garden?.rect,
     });
+    // 😈 Naughty things that aren't garden mischief fill the meter too: pinching treats, chasing the postman.
+    this.heists.onNaughty = this.life.onNaughty = () => this.catcher.onMischief();
     this.remotes.onAway = (r, n) => {
       const T = tripByN(n);
       this.hud.showToastRaw(n ? T?.emoji ?? '🧳' : '👋', n ? `<span class="who"></span> ${T?.away ?? 'went off exploring!'}` : '<span class="who"></span> is back!');
@@ -220,7 +226,7 @@ export class TownChapter {
     const inPlace = (q, pos) => (q.rect ? pos.x > q.rect.x0 && pos.x < q.rect.x1 && pos.z > q.rect.z0 && pos.z < q.rect.z1 : Math.abs(pos.x - q.x) < TOWN.BLOCK / 2 && Math.abs(pos.z - q.z) < TOWN.BLOCK / 2);
     this.puzzles = new TownPuzzles({
       scene, world, hud, player, pipeline,
-      busy: () => !this.hud.card.classList.contains('hidden') || this.games.active || !!this.travelling,
+      busy: () => !this.hud.card.classList.contains('hidden') || this.games.active || !!this.travelling || !!this.catcher?.chasing,
       why: () => (this.games.active ? 'Not in the middle of a game!' : this.travelling ? 'Already digging!' : null),
       where: () => this.places.find((q) => this.state.discovered.includes(q.id) && inPlace(q, this.player.pos))?.name ?? this.layout.name,
       found: () => this.state.discovered.length,
@@ -519,7 +525,6 @@ export class TownChapter {
 
     this.pack.sendState(dt, P, canAct && this.input.sniff);
     this.remotes.update(dt);
-    P.platforms = this.remotes.platforms(); // other dogs' backs: the co-op boost!
 
     // Golden bones.
     const b = this.bones.update(dt, this.time, pos, this.actions.glow, { onFriend: P.onFriend });
@@ -529,9 +534,8 @@ export class TownChapter {
     const door = canAct && !paw ? this.portals.hint(pos) : null; // (a way into a trip: the alley's drain…)
     this.portals.update(pos);
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
-    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
+    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
-    this.puzzles.update(dt, canAct);
 
     // Discover places by walking into them (an area's place: by going in past its gate).
     for (const p of this.places) {
@@ -544,15 +548,18 @@ export class TownChapter {
     // Sniffing: the trail leads to the closest smell (or, if there's nothing to sniff round here,
     // the next place to discover). Then dig, bark, splash, mischief.
     const found = this.smells.update(dt, { nose: this.actions.nose(), sniffing: canAct && this.input.sniff, glow: this.actions.glow, myName: this.profile().name });
-    if (found) this.onSmell(found);
+    if (found?.buried) this.buried.reveal(found.buried);
+    else if (found) this.onSmell(found);
+    this.buried.update(dt, canAct ? this.actions.nose() : null);
     // (A job's target counts too — Gus's slipper, a lost duckling… — and wins when it's near.)
     const smell = this.smells.nearest(pos, 30), job = this.friends.target();
     const ds = smell ? Math.hypot(smell.x - pos.x, smell.z - pos.z) : Infinity;
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.beach?.onDig(n) || this.seasons.onDig(n) });
+    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.buried.onDig(n) || this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
+    this.puzzles.update(dt, canAct, acted.barked); // (woof at Pickles for a game)
     this.catcher.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
@@ -572,6 +579,8 @@ export class TownChapter {
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
     const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
+    // Things to stand on that move: other dogs' backs (the co-op boost!), and the cars' bonnets and roofs (a ride!).
+    P.platforms = this.traffic.platforms(this.remotes.platforms());
 
     // Compass: toward a game's next target, home with loot, whatever the current job needs, a BBQ party, or the next place to discover.
     // (A job can point the compass somewhere else — near, not on, something to sniff out — or hide it.)

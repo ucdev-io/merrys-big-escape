@@ -11,6 +11,16 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.3.2', date: '2026-11-20', title: 'Dig it!',
+    notes: [
+      '🦴 Lots more buried treasure: sniff out spots in gardens, the park, the woods and the farm, then dig! Bones, marbles, toy soldiers, truffles… and the odd time capsule.',
+      '🚗 Hop up onto a car’s bonnet (and on up to the roof) for a ride round town.',
+      '🚐 Doug won’t give up while he can see you: get out of sight (zoomies!) to lose him. The pond won’t save you!',
+      '😈 Pinching treats from the bakery and the butcher, and chasing the postman, fill the naughty meter too.',
+      '🐈 Woof at Pickles for a game of Paw Match (no more pop-ups just from walking past).',
+    ],
+  },
+  {
     version: '0.3.1', date: '2026-11-20', title: 'Wanted!',
     notes: [
       '😈 The naughty meter: every bit of mischief fills it, and it calms down if you behave. Fill it up and… here comes Doug!',

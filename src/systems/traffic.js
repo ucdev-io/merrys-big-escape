@@ -13,10 +13,15 @@ import { ICECREAM } from '../game/lines/life.js';
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const LANE = 1.25;           // drive on the left, this far from the centre line
 const CRUISE = 5.2, ACCEL = 2.6, BRAKE = 10, TURN = 2.2;
-const HALF_W = 0.9, HALF_L = 1.85, ROOF = 1.25;
+// A car's shape, for bumping into and landing on: the body (bonnet and boot height), and the cabin on top
+// (the roof), from the front of the car (+) to the back. The ice-cream van's one tall box.
+const CAR = [{ hw: 0.85, hl: 1.8, at: 0, top: 0.85 }, { hw: 0.75, hl: 1.0, at: -0.2, top: 1.33 }];
+const VAN = [{ hw: 0.9, hl: 1.9, at: 0, top: 1.78 }];
+const SCRABBLE = 0.12; // (a dog that only just makes it up scrabbles the rest of the way)
 const COLORS = [0xd9534f, 0x5b86c4, 0xf6d06a, 0x6f9a52, 0xf1e8d8, 0x8e6fb0, 0xe39a52];
 const SAY = ['Beep beep!', 'Out of the road, pup!', 'Shoo, doggy!', 'Silly dog! Off you go!', 'Morning, doggo! Now MOVE, please.', 'Honk honk!', 'Mind the car, sausage!'];
 const SORRY = ['Oops! Sorry, pup!', 'Whoa! You OK, little one?', 'Careful, doggy!', 'Bonk! Sorry!'];
+const ROOF = ['There’s a DOG on my car!', 'Hold on tight, pup!', 'Next stop: the bakery!', 'Fares, please! …No? Go on then.', 'Is that a dog on the roof?!', 'Wheee! Where to, doggy?'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 /** The ice-cream van: cream and pink, a serving hatch on the pavement side, a giant cone on the roof. */
@@ -38,7 +43,8 @@ function iceCreamVan() {
 
 /**
  * Cars pottering round the neighbourhood's streets. They stop and honk when a dog's in the way;
- * a dog who runs into one gets a gentle bonk and loses a bit of puff — nobody ever gets hurt.
+ * a dog who runs into one gets a gentle bonk and loses a bit of puff — nobody ever gets hurt. Hop up
+ * onto a bonnet (and from there the roof) and you ride along on top: the driver doesn't mind. Much.
  * (Each player's game drives its own cars; they stop for friends' dogs too.)
  */
 export class Traffic {
@@ -64,10 +70,18 @@ export class Traffic {
       g.add(mergeStatic(iceCream ? iceCreamVan() : car(0, 0, 0, COLORS[id % COLORS.length])));
       g.position.copy(pos);
       scene.add(g);
-      const c = { id: id++, g, pos: g.position, heading: Math.atan2(dir.x, dir.z), speed: CRUISE * 0.6, from, to, phase: 'approach', honkCD: rng.float(0, 2), stuck: 0, bumpCD: 0, wait: 0, iceCream, parkIn: 25, parked: 0, jingleT: 0, serveCD: 0 };
+      const c = { id: id++, g, pos: g.position, heading: Math.atan2(dir.x, dir.z), speed: CRUISE * 0.6, from, to, phase: 'approach', honkCD: rng.float(0, 2), stuck: 0, bumpCD: 0, wait: 0, iceCream, parkIn: 25, parked: 0, jingleT: 0, serveCD: 0, shape: iceCream ? VAN : CAR, rideCD: 0 };
       this.aim(c);
       this.cars.push(c);
     }
+  }
+
+  /** Every car's bonnet and roof, as moving platforms for the dog to land on (see Colliders.surfaceAt). */
+  platforms(out = []) {
+    for (const c of this.cars) for (const b of c.shape) {
+      out.push({ x: c.pos.x + Math.sin(c.heading) * b.at, z: c.pos.z + Math.cos(c.heading) * b.at, hw: b.hw, hl: b.hl, rot: c.heading, top: b.top, reach: SCRABBLE, ride: c });
+    }
+    return out;
   }
 
   node([i, j]) { return V(this.lines[i], 0, this.lines[j]); }
@@ -98,7 +112,10 @@ export class Traffic {
     let bonked = null;
     const dogs = [player.pos, ...others];
     for (const c of this.cars) {
-      c.honkCD -= dt; c.bumpCD -= dt; c.wait -= dt;
+      c.honkCD -= dt; c.bumpCD -= dt; c.wait -= dt; c.rideCD -= dt;
+      const riding = player.riding === c, was = { x: c.pos.x, z: c.pos.z, h: c.heading };
+      if (riding && !c.rider && c.rideCD <= 0) { c.rideCD = 20; this.honk(c, player.pos, pick(ROOF), false); }
+      c.rider = riding;
       const f = V(Math.sin(c.heading), 0, Math.cos(c.heading)), l = V(f.z, 0, -f.x);
       // Steer for the next waypoint; slow down for corners.
       const to = c.wp.clone().sub(c.pos).setY(0), dist = to.length();
@@ -114,7 +131,7 @@ export class Traffic {
       let dogAhead = null;
       for (const p of dogs) {
         const r = V(p.x - c.pos.x, 0, p.z - c.pos.z), ahead = r.dot(f), side = r.dot(l);
-        if (ahead > 0 && ahead < 2.6 + c.speed * 1.1 && Math.abs(side) < 1.35 && p.y < ROOF + 0.3) { target = 0; dogAhead = p; }
+        if (ahead > 0 && ahead < 2.6 + c.speed * 1.1 && Math.abs(side) < 1.35 && p.y < 0.6) { target = 0; dogAhead = p; } // (not one riding on top!)
       }
       // Queue behind other cars; at crossroads the lower-numbered car goes first.
       for (const o of this.cars) {
@@ -137,12 +154,25 @@ export class Traffic {
       c.g.rotation.y = c.heading;
       c.g.position.y = Math.sin(performance.now() / 90 + c.id) * 0.008 * Math.min(1, c.speed / 2); // a little rumble
 
-      // Bumping into the local dog: push them out of the way, gently.
-      const r = V(player.pos.x - c.pos.x, 0, player.pos.z - c.pos.z), lz = r.dot(f), lx = r.dot(l), R = player.radius ?? 0.28;
-      if (Math.abs(lx) < HALF_W + R && Math.abs(lz) < HALF_L + R && player.pos.y < ROOF) {
-        const px = HALF_W + R - Math.abs(lx), pz = HALF_L + R - Math.abs(lz);
+      // A dog riding on top comes along for the ride (and turns with the car).
+      if (riding) {
+        const dh = c.heading - was.h, ox = player.pos.x - was.x, oz = player.pos.z - was.z, s = Math.sin(dh), k = Math.cos(dh);
+        player.pos.x = c.pos.x + ox * k + oz * s;
+        player.pos.z = c.pos.z + oz * k - ox * s;
+        player.heading += dh;
+        player.object.rotation.y = player.heading;
+      }
+
+      // Bumping into the local dog: push them out of the way, gently. (The body's a wall to a dog on the road;
+      // the cabin's a wall to one on the bonnet. Above the top, it's something to stand on.)
+      const r = V(player.pos.x - c.pos.x, 0, player.pos.z - c.pos.z), lz0 = r.dot(f), lx = r.dot(l), R = player.radius ?? 0.28;
+      for (const b of c.shape) {
+        const lz = lz0 - b.at;
+        if (!(Math.abs(lx) < b.hw + R && Math.abs(lz) < b.hl + R && player.pos.y < b.top - SCRABBLE)) continue;
+        const px = b.hw + R - Math.abs(lx), pz = b.hl + R - Math.abs(lz);
         const out = px < pz ? l.clone().multiplyScalar(Math.sign(lx) || 1) : f.clone().multiplyScalar(Math.sign(lz) || 1);
         player.pos.addScaledVector(out, Math.min(px, pz) + 0.01);
+        if (b !== c.shape[0] || player.pos.y > 0.4) continue; // (only a dog on the road gets bonked)
         if (c.speed > 0.8 && c.bumpCD <= 0) {
           c.bumpCD = 2; c.wait = 1.6; // the driver stops to check you're OK
           player.vel.x += out.x * 2.6 + f.x * Math.min(c.speed, 4) * 0.4;

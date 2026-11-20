@@ -310,7 +310,7 @@ export class HUD {
       p.className = `pill mischief wanted lv${Math.min(w.max, lv)} ${w.state}${w.level <= 0.01 && w.state === 'calm' ? ' hidden' : ''}`;
       const dots = Array.from({ length: w.max }, (_, i) => `<i style="--f:${Math.max(0, Math.min(1, w.level - i)).toFixed(2)}"></i>`).join('');
       p.innerHTML = `${w.state === 'calm' ? '😈' : '🚐'}<span class="dots">${dots}</span>`;
-      p.title = w.state === 'calm' ? 'The naughty meter: fill it and the dog warden comes!' : 'The dog warden’s coming!';
+      p.title = w.state === 'calm' ? 'The naughty meter: fill it and the dog warden comes!' : w.state === 'search' ? 'He’s lost sight of you… stay hidden!' : 'The dog warden’s coming!';
     }
     if (pulse) { p.classList.remove('pulse'); void p.offsetWidth; p.classList.add('pulse'); }
   }

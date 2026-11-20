@@ -77,7 +77,7 @@ export class TownLife {
     if (canAct && m.hurry <= 0 && ((d < 2.6 && P.speed > 3.2) || (barked && d < 7))) {
       m.hurry = 2.8; m.pause = 0;
       if (m.talkT <= 0) { m.talkT = 4; this.hud.say(`📮 ${this.line('pm-chased', POSTMAN.chased)}`, () => pos.clone().add(V(0, 2.1, 0)), 2.4); }
-      if (m.chaseCD <= 0) { m.chaseCD = 45; progress.stat('postman'); progress.award(2, 'Chased the postman!'); }
+      if (m.chaseCD <= 0) { m.chaseCD = 45; progress.stat('postman'); progress.award(2, 'Chased the postman!'); this.onNaughty?.(); }
     } else if (canAct && d < 3 && m.hurry <= 0 && m.talkT <= 0) {
       m.talkT = 20; p.wave = 1.6;
       this.hud.say(`📮 ${this.line('pm-hello', POSTMAN.hello)}`, () => pos.clone().add(V(0, 2.1, 0)), 2.4);

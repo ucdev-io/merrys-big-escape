@@ -264,6 +264,7 @@ export class Heists {
     }
     if (held?.loot) {
       const L = held.loot, who = this.lookouts[L.lookout];
+      if (L.state === 'home') this.onNaughty?.(); // (pinched off the stall: naughty! Picking it up again off the ground isn't more so)
       this.showOnTray(held, false);
       held.obj.visible = true;
       L.state = 'held'; L.by = this.me();

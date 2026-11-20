@@ -200,7 +200,7 @@ export class Player {
       impact = Math.max(speed, -this.vy);
       this.vy -= GRAVITY * dt;
       this.pos.y += this.vy * dt;
-      const onDog = !!world?.colliders.onExtra;
+      const onDog = !!world?.colliders.onExtra, hit = world?.colliders.extraHit;
       if (this.pos.y <= ground && this.vy <= 0) { // only land on the way down
         if (!this.grounded && this.vy < -2) { this.landed = 0.25; this.dog.land?.(Math.min(1, -this.vy / 6)); if (this.vy < -5) buzz(12); }
         this.pos.y = ground;
@@ -212,6 +212,7 @@ export class Player {
         this.vy = 0;
         this.onFriend = onDog || (ground > 0.35 && this.onFriend);
       } else this.grounded = false;
+      this.riding = this.grounded && hit?.ride ? hit.ride : null; // (on top of a moving car: it carries her along)
     }
 
     // Water state + one-frame events (the chapter turns these into splashes and shakes).

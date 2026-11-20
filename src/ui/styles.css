@@ -346,6 +346,7 @@ body:has(.lobby) .touch, body:has(.title-screen) .touch, body:has(.big-card:not(
 .pill.mischief.lv3 { --meter: #e8843a; }
 .pill.mischief.lv4 { --meter: #d9534f; }
 .pill.mischief.called, .pill.mischief.chase { --meter: #d9534f; animation: wanted 0.9s ease-in-out infinite; }
+.pill.mischief.search { --meter: #d9534f; } /* (he's lost sight of her: draining…) */
 @keyframes wanted { 50% { background: #f6c9c3; transform: scale(1.06); } }
 .away .pill.mischief { display: none; } /* (off on a trip: the town's meter waits) */
 .bubble.angry { background: #fde8e0; border-color: #a2463a; }
