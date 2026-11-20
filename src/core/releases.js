@@ -11,6 +11,13 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.4.0', date: '2026-11-20', title: 'All aboard!',
+    notes: [
+      '🚌 A bus stop on the edge of town: catch the bus to other towns, each with its own places to find (and back again any time).',
+      '🐈 Pickles has six new games for you, one more each time you finish a puzzle: riddles, catch the treats, a sliding postcard, whack-a-gnome, spot the difference and bone stack!',
+    ],
+  },
+  {
     version: '0.3.4', date: '2026-11-20', title: 'Unstuck',
     notes: [
       '🚐 Doug finds his way back to his van (no more walking into corners after he gives up).',
