@@ -11,6 +11,13 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.6.0', date: '2026-11-21', title: 'Days out',
+    notes: [
+      '🎡 Catch the bus to Wagtail Wonderland, the theme park! Ride the Wiggly Woof rollercoaster, the carousel, the big wheel and the helter-skelter, and drive the dodgems. Five rides wins the 🎈 funfair balloon.',
+      '🚢 A jetty at the beach: hop in the little boat out to the Sunny Dolphin, a cruise ship! Find Captain Poppy’s hat (for a ⚓ captain’s hat of your own), cannonball into the pool, play fetch, find the ship’s cat and woof at the dolphins.',
+    ],
+  },
+  {
     version: '0.5.0', date: '2026-11-20', title: 'Beam me up!',
     notes: [
       '🛸 A flying saucer hovers over the Farm’s field, with a crop circle underneath. Stand in the middle and up you go… to Planet Boing!',
