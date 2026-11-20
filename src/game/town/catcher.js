@@ -9,8 +9,9 @@ import { buzz } from '../../core/haptics.js';
 import { progress } from '../progress.js';
 
 /*
- * 🚐 Doug the dog warden. Get up to enough mischief (bins tipped, lawns dug, flowerbeds flattened) and somebody
- * phones him: his van pulls up at the kerb nearby and out he hops with a big butterfly net. He's quicker than a
+ * 🚐 Doug the dog warden. Mischief (bins tipped, lawns dug, flowerbeds flattened) fills the 😈 naughty meter (the
+ * HUD's pill, in town): every bit of mischief adds one, and it calms down again a little at a time if you behave.
+ * Fill it and somebody phones him: his van pulls up at the kerb nearby and out he hops with a big butterfly net. He's quicker than a
  * walk but slower than zoomies. Get away (zoomies, over a hedge, into the pond: he won't get his boots wet, home
  * through your own gate, or down a drain) and he gives up, puffed out. Get caught and it's off to the Sunny Paws
  * rescue centre (a trip: ../../trips/pound/), and a great escape home. Nobody ever loses a star.
@@ -22,10 +23,9 @@ import { progress } from '../progress.js';
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-const HEAT = 4;          // this much recent mischief and he's called
+const MAX = 4;           // the naughty meter: this much recent mischief and he's called
 const COOL_HEAT = 45;    // seconds for one bit of mischief to be forgiven
-const FIRST = 90;        // never in the first minute and a half
-const BREAK = 240;       // seconds between his visits
+const TIP = 'merry.tips.wanted'; // (the meter's been explained on this device)
 const SPEED = 3.5;       // m/s: faster than a walk (2.6), slower than zoomies (up to 6.8)
 const KERB = TOWN.BLOCK / 2 + TOWN.ROAD / 2 - 1.3; // where a parked van sits, from the middle of a block
 
@@ -75,13 +75,15 @@ function warden() {
   return p;
 }
 
+const seen = () => { try { return !!localStorage.getItem(TIP); } catch { return true; } };
+
 export class Catcher {
-  /** busy(): something's on (a job, a game, a heist, friends here…). go(): off to the pound. */
-  constructor({ scene, world, hud, player, actions, dogName, busy, go, homeGarden }) {
-    Object.assign(this, { scene, world, hud, player, actions, dogName, busy, go, homeGarden });
-    this.heat = 0;
+  /** busy(): something's on (a job, a game, a heist…). solo(): no friends here (he only comes then). go(): off to the pound. */
+  constructor({ scene, world, hud, player, actions, dogName, busy, solo, go, homeGarden }) {
+    Object.assign(this, { scene, world, hud, player, actions, dogName, busy, solo, go, homeGarden });
+    this.heat = 0;         // the naughty meter, 0…MAX
+    this.called = false;   // full: he's on his way (he comes as soon as she's in the streets with nothing else on)
     this.time = 0;
-    this.next = FIRST;     // the soonest he can come
     this.s = 'off';        // off · arrive · chase · wait (water, a garden) · leave · caught
     this.t = 0;
     this.blocks = world.layout.blocks;
@@ -89,8 +91,18 @@ export class Catcher {
     this.town = { x0: Math.min(...xs) - 20, x1: Math.max(...xs) + 20, z0: Math.min(...zs) - 20, z1: Math.max(...zs) + 20 };
   }
 
-  /** The dog did something naughty. */
-  onMischief() { this.heat += 1; }
+  /** The dog did something naughty: up goes the meter (and, the first time, a word about what it is). */
+  onMischief() {
+    if (this.s !== 'off' || this.called || !this.solo()) return;
+    this.heat = Math.min(MAX, this.heat + 1);
+    if (this.heat >= MAX) {
+      this.called = true;
+      this.hud.showToastRaw('📞', 'Somebody’s called the dog warden!', 'He’s on his way… (He’ll find you in the streets.)');
+    } else if (!seen()) {
+      try { localStorage.setItem(TIP, '1'); } catch { /* private mode */ }
+      this.hud.showToastRaw('😈', 'Naughty!', 'Mischief fills the naughty meter. Fill it and somebody calls the dog warden! Behave and it calms down.');
+    }
+  }
 
   /** He's after the dog right now (no fast travel to get away: run!). */
   get chasing() { return this.s === 'arrive' || this.s === 'chase'; }
@@ -102,9 +114,10 @@ export class Catcher {
 
   update(dt, { barked = false, canAct = true } = {}) {
     this.time += dt;
-    this.heat = Math.max(0, this.heat - dt / COOL_HEAT);
+    this.meter();
     if (this.s === 'off') {
-      if (this.heat >= HEAT && this.time > this.next && canAct && !this.busy() && this.inTown(this.player.pos)) this.arrive();
+      if (!this.called) this.heat = Math.max(0, this.heat - dt / COOL_HEAT); // (calming down…)
+      if (this.called && canAct && this.solo() && !this.busy() && this.inTown(this.player.pos)) this.arrive();
       return;
     }
     this.t += dt;
@@ -155,6 +168,13 @@ export class Catcher {
     w.arms[1].rotation.x = this.s === 'chase' ? -1.2 + Math.sin(this.t * 3) * 0.15 : -0.3; // (net held out in front)
   }
 
+  /** The HUD's 😈 pill: the meter (on your own), or just the mischief count (with friends: he doesn't come then). */
+  meter() {
+    const solo = this.solo();
+    if (!solo && this.called) { this.called = false; this.heat = 0; }
+    this.hud.setWanted?.(solo ? { level: this.heat, max: MAX, state: this.s === 'off' ? (this.called ? 'called' : 'calm') : this.s === 'leave' ? 'calm' : 'chase' } : null);
+  }
+
   set(s, line = null) {
     this.s = s;
     this.t = 0;
@@ -186,7 +206,7 @@ export class Catcher {
     this.scene.add(this.who.root);
     this.best = undefined;
     this.lost = 0;
-    this.heat = 0;
+    this.heat = MAX;
     this.set('arrive', pick(LINES.arrive));
     sfx.honk?.(0.8);
     buzz([20, 30, 20]);
@@ -195,6 +215,7 @@ export class Catcher {
 
   giveUp(line) {
     if (line) this.say(line, 2.8);
+    this.heat = 0; // (he's off: the meter's clear)
     if (this.s === 'chase' && line) { progress.stat('warden'); progress.award(10, 'Got away!'); }
     this.set('leave');
   }
@@ -238,7 +259,8 @@ export class Catcher {
     }
     this.van = this.who = this.netMesh = null;
     this.s = 'off';
-    this.next = this.time + BREAK;
-    this.heat = 0;
+    this.heat = 0; // (a clean slate)
+    this.called = false;
+    this.meter();
   }
 }

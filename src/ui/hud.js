@@ -282,10 +282,37 @@ export class HUD {
       </ul>`, [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]);
   }
 
+  /** Mischief done: the 😈 pill counts it (or, in town on your own, shows the naughty meter: see setWanted). */
   setMischief(n) {
-    this.mischiefPill.classList.toggle('hidden', !n);
-    this.mischiefPill.textContent = `😈 ${n}`;
-    this.mischiefPill.classList.remove('pulse'); void this.mischiefPill.offsetWidth; this.mischiefPill.classList.add('pulse');
+    this.mischiefN = n;
+    this.renderMischief(true);
+  }
+
+  /**
+   * The naughty meter, in town: { level (0…max, fractional as it calms down), max, state: 'calm' | 'called' |
+   * 'chase' } (null: back to the plain count). Dots fill yellow → red; full, the dog warden's on his way (🚐).
+   */
+  setWanted(w) {
+    const key = w ? `${w.state}|${Math.round(w.level * 24)}` : 'off';
+    if (key === this.wantedKey) return;
+    this.wantedKey = key;
+    this.wanted = w;
+    this.renderMischief(false);
+  }
+
+  renderMischief(pulse) {
+    const p = this.mischiefPill, w = this.wanted, n = this.mischiefN ?? 0;
+    if (!w) {
+      p.className = `pill mischief${n ? '' : ' hidden'}`;
+      p.textContent = `😈 ${n}`;
+    } else {
+      const lv = Math.ceil(w.level - 1e-3);
+      p.className = `pill mischief wanted lv${Math.min(w.max, lv)} ${w.state}${w.level <= 0.01 && w.state === 'calm' ? ' hidden' : ''}`;
+      const dots = Array.from({ length: w.max }, (_, i) => `<i style="--f:${Math.max(0, Math.min(1, w.level - i)).toFixed(2)}"></i>`).join('');
+      p.innerHTML = `${w.state === 'calm' ? '😈' : '🚐'}<span class="dots">${dots}</span>`;
+      p.title = w.state === 'calm' ? 'The naughty meter: fill it and the dog warden comes!' : 'The dog warden’s coming!';
+    }
+    if (pulse) { p.classList.remove('pulse'); void p.offsetWidth; p.classList.add('pulse'); }
   }
 
   setPrompt(text) {

@@ -11,6 +11,12 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.3.1', date: '2026-11-20', title: 'Wanted!',
+    notes: [
+      '😈 The naughty meter: every bit of mischief fills it, and it calms down if you behave. Fill it up and… here comes Doug!',
+    ],
+  },
+  {
     version: '0.3.0', date: '2026-11-20', title: 'The great escape',
     notes: [
       '🚐 Doug the dog warden turns up when there’s been too much mischief. Run for it!',

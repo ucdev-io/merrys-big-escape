@@ -339,6 +339,15 @@ body:has(.lobby) .touch, body:has(.title-screen) .touch, body:has(.big-card:not(
 .buttons button.jump span { margin: 0; }
 .pill.mischief { pointer-events: none; }
 .pill.mischief.pulse { animation: pulse 0.5s ease-out; }
+/* The naughty meter (in town): four dots, filling yellow → orange → red; full, the warden's coming (it flashes). */
+.pill.mischief .dots { display: inline-flex; gap: 3px; margin-left: 5px; vertical-align: -1px; }
+.pill.mischief .dots i { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid rgba(59, 43, 37, 0.45); background: linear-gradient(to right, var(--meter, #f6d06a) calc(var(--f) * 100%), rgba(59, 43, 37, 0.1) 0); }
+.pill.mischief.lv2 { --meter: #f2b134; }
+.pill.mischief.lv3 { --meter: #e8843a; }
+.pill.mischief.lv4 { --meter: #d9534f; }
+.pill.mischief.called, .pill.mischief.chase { --meter: #d9534f; animation: wanted 0.9s ease-in-out infinite; }
+@keyframes wanted { 50% { background: #f6c9c3; transform: scale(1.06); } }
+.away .pill.mischief { display: none; } /* (off on a trip: the town's meter waits) */
 .bubble.angry { background: #fde8e0; border-color: #a2463a; }
 
 /* ---------- Phones: safe areas, no stray page gestures, fullscreen ---------- */

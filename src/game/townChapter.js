@@ -200,7 +200,8 @@ export class TownChapter {
     this.catcher = new Catcher({
       scene, world, hud, player, actions: this.actions, dogName: () => this.profile().name,
       busy: () => !!(this.games.active || this.heists.target() || this.friends.objective() || this.actions.carry.held || this.away || this.travelling
-        || this.remotes.dogs.size || !this.hud.card.classList.contains('hidden')),
+        || !this.hud.card.classList.contains('hidden')),
+      solo: () => !this.remotes.dogs.size, // (friends wouldn't see him: only when you're on your own)
       go: async (from) => !!(await this.trips?.go('pound', from)),
       homeGarden: () => this.world.homes?.[this.homeSlot ?? 0]?.garden?.rect,
     });
