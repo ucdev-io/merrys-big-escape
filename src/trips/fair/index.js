@@ -224,7 +224,7 @@ class FairChapter extends TripChapter {
       }
     }
     if (D) this.placeMe();
-    const far = Math.hypot(P.pos.x - this.O.x - (A.x0 + A.x1) / 2, P.pos.z - this.O.z - (A.z0 + A.z1) / 2) > 28; // (the dogs at the wheel are only drawn from close by: a dog's a lot of shape)
+    const far = Math.hypot(this.player.pos.x - this.O.x - (A.x0 + A.x1) / 2, this.player.pos.z - this.O.z - (A.z0 + A.z1) / 2) > 28; // (the dogs at the wheel are only drawn from close by: a dog's a lot of shape)
     for (const c of this.cars) {
       c.car.position.set(c.p.x, 0, c.p.z);
       c.car.rotation.y = c.heading;
