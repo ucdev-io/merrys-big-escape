@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { sfx } from '../core/audio.js';
 import { buzz } from '../core/haptics.js';
-import { loadSave, writeSave, clearSave } from '../core/save.js';
+import { loadSave, writeSave, clearSave, townSave, writeTown, setTown } from '../core/save.js';
 import { TOWN, PLACE_EMOJI, randomSeed } from '../world/town/generator.js';
 import { BREEDS } from '../entities/breeds.js';
 import { RemoteDogs } from '../net/remoteDogs.js';
@@ -29,6 +29,8 @@ import { Farm } from './town/farm/index.js';
 import { Mud } from './town/mud.js';
 import { Beach } from './town/beach/index.js';
 import { travelBlock, landingFor, digTravel } from './town/travel.js';
+import { Portals } from './town/portals.js';
+import { tripByN } from '../trips/registry.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -49,11 +51,14 @@ export class TownChapter {
   constructor({ scene, world, player, hud, input, follow, pipeline, net = null, welcome = null, prefillCode = null }) {
     Object.assign(this, { scene, world, player, hud, input, follow, pipeline, prefillCode });
     this.layout = world.layout;
-    const save = loadSave();
-    const same = save.town?.seed === this.layout.seed;
-    this.state = { seed: this.layout.seed, discovered: same ? save.town.discovered ?? [] : [], bones: same ? save.town.bones ?? [] : [], den: same ? save.town.den ?? 0 : 0 };
+    const mine = townSave(this.layout.seed); // (what you've done in this town before: each town keeps its own)
+    this.state = { seed: this.layout.seed, discovered: mine.discovered ?? [], bones: mine.bones ?? [], den: mine.den ?? 0, trips: mine.trips ?? {} };
     this.places = this.layout.places.filter((p) => p.type !== 'home');
     this.time = 0;
+    // Back from a reload in the middle of a trip (down the drain…): she comes back up where she went down.
+    const trip = loadSave().trip;
+    this.backFrom = trip?.seed === this.layout.seed ? trip.from : null;
+    if (trip) writeSave({ trip: null });
 
     this.compass = document.createElement('div');
     this.compass.className = 'compass hidden';
@@ -120,7 +125,10 @@ export class TownChapter {
       anchor: () => this.actions.anchor(), glow: () => this.actions.glow, pigeons: () => this.actions.pigeons,
       teleport: (x, z, face) => this.teleport(x, z, face), showRecords: records,
     });
-    this.pack.onGame = (m) => this.games.handle(m);
+    this.pack.onGame = (m) => {
+      if (this.away) { if (m.a === 'start') this.hud.showToastRaw('🎮', 'Your pack started a game!', 'Come back up in time for the next one.'); return; } // (off on a trip)
+      this.games.handle(m);
+    };
     this.pack.onStartGame = (kind) => this.games.start(kind);
     this.pack.onRecords = records;
     this.actions.onScatter = (flock, n) => this.games.onScatter(n);
@@ -142,7 +150,7 @@ export class TownChapter {
     if (woods) {
       this.woods = new Woods({
         scene, world, area: woods, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
-        dogName: () => this.profile().name, den: this.state.den, onDen: (n) => { this.state.den = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
+        dogName: () => this.profile().name, den: this.state.den, onDen: (n) => { this.state.den = n; this.saveTown(); },
         look: this.seasons.look, // (the fog under the trees)
       });
       this.woods.camera = follow.camera; // (to skip drawing the wood when it's lost in the fog)
@@ -163,10 +171,10 @@ export class TownChapter {
     // round them into the pen together; the town keeps count), hens, pigs in the mud, hay to climb.
     const farm = world.areas?.find((a) => a.kind === 'farm');
     if (farm) {
-      this.state.farm = same ? save.town.farm ?? 0 : 0;
+      this.state.farm = mine.farm ?? 0;
       this.farm = new Farm({
         scene, world, area: farm, hud, player, input, actions: this.actions, friends: this.friends, pack: this.pack, remotes: this.remotes,
-        dogName: () => this.profile().name, pens: this.state.farm, onPens: (n) => { this.state.farm = n; writeSave({ chapter: 'town', town: { ...this.state } }); },
+        dogName: () => this.profile().name, pens: this.state.farm, onPens: (n) => { this.state.farm = n; this.saveTown(); },
       });
       this.farm.camera = follow.camera; // (to skip drawing the farm when it's lost in the fog)
       this.pack.onFarm = (m) => this.farm.handle(m);
@@ -181,6 +189,16 @@ export class TownChapter {
       this.remotes.onMud = (dog, level) => { onMud?.(dog, level); this.mud.setRemote(dog, level); };
     }
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
+    // 🕳️ Ways into trips (the alley's manhole down to the sewers, the beach's outfall pipe), and friends off on one.
+    this.portals = new Portals({
+      scene, world, layout: this.layout, hud, tripState: (id) => this.state.trips[id] ?? {},
+      go: (trip, from) => this.goTrip(trip, from), prefetch: (trip) => this.trips?.prefetch(trip),
+    });
+    this.remotes.onAway = (r, n) => {
+      const T = tripByN(n);
+      this.hud.showToastRaw(n ? T?.emoji ?? '🧳' : '👋', n ? `<span class="who"></span> ${T?.away ?? 'went off exploring!'}` : '<span class="who"></span> is back!');
+      this.hud.toast.querySelector('.who').textContent = r.name;
+    };
     this.goHome(0);
     // 🐾 Fast travel from the Sniff Book: dig a tunnel to any place you've found (or home).
     hud.onTravel = (id) => this.travelTo(id);
@@ -224,7 +242,7 @@ export class TownChapter {
           const { net, welcome } = await this.pack.join(code);
           if (welcome.seed !== this.layout.seed) {
             // Their town is different: reload into it (we'll rejoin straight away).
-            writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
+            setTown(welcome.seed, welcome.shared.discovered);
             net.close();
             setTimeout(() => (location.href = packPath(welcome.code)), 120);
             return;
@@ -234,7 +252,7 @@ export class TownChapter {
           this.begin();
         } catch (e) { lobby.setBusy(false); lobby.setError(e.message); }
       },
-      onNewTown: () => { writeSave({ chapter: 'town', town: { seed: randomSeed(), discovered: [] } }); location.reload(); },
+      onNewTown: () => { setTown(randomSeed()); location.reload(); },
       onGarden: () => { writeSave({ chapter: 'yard' }); location.href = HOME; },
     });
     if (this.prefillCode) lobby.prefill(this.prefillCode);
@@ -246,6 +264,8 @@ export class TownChapter {
     this.follow.yaw = this.player.heading + Math.PI;
     this.player.frozen = false;
     this.pack.watchOthers();
+    const back = this.backFrom && this.portals.out(this.backFrom);
+    if (back) { this.teleport(back.x, back.z, back.face); this.backFrom = null; }
   }
 
   /** Joined a pack: the pack's progress becomes ours (shared adventure). */
@@ -284,6 +304,64 @@ export class TownChapter {
     return true;
   }
 
+  // ---------- trips (see ../trips/) ----------
+
+  /** Off down a way in (the alley's drain…), if she can go just now. */
+  goTrip(trip, from) {
+    const why = travelBlock(this);
+    if (why) { this.hud.showToastRaw('🐾', why, '', { tip: true }); return false; }
+    this.trips?.go(trip, from);
+    return true;
+  }
+
+  /** What a trip needs from the town: its name, the dog's, and what's been done on that trip here (saved with the town). */
+  tripInfo(id) {
+    return {
+      seed: this.layout.seed, name: this.layout.name, dogName: () => this.profile().name,
+      state: { ...(this.state.trips[id] ?? {}) },
+      save: (patch) => { this.state.trips = { ...this.state.trips, [id]: { ...(this.state.trips[id] ?? {}), ...patch } }; this.saveTown(); },
+    };
+  }
+
+  /**
+   * Off on a trip: the town stops (nothing here moves until she's back) and its bits of HUD tidy away.
+   * trip: { id, n, from: { id, at } }
+   */
+  pause(trip) {
+    this.away = trip;
+    const P = this.player;
+    this.hud.setAway(true);
+    this.hud.clearBubbles();
+    this.hud.hideCard();
+    this.hud.toggleBook(false);
+    this.hud.setPrompt('');
+    P.platforms = null;
+    P.grip = 1;
+    music.setAmbient({ frogs: 0 });
+    this.pipeline.sniff = 0;
+    const at = this.portals.get(trip.from.id) ?? { x: P.pos.x, z: P.pos.z, face: P.heading };
+    this.awayAs = { pos: new THREE.Vector3(at.x, 0, at.z), heading: at.face ?? 0, speed: 0, digTimer: 0, grounded: true, inWater: false, swim: 0, sledging: false };
+  }
+
+  /** Still in the pack while she's away: friends are told which trip (an older server just shows her dog at the drain). */
+  awayTick(dt, n) {
+    this.awayAs.mudLevel = this.player.mudLevel;
+    this.pack.sendState(dt, this.awayAs, false, n);
+  }
+
+  /** Back from a trip, out at `exit` (the way in she took, or another: the beach pipe…). */
+  resume(exit) {
+    const o = this.portals.out(exit) ?? { x: this.awayAs?.pos.x ?? 0, z: this.awayAs?.pos.z ?? 0, face: this.awayAs?.heading ?? 0 };
+    this.away = null;
+    this.hud.setAway(false);
+    this.teleport(o.x, o.z, o.face ?? 0);
+    this.musicPlace = null; // (the town's tune again, or its area's)
+    music.setAmbient({ birds: 1 });
+    this.portals.refresh(); // (the beach pipe's grille, if the sluice was opened)
+    this.hud.setPlaces?.(this.placeList());
+    this.refreshObjective();
+  }
+
   goHome(slot) {
     const homes = this.world.homes;
     if (!homes?.length) return;
@@ -304,6 +382,12 @@ export class TownChapter {
     }
   }
 
+  /** Keep what's been done in this town (it has its own save: see core/save.js). */
+  saveTown() {
+    const { seed, ...rest } = this.state;
+    writeTown(seed, rest);
+  }
+
   // ---------- shared adventure (multiplayer-friendly) ----------
 
   /** Local player did something that changes the shared adventure. */
@@ -315,11 +399,11 @@ export class TownChapter {
   applyEvent(ev, byName) {
     if (ev.type === 'bone' && !this.state.bones.includes(ev.id)) {
       this.state.bones.push(ev.id);
-      writeSave({ chapter: 'town', town: { ...this.state } });
+      this.saveTown();
       this.onBone(ev.id, byName);
     } else if (ev.type === 'discover' && !this.state.discovered.includes(ev.id)) {
       this.state.discovered.push(ev.id);
-      writeSave({ chapter: 'town', town: { ...this.state } });
+      this.saveTown();
       this.onDiscovered(ev.id, byName);
     }
   }
@@ -371,7 +455,7 @@ export class TownChapter {
           <h1>Top explorer! 🗺️</h1>
           <p>${escapeHtml(this.profile().name)} has sniffed every corner of ${this.layout.name}.</p>
           <p>There’s lots more to do: <b>friends</b> in the park and at the pond, jobs on the <b>📋 board</b> by your gate, and cheeky <b>🥐 heists</b> on the bakery street…</p>`,
-          [['Keep exploring', () => this.hud.hideCard()], ['🎲 Try a new town', () => { writeSave({ town: { seed: randomSeed(), discovered: [] } }); location.reload(); }],
+          [['Keep exploring', () => this.hud.hideCard()], ['🎲 Try a new town', () => { setTown(randomSeed()); location.reload(); }],
             ['Start over', () => { clearSave(); location.reload(); }]]);
       }, 2500);
     }
@@ -400,6 +484,7 @@ export class TownChapter {
   // ---------- per frame ----------
 
   update(dt) {
+    if (this.away) return; // (off on a trip: the town waits)
     this.time += dt;
     this.cutscene?.(dt); // (digging a tunnel somewhere)
     const P = this.player, pos = P.pos;
@@ -414,8 +499,10 @@ export class TownChapter {
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
-    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
-    if (canAct) this.hud.setPrompt(this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt);
+    const door = canAct && !paw ? this.portals.hint(pos) : null; // (a way into a trip: the alley's drain…)
+    this.portals.update(pos);
+    this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
+    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
     // Discover places by walking into them (an area's place: by going in past its gate).
@@ -436,7 +523,7 @@ export class TownChapter {
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.beach?.onDig(n) || this.seasons.onDig(n) });
+    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }

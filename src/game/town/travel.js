@@ -15,6 +15,7 @@ const facing = (fx, fz, tx, tz) => Math.atan2(tx - fx, tz - fz); // (a heading f
 /** Why the dog can't dig off somewhere just now (a short line for a tip), or null if she can. */
 export function travelBlock(ch) {
   const P = ch.player, f = ch.friends;
+  if (ch.away || ch.trips?.busy) return 'Find the way back up first!'; // (off on a trip: down the drain…)
   if (ch.travelling) return 'Already digging!';
   if (ch.games?.active) return 'Not in the middle of a game!';
   if (ch.heists?.target()) return 'Take your loot home first!';

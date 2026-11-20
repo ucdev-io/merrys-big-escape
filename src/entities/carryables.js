@@ -87,6 +87,17 @@ function sock() {
   return outer;
 }
 
+/** A rubber duck (they come bobbing down the sewers). */
+function rubberDuck() {
+  const g = new THREE.Group();
+  mesh(new THREE.SphereGeometry(0.075, 14, 10), 0xf6d03a, g, [0, 0.06, 0], [0, 0, 0], [1.2, 0.85, 1]);
+  mesh(new THREE.SphereGeometry(0.048, 12, 9), 0xf6d03a, g, [0.06, 0.13, 0]);
+  mesh(new THREE.ConeGeometry(0.022, 0.05, 8), 0xe8843a, g, [0.115, 0.125, 0], [0, 0, -Math.PI / 2]);
+  mesh(new THREE.SphereGeometry(0.009, 6, 5), 0x2b2522, g, [0.09, 0.15, 0.03]);
+  mesh(new THREE.SphereGeometry(0.009, 6, 5), 0x2b2522, g, [0.09, 0.15, -0.03]);
+  return g;
+}
+
 // hold: [x, y, z] position and [x, y, z] rotation in the dog's mouth.
 export const CARRYABLES = {
   squeaky: { name: 'squeaky ball', emoji: '🔴', build: squeaky, hold: { pos: [0, -0.03, 0.03], rot: [0, 0, 0] } },
@@ -98,6 +109,7 @@ export const CARRYABLES = {
   newspaper: { name: 'newspaper', emoji: '📰', build: newspaper, hold: { pos: [0, -0.03, 0.0], rot: [0, 0, 0] } },
   frisbee: { name: 'frisbee', emoji: '🥏', build: frisbee, hold: { pos: [0, -0.04, 0.08], rot: [1.2, 0, 0] } },
   bone: { name: 'old bone', emoji: '🦴', build: oldBone, hold: { pos: [0, -0.025, 0.0], rot: [0, 0, 0] } },
+  rubberduck: { name: 'rubber duck', emoji: '🦆', build: rubberDuck, hold: { pos: [0, -0.09, 0.04], rot: [0, -Math.PI / 2, 0] } },
   // Pinched from the bakery street (heists: see treats.js).
   croissant: { name: 'croissant', emoji: '🥐', build: () => treatMesh('croissant'), hold: { pos: [0, -0.03, 0.035], rot: [0, 0, 0] } },
   bun: { name: 'iced bun', emoji: '🧁', build: () => treatMesh('bun'), hold: { pos: [0, -0.06, 0.045], rot: [0.3, 0, 0] } },

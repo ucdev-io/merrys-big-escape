@@ -13,7 +13,7 @@ import { YardChapter } from './game/yardChapter.js';
 import { TownChapter } from './game/townChapter.js';
 import { generateTown, randomSeed } from './world/town/generator.js';
 import { buildTown } from './world/town/builders.js';
-import { loadSave, writeSave } from './core/save.js';
+import { loadSave, writeSave, setTown } from './core/save.js';
 import { NetClient } from './net/client.js';
 import { showTitle } from './ui/title.js';
 import { packCodeFromUrl, packPath, HOME } from './net/links.js';
@@ -23,6 +23,7 @@ import { statsFor } from './game/stats.js';
 import { music } from './core/music.js';
 import { autoFullscreen } from './ui/fullscreen.js';
 import { localSeason } from './game/season.js';
+import { Trips } from './trips/manager.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
 window.addEventListener('click', (e) => { if (e.target.closest?.('.pill.big, .lobby .solo, .lobby .host, .lobby .join')) autoFullscreen(); }, true);
@@ -115,7 +116,7 @@ if (inTown && packCode && save.profile) {
   try {
     net = new NetClient();
     welcome = await net.enter('join', { code: packCode, name: profile.name, breed: profile.breed, level: progress.level, look: progress.look, profile: progress.id, season: localSeason() });
-    writeSave({ chapter: 'town', town: { seed: welcome.seed, discovered: welcome.shared.discovered } });
+    setTown(welcome.seed, welcome.shared.discovered);
   } catch (e) {
     net = null;
     history.replaceState(null, '', HOME);
@@ -135,7 +136,7 @@ window.__mark?.('start');
 loading(inTown ? 'building the town' : 'building the garden');
 if (inTown) {
   const seed = (welcome?.seed || params.get('seed') || loadSave().town?.seed || randomSeed()).toUpperCase();
-  if (loadSave().town?.seed !== seed) writeSave({ chapter: 'town', town: { seed, discovered: [] } });
+  if (loadSave().town?.seed !== seed) setTown(seed);
   const plan = generateTown(seed);
   window.__mark?.('build: plan');
   world = buildTown(plan);
@@ -273,6 +274,11 @@ if (location.search.includes('tune')) {
 }
 
 const sky = scene.getObjectByName('sky');
+// What's being played and drawn: the town (or the garden), or a trip (down the drain…) while the town waits.
+const home = { scene, world, chapter, sky };
+let active = home;
+const trips = inTown ? new Trips({ renderer, pipeline, camera, follow, sun, player, hud, input, town: chapter, setActive: (a) => { active = a ?? home; } }) : null;
+if (trips) chapter.trips = trips;
 // The shadow camera follows the dog in whole shadow-map texels: sliding smoothly, the texels'
 // edges crept across the ground as she ran, and shadow edges shimmered. (Its axes never change:
 // the sun always shines from the same side, so they're worked out once.)
@@ -295,19 +301,21 @@ function frame(now) {
   const raw = Math.max(0, timer.getDelta()), dt = Math.min(raw, 1 / 20);
   const t = timer.getElapsed();
 
-  player.update(dt, input, follow.yaw, world);
-  chapter.update(dt);
+  const A = active;
+  player.update(dt, input, follow.yaw, A.world);
+  trips?.update(dt);
+  A.chapter.update(dt);
   hud.update(dt);
-  world.update(t, player.pos);
+  A.world.update(t, player.pos);
   follow.update(dt, player.pos, player.heading, player.speed);
 
-  sky?.position.copy(camera.position);
+  A.sky?.position.copy(camera.position);
 
   followSun(player.pos);
 
   pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
   const r0 = drawn ? 0 : performance.now();
-  pipeline.render(scene, camera);
+  pipeline.render(A.scene, camera);
   if (!drawn) firstMs = performance.now() - r0; // (the first picture: every shader made, every shape sent)
   input.endFrame();
   if (++drawn === 2) {
@@ -353,4 +361,4 @@ function frame(now) {
 let drawn = 0, firstMs = 0, warm = null;
 requestAnimationFrame(frame);
 
-window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress, world };
+window.__game = { scene, camera, player, pipeline, renderer, follow, chapter, hud, input, progress, world, trips, get active() { return active; } };

@@ -34,6 +34,7 @@ export function blobGeometry(seed = 0, bump = 0.28, detail = 3) {
     p.setXYZ(i, v.x, v.y, v.z);
   }
   g.computeVertexNormals();
+  g.userData.shared = true; // (handed out again and again: never thrown away with whatever used it last)
   blobCache.set(key, g);
   return g;
 }

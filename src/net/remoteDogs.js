@@ -120,6 +120,10 @@ export class RemoteDogs {
       for (let i = 0; i < b.length - 1; i++) if (b[i].t <= renderT && b[i + 1].t >= renderT) { a = b[i]; c = b[i + 1]; break; }
       const k = c.t > a.t ? THREE.MathUtils.clamp((renderT - a.t) / (c.t - a.t), 0, 1) : 1;
       const root = r.dog.root;
+      // Away on a trip (down a drain…): no dog to see here until they're back.
+      const away = (c.f >> 8) & 15;
+      if (away !== (r.away ?? 0)) { r.away = away; this.onAway?.(r, away); }
+      if (away) { root.visible = false; r.tag.style.opacity = 0; continue; }
       root.visible = true;
       root.position.set(a.x + (c.x - a.x) * k, a.y + (c.y - a.y) * k, a.z + (c.z - a.z) * k);
       const h = a.h + wrap(c.h - a.h) * k;

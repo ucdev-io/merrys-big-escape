@@ -17,6 +17,8 @@ const THEMES = {
   woods: { bpm: 84, root: 62, prog: [[0, 3, 7], [-2, 2, 5], [3, 7, 10], [5, 9, 12]], seed: 'woods', shaker: false, vol: 0.9, scale: [0, 3, 5, 7, 10], lead: 'flute' },
   farm: { bpm: 116, root: 67, prog: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], seed: 'farm', shaker: true, vol: 0.95, lead: 'twang' },
   beach: { bpm: 98, root: 64, prog: [[0, 4, 7], [-3, 0, 4], [5, 9, 12], [7, 11, 14]], seed: 'beach', shaker: true, vol: 0.95, lead: 'bell' },
+  // Trips (see trips/): the sewers are bouncy and a bit silly (a plinky, drippy tune in A, with a tuba-ish bass).
+  sewer: { bpm: 100, root: 57, prog: [[0, 4, 7], [5, 9, 12], [-1, 2, 7], [0, 4, 7]], seed: 'sewer', shaker: false, vol: 0.85, lead: 'bloop' },
 };
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic: always sounds friendly
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
@@ -27,7 +29,7 @@ class Music {
     this.enabled = true;
     this.timer = null;
     this.bus = null;
-    this.ambient = { birds: 0, frogs: 0 };
+    this.ambient = { birds: 0, frogs: 0, drips: 0 };
   }
 
   setEnabled(on) {
@@ -100,6 +102,7 @@ class Music {
     // Birds and frogs (even with the music off).
     if (Math.random() < 0.09 * this.ambient.birds) this.bird(A, now + Math.random() * 0.2);
     if (Math.random() < 0.05 * this.ambient.frogs) this.frog(A, now + Math.random() * 0.2);
+    if (Math.random() < 0.07 * this.ambient.drips) this.drip(A, now + Math.random() * 0.2);
   }
 
   /** Carry on in another theme from the next beat (keeps the beat clock going, unlike play()). */
@@ -145,6 +148,14 @@ class Music {
   flute(A, f, t, dur, vol) { this.osc(A, 'sine', f, t, dur * 1.1, vol * 1.05, 0.045); this.osc(A, 'triangle', f * 2, t, dur * 0.7, vol * 0.12, 0.05); } // (soft and breathy)
   twang(A, f, t, dur, vol) { this.osc(A, 'sawtooth', f, t, dur * 0.45, vol * 0.42, 0.004); this.osc(A, 'triangle', f, t, dur * 0.8, vol * 0.8, 0.006); } // (a banjo-ish pluck)
   bell(A, f, t, dur, vol) { this.osc(A, 'sine', f, t, dur * 0.9, vol * 0.95, 0.004); this.osc(A, 'sine', f * 2, t, dur * 0.5, vol * 0.35, 0.003); this.osc(A, 'sine', f * 3.01, t, dur * 0.25, vol * 0.12, 0.003); } // (a steel drum)
+  bloop(A, f, t, dur, vol) { // (a bubbly blip that dips a little)
+    const o = A.ctx.createOscillator(), g = A.ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(f * 1.06, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05);
+    this.env(g, t, 0.006, vol * 1.1, dur * 0.7);
+    o.connect(g).connect(this.bus);
+    o.start(t); o.stop(t + dur + 0.1);
+    this.osc(A, 'triangle', f * 2, t, dur * 0.3, vol * 0.18, 0.004);
+  }
   shaker(A, t, vol) {
     const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
     s.buffer = A.noiseBuf; f.type = 'highpass'; f.frequency.value = 6000;
@@ -160,6 +171,16 @@ class Music {
       o.frequency.setValueAtTime(base, tt);
       o.frequency.exponentialRampToValueAtTime(base * (1.2 + Math.random() * 0.3), tt + 0.06);
       this.env(g, tt, 0.005, 0.018, 0.06);
+      o.connect(g).connect(A.master);
+      o.start(tt); o.stop(tt + 0.1);
+    }
+  }
+  drip(A, t) { // plink… plonk (water dripping in the sewers), with a faint echo
+    const f = 900 + Math.random() * 900;
+    for (const [d, v] of [[0, 0.03], [0.21, 0.009]]) {
+      const o = A.ctx.createOscillator(), g = A.ctx.createGain(), tt = t + d;
+      o.type = 'sine'; o.frequency.setValueAtTime(f, tt); o.frequency.exponentialRampToValueAtTime(f * 1.9, tt + 0.05);
+      this.env(g, tt, 0.003, v, 0.07);
       o.connect(g).connect(A.master);
       o.start(tt); o.stop(tt + 0.1);
     }

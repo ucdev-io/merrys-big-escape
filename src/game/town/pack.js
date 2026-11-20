@@ -86,11 +86,12 @@ export class Pack {
     this.updateBadge();
   }
 
-  /** Send my dog's state (~12×/s). */
-  sendState(dt, P, sniffing) {
+  /** Send my dog's state (~12×/s). `trip`: off on a trip (its number, 1–15: see trips/registry.js), seen from where she went. */
+  sendState(dt, P, sniffing, trip = 0) {
     if (!this.net) return;
     const flags = (sniffing ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0) | (P.sledging ? 32 : 0)
-      | (((P.mudLevel ?? 0) & 3) << 6); // (+ how muddy: 0–3)
+      | (((P.mudLevel ?? 0) & 3) << 6) // (+ how muddy: 0–3)
+      | ((trip & 15) << 8); // (+ which trip she's away on: friends don't see her dog meanwhile)
     this.net.sendState(dt, P.pos, P.heading, P.speed, flags);
   }
 

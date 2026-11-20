@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 const clamp = THREE.MathUtils.clamp;
+const FREE = { pitchMin: 0.15, pitchMax: 1.2, distMin: 2.5, distMax: 14 };
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
 /**
@@ -25,6 +26,8 @@ export class FollowCamera {
     this._near = [];
     this._hit = new THREE.Vector3();
     this.manualHold = 0;        // seconds left before auto-follow resumes after a drag
+    // How far you can look up/down and zoom out (a trip can change these: the sewer keeps you looking down into it).
+    this.limits = { ...FREE };
     this.ray = new THREE.Raycaster();
     this._dir = new THREE.Vector3();
     this._eye = new THREE.Vector3();
@@ -38,22 +41,29 @@ export class FollowCamera {
     window.addEventListener('pointermove', (e) => {
       if (!dragging) return;
       this.yaw -= (e.clientX - lx) * 0.005;
-      this.pitch = clamp(this.pitch + (e.clientY - ly) * 0.004, 0.15, 1.2);
+      this.pitch = clamp(this.pitch + (e.clientY - ly) * 0.004, this.limits.pitchMin, this.limits.pitchMax);
       lx = e.clientX; ly = e.clientY;
       this.manualHold = 2.5;
     });
     dom.addEventListener('wheel', (e) => {
-      this.distance = clamp(this.distance * (1 + Math.sign(e.deltaY) * 0.1), 2.5, 14);
+      this.distance = clamp(this.distance * (1 + Math.sign(e.deltaY) * 0.1), this.limits.distMin, this.limits.distMax);
     }, { passive: true });
   }
 
   /** Look around by dragging (touch): yaw left/right, pitch up/down. */
   orbitBy(dx, dy) {
     this.yaw -= dx * 0.006;
-    this.pitch = clamp(this.pitch + dy * 0.004, 0.15, 1.2);
+    this.pitch = clamp(this.pitch + dy * 0.004, this.limits.pitchMin, this.limits.pitchMax);
     this.manualHold = 2.5;
   }
-  zoomBy(f) { this.distance = clamp(this.distance * f, 2.5, 14); }
+  zoomBy(f) { this.distance = clamp(this.distance * f, this.limits.distMin, this.limits.distMax); }
+
+  /** Look-around limits ({ pitchMin, pitchMax, distMin, distMax }, any left out are the usual ones); null for the usual. */
+  setLimits(l = null) {
+    this.limits = { ...FREE, ...(l ?? {}) };
+    this.pitch = clamp(this.pitch, this.limits.pitchMin, this.limits.pitchMax);
+    this.distance = clamp(this.distance, this.limits.distMin, this.limits.distMax);
+  }
 
   /**
    * @param solid    buildings/sheds: the camera slides in front of these.

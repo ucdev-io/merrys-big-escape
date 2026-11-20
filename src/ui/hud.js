@@ -304,7 +304,7 @@ export class HUD {
     if (act === this._pawAct) return;
     this._pawAct = act;
     const b = document.querySelector('.touch [data-b="dig!"]');
-    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow' }[act] ?? 'Dig'}`;
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */
@@ -421,6 +421,15 @@ export class HUD {
     this.root.appendChild(e);
     this.bubbles.push({ e, anchor, t: dur });
   }
+
+  /** Take down every speech bubble (off on a trip: the town's chatter stays in town). */
+  clearBubbles() {
+    for (const b of this.bubbles) b.e.remove();
+    this.bubbles = [];
+  }
+
+  /** Off on a trip (true) or back in town: the town's own bits of HUD (friends' name tags, its game banner…) hide meanwhile. */
+  setAway(on) { this.root.classList.toggle('away', !!on); }
 
   /** Little word that pops up and floats away (WOOF!, sniff sniff…). */
   float(text, pos, cls = '') {
