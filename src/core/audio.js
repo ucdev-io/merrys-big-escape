@@ -125,6 +125,16 @@ export const sfx = {
   howl(pitch = 1, vol = 1) { const o = 330 * pitch; tone('sine', o, o * 1.5, 0.6, 0.12 * vol); tone('sine', o * 1.5, o * 1.42, 0.9, 0.1 * vol, 0.55); tone('sine', o * 1.42, o * 0.9, 0.6, 0.08 * vol, 1.4); },
   // Power-up running out.
   fizzle() { tone('sine', 600, 200, 0.3, 0.12); },
+  // 🚢 A ship's horn: a deep, two-note HOOO-ONK (vol: quieter when it's far off).
+  horn(vol = 1) {
+    for (const [f, d, len] of [[110, 0, 0.75], [92, 0.82, 1.1]]) {
+      tone('sawtooth', f, f * 0.99, len, 0.09 * vol, d, { type: 'lowpass', freq: 520, q: 1.5 });
+      tone('sawtooth', f * 1.5, f * 1.49, len, 0.05 * vol, d, { type: 'lowpass', freq: 700 });
+      tone('sine', f / 2, f / 2, len, 0.12 * vol, d);
+    }
+  },
+  // 🔔 The ship's bell: ding (and a long, shimmering ring).
+  bell() { tone('sine', 1320, 1316, 1.4, 0.12); tone('sine', 2640, 2630, 0.7, 0.05); tone('sine', 3520, 3500, 0.35, 0.03); },
   // 🛸 A flying saucer's beam of light: a rising, shimmering whooo-eee (and a sparkle on top).
   beam() {
     tone('sine', 220, 880, 1.6, 0.12); tone('sine', 223, 886, 1.6, 0.08, 0.02);

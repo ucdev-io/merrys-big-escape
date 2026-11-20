@@ -90,7 +90,7 @@ export class Sandy {
       const L = A.layout;
       for (let t = 0; t < 60 && this.job.items.length < BALLS; t++) {
         const p = A.at(this.rng.float(L.uL + 8, L.uR - 8), this.rng.float(A.shore + 5, A.swimEnd - 3));
-        if (this.job.items.some((it) => flat(it.pos, p) < 7)) continue;
+        if (this.job.items.some((it) => flat(it.pos, p) < 7) || A.inJetty?.(p.x, p.z)) continue; // (never under the jetty)
         this.job.items.push(this.carry.add('beachball', p.x, p.z, { job: 'sandy' }));
       }
       this.say(this.line(SANDY.askBalls), 6.5);

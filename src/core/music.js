@@ -21,6 +21,8 @@ const THEMES = {
   sewer: { bpm: 100, root: 57, prog: [[0, 4, 7], [5, 9, 12], [-1, 2, 7], [0, 4, 7]], seed: 'sewer', shaker: false, vol: 0.85, lead: 'bloop' },
   // …and out in space it's slow and dreamy (a floaty theremin in Eb over drifting chords, Imaj7 IVmaj7 vi V).
   space: { bpm: 76, root: 63, prog: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 0, 4, 7], [-5, -1, 2, 7]], seed: 'space', shaker: false, vol: 0.85, lead: 'theremin' },
+  // On the cruise ship: a jaunty sea shanty in D (I IV I V on a wheezy accordion, with a rolling 6/8-ish bounce).
+  cruise: { bpm: 124, root: 62, prog: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], seed: 'cruise', shaker: true, vol: 0.9, lead: 'accordion' },
 };
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic: always sounds friendly
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
@@ -166,6 +168,11 @@ class Music {
     this.env(g, t, 0.06, vol * 1.05, dur * 1.2);
     o.connect(g).connect(this.bus);
     o.start(t); o.stop(t + dur * 1.3 + 0.1); lfo.start(t); lfo.stop(t + dur * 1.3 + 0.1);
+  }
+  accordion(A, f, t, dur, vol) { // (two reeds a hair apart, a little wheezy: squeezebox!)
+    for (const d of [-6, 6]) this.osc(A, 'sawtooth', f * 2 ** (d / 1200), t, dur * 0.85, vol * 0.22, 0.025);
+    this.osc(A, 'square', f / 2, t, dur * 0.8, vol * 0.08, 0.03);
+    this.osc(A, 'triangle', f, t, dur * 0.9, vol * 0.6, 0.02);
   }
   shaker(A, t, vol) {
     const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();

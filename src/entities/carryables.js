@@ -98,6 +98,16 @@ function rubberDuck() {
   return g;
 }
 
+/** Captain Poppy's hat (the cruise ship's: it blew off in the wind): white, with a navy band, a black peak and a gold anchor. */
+function captainHat() {
+  const g = new THREE.Group();
+  mesh(new THREE.CylinderGeometry(0.1, 0.085, 0.07, 22), 0xfbfaf6, g, [0, 0.035, 0]);
+  mesh(new THREE.CylinderGeometry(0.087, 0.087, 0.025, 22, 1, true), 0x2f3a52, g, [0, 0.013, 0]);
+  mesh(new THREE.CylinderGeometry(0.088, 0.088, 0.008, 18, 1, false, -Math.PI / 2, Math.PI), 0x232b3d, g, [0, 0.004, 0.045], [0.1, Math.PI, 0], [1, 1, 1.15]);
+  mesh(new THREE.SphereGeometry(0.016, 10, 8), 0xe0b04a, g, [0, 0.04, 0.095], [0, 0, 0], [1, 1, 0.4]);
+  return g;
+}
+
 /** A bunch of keys on a big brass ring (the rescue centre's: they open the pens). */
 function keys() {
   const g = new THREE.Group();
@@ -127,6 +137,7 @@ export const CARRYABLES = {
   bone: { name: 'old bone', emoji: '🦴', build: oldBone, hold: { pos: [0, -0.025, 0.0], rot: [0, 0, 0] } },
   rubberduck: { name: 'rubber duck', emoji: '🦆', build: rubberDuck, hold: { pos: [0, -0.09, 0.04], rot: [0, -Math.PI / 2, 0] } },
   keys: { name: 'bunch of keys', emoji: '🔑', build: keys, hold: { pos: [0, -0.03, 0.06], rot: [1.3, 0, 0] } },
+  captainhat: { name: 'captain’s hat', emoji: '🧢', build: captainHat, hold: { pos: [0, -0.06, 0.07], rot: [0.4, 0, 0] } },
   // Pinched from the bakery street (heists: see treats.js).
   croissant: { name: 'croissant', emoji: '🥐', build: () => treatMesh('croissant'), hold: { pos: [0, -0.03, 0.035], rot: [0, 0, 0] } },
   bun: { name: 'iced bun', emoji: '🧁', build: () => treatMesh('bun'), hold: { pos: [0, -0.06, 0.045], rot: [0.3, 0, 0] } },

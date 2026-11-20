@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { paint } from '../../render/watercolorMaterial.js';
 import { blocked } from '../../world/spots.js';
-import { toWorld } from '../../world/areas/areas.js';
+import { toWorld, toLocal } from '../../world/areas/areas.js';
 import { groundY } from '../seasons/common.js';
 import { UfoSite } from './ufo.js';
+import { JettySite } from './jetty.js';
 
 /*
  * 🕳️ The ways into trips from town: the manhole in the alley (down to the sewers, any time), and the old outfall
@@ -40,6 +41,8 @@ export class Portals {
     if (pipe) this.list.push(pipe);
     const ufo = this.ufo();
     if (ufo) this.list.push(ufo);
+    const jetty = this.jetty();
+    if (jetty) this.list.push(jetty);
   }
 
   /** The crop circle in the Farm's field, under the hovering flying saucer. */
@@ -56,6 +59,20 @@ export class Portals {
 
   /** The saucer's beam on for `secs` (on the way up, or back down). */
   beam(secs) { this.site?.beam(secs); }
+
+  /** The jetty out into the sea at the beach (clear of the outfall pipe), and the tender that runs out to the ship. */
+  jetty() {
+    const area = this.world.areas?.find((a) => a.kind === 'beach'), pipe = this.get('beach');
+    const avoid = pipe && area ? [toLocal(area.layout.a, pipe.x, pipe.z)[0]] : [];
+    const site = new JettySite(this.group, area, this.world, avoid);
+    if (!site.spot) return null;
+    this.jettySite = site;
+    const e = site.end;
+    return {
+      id: 'jetty', trip: 'cruise', x: e.x, z: e.z, face: e.face, r: 1.7, out: e, style: 'boat', paw: 'aboard', emoji: '🚢',
+      ride: (k, P, dir) => site.ride(k, P, dir), open: () => true, text: '🐾 All aboard!',
+    };
+  }
 
   /** In the alley, just off the middle (not on the pigeons' spot, the bins or the crates). */
   alley() {
@@ -167,7 +184,7 @@ export class Portals {
     if (!p) return null;
     if (!p.open()) return { text: p.shut, paw: 'dig' };
     const why = this.blocked();
-    return why ? { text: `${p.style === 'beam' ? '🛸' : '🕳️'} ${why}`, paw: 'dig' } : { text: p.text, paw: p.paw ?? 'squeeze' };
+    return why ? { text: `${p.emoji ?? (p.style === 'beam' ? '🛸' : '🕳️')} ${why}`, paw: 'dig' } : { text: p.text, paw: p.paw ?? 'squeeze' };
   }
 
   /** 🐾 pressed: down the way in she's at (true if there was one). */
@@ -175,13 +192,14 @@ export class Portals {
     const p = this.at(pos, nose);
     if (!p) return false;
     if (!p.open()) { this.hud.float('Locked! 🔒', V(pos.x, 1.2, pos.z)); return true; }
-    if (this.go(p.trip, { id: p.id, at: p.at ?? { x: p.x, z: p.z }, style: p.style }) && p.style === 'beam') this.beam(2.4);
+    if (this.go(p.trip, { id: p.id, at: p.at ?? { x: p.x, z: p.z }, style: p.style, ride: p.ride }) && p.style === 'beam') this.beam(2.4);
     return true;
   }
 
   /** Getting close to a way in: start fetching the trip, so it's ready when she gets there. (And the saucer bobs.) */
   update(pos, dt = 1 / 60) {
     this.site?.update(dt, pos);
+    this.jettySite?.update(dt, pos);
     for (const p of this.list) {
       if (this.fetched.has(p.trip)) continue;
       if ((pos.x - p.x) ** 2 + (pos.z - p.z) ** 2 < 15 * 15) { this.fetched.add(p.trip); this.prefetch(p.trip); }

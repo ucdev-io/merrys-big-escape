@@ -110,6 +110,16 @@ export class Trips {
         f.style.opacity = Math.max(0, (k - 0.6) / 0.4).toFixed(3);
         return k >= 1;
       }));
+    } else if (from.style === 'boat') {
+      // Into the tender at the end of the jetty, and off it chugs out to sea (from.ride moves the boat, and her).
+      sfx.horn?.(0.6);
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 2.8);
+        from.ride?.(k, P, 'out');
+        f.style.opacity = Math.max(0, (k - 0.62) / 0.38).toFixed(3);
+        return k >= 1;
+      }));
     } else {
       await this.play(step((dt) => {
         t += dt;
@@ -222,6 +232,19 @@ export class Trips {
         return k >= 1;
       }));
       P.pos.y = y1;
+    } else if (style === 'boat' && x.from.ride) {
+      // The tender chugs back in to the jetty, and she hops up onto the end of it.
+      const f = this.paper();
+      let t = 0;
+      x.from.ride(0, P, 'in');
+      this.follow.snap(P.pos);
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 2.6);
+        x.from.ride(k, P, 'in');
+        f.style.opacity = Math.max(0, 1 - t / 0.5).toFixed(3);
+        return k >= 1;
+      }));
     } else await this.fadeTo(0, 0.35);
     sfx.pop();
     this.release(P.pos.y);
