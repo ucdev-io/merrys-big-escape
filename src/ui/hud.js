@@ -307,7 +307,7 @@ export class HUD {
     if (act === this._pawAct) return;
     this._pawAct = act;
     const b = document.querySelector('.touch [data-b="dig!"]');
-    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!' }[act] ?? 'Dig'}`;
+    if (b) b.innerHTML = `<span>🐾</span>${{ dig: 'Dig', grab: 'Grab', drop: 'Drop', pull: 'Pull!', build: 'Build', ride: 'Ride!', tow: 'Tow', squeeze: 'In!', turn: 'Turn!', nudge: 'Nudge!' }[act] ?? 'Dig'}`;
   }
 
   /** Not enough zoomies for a huge jump. */

@@ -30,6 +30,7 @@ import { Mud } from './town/mud.js';
 import { Beach } from './town/beach/index.js';
 import { travelBlock, landingFor, digTravel } from './town/travel.js';
 import { Portals } from './town/portals.js';
+import { Catcher } from './town/catcher.js';
 import { tripByN } from '../trips/registry.js';
 import { TownPuzzles } from './town/puzzles.js';
 
@@ -86,7 +87,7 @@ export class TownChapter {
       busy: () => !this.hud.card.classList.contains('hidden') || !!this.games?.active,
     });
     this.friends.onChange = () => this.refreshObjective();
-    this.actions.onMischief = () => this.friends.onMischief();
+    this.actions.onMischief = () => { this.friends.onMischief(); this.catcher?.onMischief(); };
     // More friends in the park: Nut & Meg, squirrel twins who love hide-and-seek, and Pepper the
     // hedgehog, who'd love a walk to the flowerbeds if it weren't for the robot lawnmower.
     const friendly = { scene, world, hud, player, actions: this.actions, friends: this.friends, seed: this.layout.seed, dogName: () => this.profile().name };
@@ -194,6 +195,14 @@ export class TownChapter {
     this.portals = new Portals({
       scene, world, layout: this.layout, hud, tripState: (id) => this.state.trips[id] ?? {},
       go: (trip, from) => this.goTrip(trip, from), prefetch: (trip) => this.trips?.prefetch(trip),
+    });
+    // 🚐 Doug the dog warden, when there's been too much mischief (on your own, with nothing else going on).
+    this.catcher = new Catcher({
+      scene, world, hud, player, actions: this.actions, dogName: () => this.profile().name,
+      busy: () => !!(this.games.active || this.heists.target() || this.friends.objective() || this.actions.carry.held || this.away || this.travelling
+        || this.remotes.dogs.size || !this.hud.card.classList.contains('hidden')),
+      go: async (from) => !!(await this.trips?.go('pound', from)),
+      homeGarden: () => this.world.homes?.[this.homeSlot ?? 0]?.garden?.rect,
     });
     this.remotes.onAway = (r, n) => {
       const T = tripByN(n);
@@ -309,6 +318,7 @@ export class TownChapter {
 
   /** Dig a tunnel to a place from the Sniff Book (or 'home'). False if she can't just now (and says why). */
   travelTo(id) {
+    if (this.catcher?.chasing) { this.hud.showToastRaw('🚐', 'No time to dig: the warden’s right behind you!', 'Run for it!', { tip: true }); return false; }
     const why = travelBlock(this);
     if (why) { this.hud.showToastRaw('🐾', why, '', { tip: true }); return false; }
     const to = landingFor(this, id);
@@ -344,6 +354,7 @@ export class TownChapter {
   pause(trip) {
     this.away = trip;
     const P = this.player;
+    if (this.catcher.chasing) this.catcher.escaped(); // (down a drain, with the warden right behind!)
     this.hud.setAway(true);
     this.hud.clearBubbles();
     this.hud.hideCard();
@@ -365,7 +376,8 @@ export class TownChapter {
 
   /** Back from a trip, out at `exit` (the way in she took, or another: the beach pipe…). */
   resume(exit) {
-    const o = this.portals.out(exit) ?? { x: this.awayAs?.pos.x ?? 0, z: this.awayAs?.pos.z ?? 0, face: this.awayAs?.heading ?? 0 };
+    const home = exit === 'home' && this.world.homes?.[this.homeSlot ?? 0]; // (out at your own garden gate)
+    const o = home ? { x: home.pos.x, z: home.pos.z, face: home.face } : this.portals.out(exit) ?? { x: this.awayAs?.pos.x ?? 0, z: this.awayAs?.pos.z ?? 0, face: this.awayAs?.heading ?? 0 };
     this.away = null;
     this.hud.setAway(false);
     this.teleport(o.x, o.z, o.face ?? 0);
@@ -540,6 +552,7 @@ export class TownChapter {
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
     const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
+    this.catcher.update(dt, { barked: acted.barked, canAct });
     this.heists.update(dt, { canAct, barked: acted.barked });
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
     if (this.beach) { if (acted.barked) this.beach.onBark(pos); this.beach.update(dt, { canAct }); }

@@ -94,18 +94,21 @@ export class Trips {
     this.hold();
     sfx.tunnel();
     buzz(30);
-    // Squeeze in, nose first.
+    // Squeeze in, nose first (or, scooped up in a net: just away she goes).
     const y0 = P.pos.y, sx = P.pos.x, sz = P.pos.z, at = from.at ?? { x: sx, z: sz };
     let t = 0;
     const f = this.paper();
-    await this.play(step((dt) => {
-      t += dt;
-      const k = Math.min(1, t / 0.8), e = k * k * (3 - 2 * k);
-      P.pos.set(sx + (at.x - sx) * e, y0 - Math.max(0, k - 0.25) / 0.75 * 0.95, sz + (at.z - sz) * e);
-      P.dog.body.rotation.x = 0.9 * Math.sin(k * Math.PI * 0.5);
-      f.style.opacity = Math.max(0, (k - 0.45) / 0.55).toFixed(3);
-      return k >= 1;
-    }));
+    if (from.style === 'net') await this.fadeTo(1, 0.6);
+    else {
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 0.8), e = k * k * (3 - 2 * k);
+        P.pos.set(sx + (at.x - sx) * e, y0 - Math.max(0, k - 0.25) / 0.75 * 0.95, sz + (at.z - sz) * e);
+        P.dog.body.rotation.x = 0.9 * Math.sin(k * Math.PI * 0.5);
+        f.style.opacity = Math.max(0, (k - 0.45) / 0.55).toFixed(3);
+        return k >= 1;
+      }));
+    }
     const slow = setTimeout(() => this.note('🐾 Sniffing out the way…'), 300);
     let built;
     try {
@@ -142,7 +145,7 @@ export class Trips {
     this.follow.yaw = s.face + Math.PI;
     this.follow.manualHold = 0;
     this.cur = { id, n: T.n, from, scene, world, chapter, look, geo0 };
-    this.setActive({ scene, world, chapter, sky: null });
+    this.setActive({ scene, world, chapter, sky: built.sky ?? null }); // (an outdoor trip brings its own sky)
     // Every shader it needs, made now (behind the paper) rather than in a stutter on the way round.
     const ms = await this.compile(scene);
     this.clearNote();
@@ -181,7 +184,7 @@ export class Trips {
     this.follow.setLimits(null);
     x.chapter.dispose?.();
     x.world.dispose?.();
-    disposeTree(x.scene);
+    disposeTree(x.scene, town.scene); // (never anything the town's still using)
     this.cur = null;
     this.restoreLook();
     town.resume(exit);

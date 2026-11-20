@@ -9,6 +9,7 @@
 export const TRIPS = {
   box: { n: 1, emoji: '📦', name: 'The Test Box', load: () => import('./box/index.js'), test: true },
   sewer: { n: 2, emoji: '🕳️', name: 'The Sewers', load: () => import('./sewer/index.js'), away: 'went down a drain!' },
+  pound: { n: 3, emoji: '🚐', name: 'Sunny Paws', load: () => import('./pound/index.js'), away: 'got scooped up by the dog warden!' },
 };
 
 /** The trip with this number (from a friend's state), or null. */

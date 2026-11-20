@@ -98,6 +98,22 @@ function rubberDuck() {
   return g;
 }
 
+/** A bunch of keys on a big brass ring (the rescue centre's: they open the pens). */
+function keys() {
+  const g = new THREE.Group();
+  mesh(new THREE.TorusGeometry(0.06, 0.009, 6, 18), 0xc9a24a, g, [0, 0.012, 0], [Math.PI / 2, 0, 0]);
+  for (const [a, c] of [[0.4, 0xc9a24a], [1.9, 0xa7a196], [3.5, 0xd9b45a]]) {
+    const k = new THREE.Group();
+    k.position.set(Math.cos(a) * 0.06, 0.012, Math.sin(a) * 0.06);
+    k.rotation.y = -a;
+    g.add(k);
+    mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.008, 12), c, k, [0.03, 0, 0]);
+    mesh(new THREE.BoxGeometry(0.08, 0.008, 0.012), c, k, [0.085, 0, 0]);
+    mesh(new THREE.BoxGeometry(0.012, 0.008, 0.02), c, k, [0.115, 0, 0.012]);
+  }
+  return g;
+}
+
 // hold: [x, y, z] position and [x, y, z] rotation in the dog's mouth.
 export const CARRYABLES = {
   squeaky: { name: 'squeaky ball', emoji: '🔴', build: squeaky, hold: { pos: [0, -0.03, 0.03], rot: [0, 0, 0] } },
@@ -110,6 +126,7 @@ export const CARRYABLES = {
   frisbee: { name: 'frisbee', emoji: '🥏', build: frisbee, hold: { pos: [0, -0.04, 0.08], rot: [1.2, 0, 0] } },
   bone: { name: 'old bone', emoji: '🦴', build: oldBone, hold: { pos: [0, -0.025, 0.0], rot: [0, 0, 0] } },
   rubberduck: { name: 'rubber duck', emoji: '🦆', build: rubberDuck, hold: { pos: [0, -0.09, 0.04], rot: [0, -Math.PI / 2, 0] } },
+  keys: { name: 'bunch of keys', emoji: '🔑', build: keys, hold: { pos: [0, -0.03, 0.06], rot: [1.3, 0, 0] } },
   // Pinched from the bakery street (heists: see treats.js).
   croissant: { name: 'croissant', emoji: '🥐', build: () => treatMesh('croissant'), hold: { pos: [0, -0.03, 0.035], rot: [0, 0, 0] } },
   bun: { name: 'iced bun', emoji: '🧁', build: () => treatMesh('bun'), hold: { pos: [0, -0.06, 0.045], rot: [0.3, 0, 0] } },

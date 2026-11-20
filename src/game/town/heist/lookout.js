@@ -24,8 +24,8 @@ function workPose(work, w) {
  * watching (the BBQ cook flips burgers while he watches the grill), or hands on hips.
  */
 export class Lookout {
-  constructor({ hud, person, pos, faces, zone, work = 'knead', lookWork = null, marks = {}, head = 2.2 }) {
-    Object.assign(this, { hud, person, faces, zone, work, lookWork, headY: head });
+  constructor({ hud, person, pos, faces, zone, work = 'knead', lookWork = null, marks = {}, head = 2.2, cls = '' }) {
+    Object.assign(this, { hud, person, faces, zone, work, lookWork, headY: head, cls });
     this.pos = person.root.position.copy(pos);
     person.root.rotation.y = faces.busy;
     this.marks = { busy: '🎵', warn: '❗', look: '👀', door: '❓', ...marks };
@@ -36,7 +36,7 @@ export class Lookout {
     this.shoutT = 0; // "Oi!": arms up
     this.bubbleAt = () => this.top(0.7); // (one anchor, so a new line replaces the last; above the sign)
     this.mark = document.createElement('div');
-    this.mark.className = 'lookout busy';
+    this.mark.className = `lookout busy ${cls}`;
     this.mark.textContent = this.marks.busy;
     hud.root.appendChild(this.mark);
   }
@@ -46,7 +46,7 @@ export class Lookout {
     this.s = s;
     this.left = ms / 1000;
     this.by = by;
-    this.mark.className = `lookout ${s}`;
+    this.mark.className = `lookout ${s} ${this.cls}`;
     this.mark.textContent = this.marks[s] ?? '';
   }
 
