@@ -47,7 +47,7 @@ export class Bones {
   }
 
   update(dt, live) {
-    const { player, pack, hud } = this.ctx, P = player.pos, t = performance.now() / 1000;
+    const { player, hud } = this.ctx, P = player.pos, t = performance.now() / 1000;
     let near = null, nd = Infinity;
     for (const b of this.list) {
       if (b.got) continue;
@@ -58,7 +58,7 @@ export class Bones {
         b.got = true;
         b.m.visible = false;
         sfx.chomp?.(); buzz(15);
-        pack.sendGame({ a: 'grab', i: b.i });
+        this.ctx.send({ a: 'grab', i: b.i });
         hud.float('+1 🦴', this.ctx.anchor());
         continue;
       }

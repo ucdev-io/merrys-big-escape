@@ -13,7 +13,7 @@ export class PigeonPanic {
   /** The dog just sent a flock of n flying. */
   onScatter(n) {
     if (!this.live) return;
-    this.ctx.pack.sendGame({ a: 'pig', n });
+    this.ctx.send({ a: 'pig', n });
     this.ctx.hud.float(`+${n} 🐦`, this.ctx.anchor());
   }
 

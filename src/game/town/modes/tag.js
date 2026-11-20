@@ -19,7 +19,7 @@ export class Tag {
   }
 
   update(dt, live) {
-    const { player, pack, remotes, me } = this.ctx, g = this.g, P = player.pos;
+    const { player, remotes, me } = this.ctx, g = this.g, P = player.pos;
     const it = g.it === me() ? player.object : remotes.dogs.get(g.it)?.dog.root;
     this.ring.visible = !!it;
     if (it) this.ring.position.set(it.position.x, it.position.y + 0.05, it.position.z);
@@ -27,7 +27,7 @@ export class Tag {
     if (live && g.it === me() && g.tagCD <= 0) { // we're it: touching a dog tags them
       for (const r of remotes.dogs.values()) {
         const q = r.dog.root.position;
-        if (r.dog.root.visible && Math.hypot(q.x - P.x, q.z - P.z) < 0.95 && Math.abs(q.y - P.y) < 0.8) { g.tagCD = 1.6; pack.sendGame({ a: 'tag', target: r.id }); break; }
+        if (r.dog.root.visible && Math.hypot(q.x - P.x, q.z - P.z) < 0.95 && Math.abs(q.y - P.y) < 0.8) { g.tagCD = 1.6; this.ctx.send({ a: 'tag', target: r.id }); break; }
       }
     }
     return { banner: `🐾 ${g.it === me() ? 'You’re IT!' : `${nameOf(this.ctx, g, g.it)} is it`}` };

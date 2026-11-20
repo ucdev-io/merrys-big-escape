@@ -48,7 +48,7 @@ export class Race {
   update(dt, live) {
     this.flag.userData.ring.rotation.z += dt;
     const P = this.ctx.player.pos, pl = this.place;
-    if (live && !this.sent && Math.abs(P.x - pl.x) < H + 1 && Math.abs(P.z - pl.z) < H + 1) { this.sent = true; this.ctx.pack.sendGame({ a: 'done' }); }
+    if (live && !this.sent && Math.abs(P.x - pl.x) < H + 1 && Math.abs(P.z - pl.z) < H + 1) { this.sent = true; this.ctx.send({ a: 'done' }); }
     const t = performance.now() - this.g.startAt;
     return {
       compass: { pos: this.flag.position, emoji: '🏁' }, clock: false,

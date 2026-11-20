@@ -7,8 +7,8 @@
 import { WebSocketServer } from 'ws';
 import { BREED_IDS } from '../src/entities/breedIds.js';
 import { cleanName, cleanSeed, cleanId, cleanCode, num, cleanLevel, cleanLook, list } from './clean.js';
-import { worldFor, worldByCode, touchWorld, getProfile, addResults } from './store.js';
-import { CHALLENGES } from '../src/game/challenges.js';
+import { worldFor, worldByCode, touchWorld, getProfile } from './store.js';
+import { gameJoin, gameMessage, gameLeave } from './games.js';
 import { heistJoin, heistMessage, heistLeave, heistTick } from './heists.js';
 import { seasonOpen, seasonWelcome, seasonMessage, seasonLeave, seasonTick } from './seasons.js';
 import { cleanDen, DEN_MAX, STICK_GAP_MS } from '../src/game/denRules.js';
@@ -85,111 +85,7 @@ function enter(p, room, msg) {
   });
   broadcast(room, { t: 'join', p: publicPlayer(p) }, p);
   heistJoin(room, p, send); // who's looking, which treats are where
-  const g = room.game;
-  if (g && !g.over) { g.dogs.set(p.id, dogOf(p)); send(p.ws, { t: 'game', a: 'start', game: publicGame(g) }); } // join in!
-}
-
-// ---- games and challenges (see src/game/challenges.js): 🏁 races, ⚡ the zoomies dash, 🦴 bone rush,
-// 🐦 pigeon panic, 🦆 duck round-up and 🐾 tag. The server keeps score, so everyone sees the same
-// results, and puts the best on the 🏆 pack records. Times go out as "in so many ms" (everyone's
-// clock is a bit different). The dog who starts a round-up runs the ducks for everyone (its "host").
-const publicGame = (g) => ({
-  id: g.id, kind: g.kind, by: g.by, byName: g.byName, target: g.target, seed: g.seed, host: g.host, over: g.over,
-  it: g.it, tags: g.tags, scores: g.scores, got: g.got, home: g.home, finishers: g.finishers, doneMs: g.doneMs,
-  startsIn: g.startAt - Date.now(), endsIn: g.endsAt - Date.now(), records: g.records ?? null,
-});
-const dogOf = (q) => ({ name: q.name, breed: q.breed, profile: q.profile });
-
-function startGame(room, p, msg) {
-  if (room.game && !room.game.over) return;
-  const kind = Object.hasOwn(CHALLENGES, msg.kind) ? msg.kind : 'race', C = CHALLENGES[kind];
-  if (room.players.size < (C.min ?? 1)) return send(p.ws, { t: 'game', a: 'nope', msg: `${C.name} needs at least ${C.min} dogs!` });
-  const now = Date.now();
-  const g = (room.game = {
-    id: (room.gameN = (room.gameN ?? 0) + 1), kind, by: p.id, byName: p.name, target: cleanId(msg.target), over: false,
-    seed: Math.floor(Math.random() * 1e9), host: p.id, startAt: now + 4000, endsAt: now + 4000 + C.secs * 1000,
-    finishers: [], tags: {}, it: null, lastTag: 0, scores: {}, got: {}, home: [], doneMs: null,
-    dogs: new Map([...room.players.values()].map((q) => [q.id, dogOf(q)])), // everyone who played (even if they go home)
-  });
-  if (kind === 'tag') { const ids = [...room.players.keys()]; g.it = ids[Math.floor(Math.random() * ids.length)]; }
-  clearTimeout(room.gameTimer);
-  room.gameTimer = setTimeout(() => endGame(room), g.endsAt - now);
-  broadcast(room, { t: 'game', a: 'start', game: publicGame(g) });
-}
-
-function endGame(room) {
-  const g = room.game;
-  if (!g || g.over) return;
-  g.over = true;
-  clearTimeout(room.gameTimer);
-  g.records = saveRecords(room, g);
-  broadcast(room, { t: 'game', a: 'end', game: publicGame(g) });
-}
-
-/** Results onto the 🏆 pack records: { board (top 5), mine: { [dog id, or 'team']: { rank, record, best } } }. */
-function saveRecords(room, g) {
-  const C = CHALLENGES[g.kind];
-  if (!C.rank) return null;
-  const who = [], entries = [];
-  if (C.coop) {
-    const team = [...g.dogs.values()];
-    if (g.home.length) { who.push('team'); entries.push({ team: team.map((d) => d.name), profiles: team.map((d) => d.profile), breed: team[0]?.breed, score: g.home.length, ms: g.doneMs ?? C.secs * 1000 }); }
-  } else if (C.rank === 'time') {
-    for (const f of g.finishers) if (g.dogs.has(f.id)) { who.push(f.id); entries.push({ ...g.dogs.get(f.id), ms: f.ms }); }
-  } else {
-    const scores = g.kind === 'tag' ? g.tags : g.scores;
-    for (const [id, d] of g.dogs) if (scores[id] > 0) { who.push(id); entries.push({ ...d, score: scores[id] }); }
-  }
-  const r = addResults(g.kind, room.seed, entries);
-  return r && { board: r.board, mine: Object.fromEntries(who.map((id, i) => [id, r.results[i]])) };
-}
-
-function gameMove(room, p, msg) {
-  const g = room.game;
-  if (!g || g.over || Date.now() < g.startAt - 200) return;
-  const C = CHALLENGES[g.kind];
-  if (!g.dogs.has(p.id)) g.dogs.set(p.id, dogOf(p));
-  switch (msg.a) {
-    case 'done': // 🏁 ⚡ over the finish line
-      if (!['race', 'dash'].includes(g.kind) || g.finishers.some((f) => f.id === p.id)) return;
-      g.finishers.push({ id: p.id, name: p.name, ms: Date.now() - g.startAt });
-      broadcast(room, { t: 'game', a: 'finish', id: p.id, name: p.name, place: g.finishers.length, ms: Date.now() - g.startAt });
-      if (g.finishers.length >= room.players.size) endGame(room);
-      return;
-    case 'tag': { // 🐾 you're it!
-      const target = Number(msg.target);
-      if (g.kind !== 'tag' || g.it !== p.id || target === p.id || !room.players.has(target) || Date.now() - g.lastTag < 1500) return;
-      g.tags[p.id] = (g.tags[p.id] ?? 0) + 1;
-      g.it = target;
-      g.lastTag = Date.now();
-      return broadcast(room, { t: 'game', a: 'it', it: target, by: p.id, byName: p.name, name: room.players.get(target).name, tags: g.tags });
-    }
-    case 'grab': { // 🦴 first dog there gets it
-      const i = msg.i | 0;
-      if (g.kind !== 'bones' || i < 0 || i >= C.count || g.got[i] !== undefined) return;
-      g.got[i] = p.id;
-      g.scores[p.id] = (g.scores[p.id] ?? 0) + 1;
-      broadcast(room, { t: 'game', a: 'got', i, by: p.id, name: p.name, scores: g.scores });
-      if (Object.keys(g.got).length >= C.count) endGame(room);
-      return;
-    }
-    case 'pig': { // 🐦 a flock sent flying
-      if (g.kind !== 'pigeons') return;
-      const n = Math.max(1, Math.min(12, msg.n | 0));
-      g.scores[p.id] = (g.scores[p.id] ?? 0) + n;
-      return broadcast(room, { t: 'game', a: 'score', by: p.id, name: p.name, n, scores: g.scores });
-    }
-    case 'ducks': // 🦆 where the ducks are now (from whoever's running them)
-      if (g.kind !== 'ducks' || p.id !== g.host) return;
-      return broadcast(room, { t: 'game', a: 'ducks', d: (Array.isArray(msg.d) ? msg.d : []).slice(0, C.count * 3).map((v) => num(v)) }, p);
-    case 'home': { // 🦆 one more duck safe in the pond (and which dog shooed it in)
-      const i = msg.i | 0, by = room.players.get(Number(msg.by));
-      if (g.kind !== 'ducks' || p.id !== g.host || i < 0 || i >= C.count || g.home.includes(i)) return;
-      g.home.push(i);
-      broadcast(room, { t: 'game', a: 'home', i, home: g.home, by: by?.id ?? null, name: by?.name ?? null });
-      if (g.home.length >= C.count) { g.doneMs = Date.now() - g.startAt; endGame(room); }
-    }
-  }
+  gameJoin(room, p, send, broadcast); // a game on? join in!
 }
 
 function leave(p) {
@@ -200,21 +96,7 @@ function leave(p) {
   heistLeave(room, p, send, broadcast);
   seasonLeave(room, p, send, broadcast);
   farmLeave(room, p, send, broadcast);
-  const g = room.game;
-  if (g && !g.over && room.players.size) {
-    if (g.kind === 'tag' && g.it === p.id) { // "it" went home: someone else is it now
-      const ids = [...room.players.keys()];
-      g.it = ids[Math.floor(Math.random() * ids.length)];
-      broadcast(room, { t: 'game', a: 'it', it: g.it, by: null, byName: null, name: room.players.get(g.it).name, tags: g.tags });
-    }
-    if (g.kind === 'tag' && room.players.size < 2) endGame(room);
-    if (['race', 'dash'].includes(g.kind) && g.finishers.length >= room.players.size) endGame(room);
-    if (g.kind === 'ducks' && g.host === p.id) { // someone else runs the ducks now
-      g.host = room.players.keys().next().value;
-      broadcast(room, { t: 'game', a: 'host', host: g.host });
-    }
-  }
-  if (!room.players.size) clearTimeout(room.gameTimer);
+  gameLeave(room, p, send, broadcast);
   touchWorld(room.world);
   if (room.players.size === 0) rooms.delete(room.code);
   p.room = null;
@@ -271,10 +153,9 @@ function onMessage(p, msg) {
       // World changes carry what/where (a bin or flock id, a spot); barks etc. just say who.
       if (['tip', 'hole', 'trample', 'scatter'].includes(msg.a)) return broadcast(room, { t: 'act', by: p.id, a: msg.a, id: cleanId(msg.id), x: num(msg.x), z: num(msg.z) }, p);
       return broadcast(room, { t: 'act', id: p.id, a: msg.a }, p);
-    case 'game': // games and challenges
-      if (!room) return;
-      if (msg.a === 'start') return startGame(room, p, msg);
-      return gameMove(room, p, msg);
+    case 'game': // 🎮 games and challenges (see games.js)
+      if (room) gameMessage(room, p, msg, send, broadcast);
+      return;
     case 'heist': // 🥐 cheeky food raids (see heists.js)
       if (room) heistMessage(room, p, msg, send, broadcast);
       return;
