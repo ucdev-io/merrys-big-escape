@@ -124,7 +124,7 @@ export class TownChapter {
     this.games = new TownGames({
       scene, world, hud, player, pack: this.pack, remotes: this.remotes, layout: this.layout,
       anchor: () => this.actions.anchor(), glow: () => this.actions.glow, pigeons: () => this.actions.pigeons,
-      teleport: (x, z, face) => this.teleport(x, z, face), showRecords: records,
+      teleport: (x, z, face) => this.teleport(x, z, face), showRecords: records, away: () => !!this.away,
     });
     this.pack.onGame = (m) => {
       if (this.away) { if (m.a === 'start') this.hud.showToastRaw('🎮', 'Your pack started a game!', 'Come back up in time for the next one.'); return; } // (off on a trip)

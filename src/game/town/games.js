@@ -45,6 +45,7 @@ export class TownGames {
   /** From the 👥 card or ☰ → Games (or "Again!"). */
   start(kind) {
     if (this.active || !CHALLENGES[kind]) return;
+    if (this.ctx.away?.()) { this.hud.showToastRaw('🎮', 'Games are up in town!', 'Find the way back up first.', { tip: true }); return; } // (off on a trip)
     this.send({ a: 'start', kind, ...(MODES[kind].pick?.(this.ctx) ?? {}) });
   }
 
