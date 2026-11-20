@@ -55,7 +55,7 @@ const pipeline = new WatercolorPipeline(renderer, { quality: isMobile ? 'low' : 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xe4e6dc, 22, 85);
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.2, 200); // (near 0.2, not 0.1: twice the depth precision, so far-off layers don't flicker)
 const follow = new FollowCamera(camera, canvas);
 
 const sun = new THREE.DirectionalLight(0xffffff, 1.0);

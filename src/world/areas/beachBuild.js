@@ -265,7 +265,7 @@ function rockPool(p, rng) {
   const water = mesh(new THREE.CircleGeometry(p.r, 24), 0x8cc6c8, g, [0, 0.045, 0], [-Math.PI / 2, 0, 0]);
   water.castShadow = false;
   tag(water, 'none');
-  const deep = mesh(new THREE.CircleGeometry(p.r * 0.55, 18), 0x6eb0bb, g, [rng.float(-0.2, 0.2), 0.047, rng.float(-0.2, 0.2)], [-Math.PI / 2, 0, 0]);
+  const deep = mesh(new THREE.CircleGeometry(p.r * 0.55, 18), 0x6eb0bb, g, [rng.float(-0.2, 0.2), 0.053, rng.float(-0.2, 0.2)], [-Math.PI / 2, 0, 0]);
   deep.castShadow = false;
   tag(deep, 'none');
   for (let i = 0; i < 3; i++) { const a = rng.float(0, 6.28), r = p.r * rng.float(0.3, 0.75); tag(mesh(blobGeometry(rng.int(0, 20), 0.35, 1), 0x4f7a45, g, [Math.cos(a) * r, 0.046, Math.sin(a) * r], [0, a, 0], [0.22, 0.02, 0.12]), 'none').castShadow = false; }

@@ -28,6 +28,7 @@ import { Woods } from './town/woods/index.js';
 import { Farm } from './town/farm/index.js';
 import { Mud } from './town/mud.js';
 import { Beach } from './town/beach/index.js';
+import { travelBlock, landingFor, digTravel } from './town/travel.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -181,6 +182,9 @@ export class TownChapter {
     }
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     this.goHome(0);
+    // 🐾 Fast travel from the Sniff Book: dig a tunnel to any place you've found (or home).
+    hud.onTravel = (id) => this.travelTo(id);
+    hud.travelReason = () => travelBlock(this);
     hud.setPlaces?.(this.placeList());
     this.refreshObjective();
     this.player.frozen = true;
@@ -269,9 +273,21 @@ export class TownChapter {
     this.follow.yaw = face + Math.PI;
   }
 
+  /** Dig a tunnel to a place from the Sniff Book (or 'home'). False if she can't just now (and says why). */
+  travelTo(id) {
+    const why = travelBlock(this);
+    if (why) { this.hud.showToastRaw('🐾', why, '', { tip: true }); return false; }
+    const to = landingFor(this, id);
+    if (!to) return false;
+    this.travelling = true;
+    this.cutscene = digTravel({ ch: this, to, onDone: () => { this.travelling = false; this.cutscene = null; this.refreshObjective(); } });
+    return true;
+  }
+
   goHome(slot) {
     const homes = this.world.homes;
     if (!homes?.length) return;
+    this.homeSlot = slot % homes.length; // (where 🏡 Home in the Sniff Book goes)
     const h = homes[slot % homes.length];
     for (const g of this.world.gardens ?? []) g.own = false;
     if (h.garden) h.garden.own = true; // your own family is less cross
@@ -385,6 +401,7 @@ export class TownChapter {
 
   update(dt) {
     this.time += dt;
+    this.cutscene?.(dt); // (digging a tunnel somewhere)
     const P = this.player, pos = P.pos;
     const canAct = !P.frozen;
 

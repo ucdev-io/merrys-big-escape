@@ -13,6 +13,7 @@ import { JobWorld } from './jobWorld.js';
 import { makeOffers } from './offers.js';
 import { STEPS } from './steps.js';
 import { doorMarker } from '../friendModels.js';
+import { groundY } from '../../seasons/common.js';
 import { season } from '../../season.js';
 
 const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -40,7 +41,12 @@ export class JobRun {
     this.item = null;
     // Glowing paw prints where it's going: on the doorstep (or, for a runaway, at the garden gate).
     const herd = this.step.carries === false, at = herd ? this.person.gate : this.person.step;
-    if (at) { this.marker = doorMarker(); this.marker.position.copy(at); this.marker.visible = herd; rt.scene.add(this.marker); }
+    if (at) {
+      this.marker = doorMarker();
+      this.marker.position.set(at.x, groundY(rt.jw.world, at.x, at.z), at.z); // (on top of the lawn or pavement, not under it)
+      this.marker.visible = herd;
+      rt.scene.add(this.marker);
+    }
     this.step.start(this);
   }
 

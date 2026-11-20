@@ -86,7 +86,17 @@ export class HUD {
     this.book = el('div', 'sniff-book hidden');
     this.root.appendChild(this.book);
     this.bookBtn.onclick = () => this.toggleBook();
-    this.book.onclick = (e) => { if (e.target === this.book || e.target.closest('.close')) this.toggleBook(false); };
+    this.book.onclick = (e) => {
+      const go = e.target.closest('[data-go]');
+      if (go) { // 🐾 Go: dig a tunnel there (or a note saying why not just now)
+        this.toggleBook(false);
+        const why = this.travelReason?.();
+        if (why) this.showToastRaw('🐾', why, '', { tip: true });
+        else this.onTravel?.(go.dataset.go);
+        return;
+      }
+      if (e.target === this.book || e.target.closest('.close')) this.toggleBook(false);
+    };
 
     this.card = el('div', 'big-card hidden');
     this.root.appendChild(this.card);
@@ -382,9 +392,12 @@ export class HUD {
 
   renderBook() {
     if (this.places) {
+      const travel = !!this.onTravel; // (in town: 🐾 Go digs a tunnel straight to a place you've found)
+      const go = (id) => (travel ? `<button class="pill go" data-go="${id}">🐾 Go</button>` : '');
+      const home = travel ? `<div class="slot got home"><div class="emoji">🏡</div><div class="name">Home</div><div class="blurb">Back to my own garden gate.</div>${go('home')}</div>` : '';
       this.book.innerHTML = `<div class="page"><button class="close pill">✕</button><h2>Merry's Sniff Book</h2>
-        <p class="intro">Places my amazing nose has discovered.</p>
-        <div class="slots">${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div></div>`).join('')}</div></div>`;
+        <p class="intro">Places my amazing nose has discovered.${travel ? ' Tap 🐾 Go to dig a tunnel there!' : ''}</p>
+        <div class="slots">${home}${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div>${p.found ? go(p.id) : ''}</div>`).join('')}</div></div>`;
       return;
     }
     const keys = ['duck', 'sock', 'biscuit', 'tunnel'];

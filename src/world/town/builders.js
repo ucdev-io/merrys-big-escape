@@ -183,7 +183,7 @@ function lot(g, lc, rng, qx, qz, faceX, { home = false } = {}) {
   // Path from door to gate.
   const pts = [];
   for (let i = 0; i <= 4; i++) { const [x, z] = at(-1.8 + d / 2 + 0.6 + i * ((H / 2 - d / 2 + 1) / 4)); pts.push([x + rng.float(-0.15, 0.15), z + rng.float(-0.15, 0.15)]); }
-  g.add(steppingStones(pts, rng));
+  g.add(steppingStones(pts, rng, 0.015)); // (just proud of the lawn, 0.06)
 
   // Garden.
   const [tx, tz] = at(-5.6, rng.float(-3.5, 3.5));

@@ -10,7 +10,9 @@ export function dogBowl() {
   const geo = bakeParts([
     [new THREE.CylinderGeometry(0.3, 0.24, 0.13, 28, 1, true), 0xd9534f, [0, 0.065, 0]],
     [new THREE.TorusGeometry(0.3, 0.025, 8, 32), 0xe8705f, [0, 0.13, 0], [Math.PI / 2, 0, 0]],
-    [new THREE.CylinderGeometry(0.235, 0.235, 0.02, 28), 0xb8433c, [0, 0.03, 0]],
+    // The inside floor reaches right out to the wall (which flares from 0.24 to 0.3), so there's no gap
+    // round its edge, and its top (0.035) is well clear of the ground the bowl stands on.
+    [new THREE.CylinderGeometry(0.2555, 0.242, 0.03, 28), 0xb8433c, [0, 0.02, 0]],
     [new THREE.CylinderGeometry(0.24, 0.24, 0.03, 28), 0xd9534f, [0, 0.015, 0]],
     [new THREE.SphereGeometry(0.06, 12, 8), 0xf6efe0, [0, 0.07, 0.3], [0, 0, 0], [1, 0.7, 0.25]], // a little bone badge
     [new THREE.SphereGeometry(0.03, 10, 6), 0xf6efe0, [-0.055, 0.085, 0.3], [0, 0, 0], [1, 1, 0.4]],

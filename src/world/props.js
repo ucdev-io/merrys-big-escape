@@ -269,11 +269,12 @@ export function flowerBed(x, z, w, d, rng, col) {
   return g;
 }
 
-export function steppingStones(points, rng) {
+/** Stones across a lawn. y: the lawn's height (the town's lawns are a slab 0.06 up), so they sit on it, not in it. */
+export function steppingStones(points, rng, y = 0) {
   const g = new THREE.Group();
   for (const [x, z] of points) {
     const s = rng.float(0.28, 0.4);
-    const m = mesh(blobGeometry(rng.int(0, 20), 0.15, 1), PALETTE.path, g, [x, 0.0, z], [0, rng.float(0, 3), 0], [s, 0.06, s * rng.float(0.8, 1.1)]);
+    const m = mesh(blobGeometry(rng.int(0, 20), 0.15, 1), PALETTE.path, g, [x, y, z], [0, rng.float(0, 3), 0], [s, 0.06, s * rng.float(0.8, 1.1)]);
     m.castShadow = false;
   }
   return g;

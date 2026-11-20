@@ -19,7 +19,9 @@ export class GrassField {
     this.mesh.receiveShadow = true;
     this.mesh.userData.noMerge = true;
     scene.add(this.mesh);
-    this.isLawn = isLawn;
+    this.lawnAt = isLawn;
+    this.out = new Map(); // key → { x, z, r2 }: little circles kept clear (the dog bowl)
+    this.isLawn = (x, z) => this.lawnAt(x, z) && !this.kept(x, z);
     this.tile = tile;
     this.y = y;
     this.last = new THREE.Vector2(Infinity, Infinity);
@@ -38,6 +40,19 @@ export class GrassField {
       this.mesh.setColorAt(i, cols[i % 3]);
     }
     this._m = new THREE.Matrix4(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3();
+  }
+
+  kept(x, z) {
+    for (const c of this.out.values()) if ((x - c.x) ** 2 + (z - c.z) ** 2 < c.r2) return true;
+    return false;
+  }
+
+  /** Keep the grass out of a circle (or let it back, with r = 0), e.g. so it doesn't grow up through the dog bowl. */
+  keepOut(key, x, z, r) {
+    if (r > 0) this.out.set(key, { x, z, r2: r * r });
+    else this.out.delete(key);
+    for (const it of this.items) it.kx = NaN; // (tufts only look at the lawn when they move: make them all look again)
+    this.last.set(Infinity, Infinity);
   }
 
   /**

@@ -154,6 +154,9 @@ body.touch-mode .boosts { bottom: 177px; }
 .slot .emoji { font-size: 40px; }
 .slot .name { font-size: 20px; }
 .slot .blurb { font-size: 15px; opacity: 0.75; }
+.slot .go { margin-top: 8px; font-size: 16px; padding: 4px 14px; }
+/* Fast travel: the page turns to plain paper while the dog's underground (no blur, just paper). */
+.travel-fade { position: absolute; inset: 0; background: var(--paper); opacity: 0; pointer-events: none; }
 .big-card .page h1 { font-weight: normal; font-size: 40px; margin: 0; }
 .big-card .page p { font-size: 20px; }
 .big-card .page .keys { font-size: 17px; opacity: 0.8; }

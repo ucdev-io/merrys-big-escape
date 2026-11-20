@@ -52,7 +52,7 @@ export function cardboardBox(x, z, ry) {
 
 export function puddle(x, z, s = 1) {
   const g = G(x, z);
-  const m = mesh(blobGeometry(7, 0.2, 2), 0x9fbfd0, g, [0, 0.03, 0], [0, s * 3, 0], [0.8 * s, 0.01, 0.5 * s]);
+  const m = mesh(blobGeometry(7, 0.2, 2), 0x9fbfd0, g, [0, 0.064, 0], [0, s * 3, 0], [0.8 * s, 0.01, 0.5 * s]); // (on the alley's ground, 0.06, not under it)
   m.castShadow = false;
   return g;
 }
@@ -178,11 +178,13 @@ export function brickBuilding(x, z, ry, w, d, h, color = 0xc88e74) {
   g.userData.occluder = true;
   mesh(RB(w, h, d, 0.08, 2), color, g, [0, h / 2, 0]);
   mesh(RB(w + 0.2, 0.25, d + 0.2, 0.06), 0x9d8a7a, g, [0, h, 0]);
-  const cols = Math.max(1, Math.floor(w / 2.2));
+  const cols = Math.max(1, Math.floor(w / 2.2)), doorX = w / 2 - 1;
   for (let r = 0; r < 2; r++) for (let c = 0; c < cols; c++) {
-    mesh(RB(0.8, 1.0, 0.08, 0.03), 0x9ab8cf, g, [-w / 2 + (c + 0.5) * (w / cols), 1.6 + r * 2.0, d / 2 + 0.03]);
+    const wx = -w / 2 + (c + 0.5) * (w / cols);
+    if (r === 0 && Math.abs(wx - doorX) < 1.0) continue; // (no ground-floor window where the door is)
+    mesh(RB(0.8, 1.0, 0.08, 0.03), 0x9ab8cf, g, [wx, 1.6 + r * 2.0, d / 2 + 0.03]);
   }
-  mesh(RB(0.9, 1.9, 0.08, 0.03), 0x5a4a42, g, [w / 2 - 1, 0.95, d / 2 + 0.03]);
+  mesh(RB(0.9, 1.9, 0.08, 0.03), 0x5a4a42, g, [doorX, 0.95, d / 2 + 0.045]);
   return g;
 }
 
@@ -231,7 +233,7 @@ export function pathRibbon(points, width, color) {
     const p = curve.getPointAt(i / segs), t = curve.getTangentAt(i / segs);
     const nx = -t.z, nz = t.x;
     const w = width * (0.9 + 0.2 * Math.sin(i * 0.7));
-    pos.push(p.x + nx * w / 2, 0.055, p.z + nz * w / 2, p.x - nx * w / 2, 0.055, p.z - nz * w / 2);
+    pos.push(p.x + nx * w / 2, 0.066, p.z + nz * w / 2, p.x - nx * w / 2, 0.066, p.z - nz * w / 2); // (just above the lawn's top, 0.06)
     if (i < segs) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
   }
   const geo = new THREE.BufferGeometry();

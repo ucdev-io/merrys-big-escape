@@ -14,6 +14,7 @@ import { COSMETICS } from '../cosmetics.js';
 import { buzz } from '../../core/haptics.js';
 import { sfx } from '../../core/audio.js';
 import { blocked } from '../../world/spots.js';
+import { groundY } from '../seasons/common.js';
 import { season } from '../season.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -114,7 +115,8 @@ export class Heists {
         if (!blocked(this.world, p.x, p.z, 0.5) && inRect(p, g.rect)) { at = p; break; }
       }
       this.bowl ??= dogBowl();
-      this.bowl.position.set(at.x, 0.02, at.z);
+      this.bowl.position.set(at.x, groundY(this.world, at.x, at.z) - 0.005, at.z); // (standing on the lawn, not in it)
+      this.world.grass?.keepOut?.('bowl', at.x, at.z, 0.36); // (and no grass growing up through it)
       this.bowl.rotation.y = h.face + Math.PI;
       if (!this.bowl.parent) this.scene.add(this.bowl);
       for (const m of this.pile) this.bowl.add(m);

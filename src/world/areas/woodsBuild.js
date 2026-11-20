@@ -282,7 +282,7 @@ export function buildWoods(g, d, { C, extra, flats }) {
       lg.position.set(cu, 0.24, cv);
       lg.rotation.y = -ang;
       mesh(new THREE.CylinderGeometry(0.24, 0.26, 1.9, 9), PALETTE.bark, lg, [0, 0, 0], [Math.PI / 2, 0, 0]);
-      for (const s of [-1, 1]) mesh(new THREE.CircleGeometry(0.24, 9), PALETTE.wood, lg, [0, 0, s * 0.951], [0, s > 0 ? 0 : Math.PI, 0]);
+      for (const s of [-1, 1]) mesh(new THREE.CircleGeometry(0.24, 9), PALETTE.wood, lg, [0, 0, s * 0.956], [0, s > 0 ? 0 : Math.PI, 0]);
       g.add(lg);
       for (const t of [-0.7, 0, 0.7]) C.circle(cu + Math.sin(ang) * t, cv - Math.cos(ang) * t, 0.3, 0.48);
     }
