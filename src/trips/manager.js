@@ -93,7 +93,7 @@ export class Trips {
     const P = this.player, town = this.town, geo0 = this.renderer.info.memory.geometries, t0 = performance.now();
     const mod = T.load(); // (already on its way if she came near the drain)
     this.hold();
-    if (from.style === 'beam') sfx.beam?.(); else if (from.style !== 'bus') sfx.tunnel();
+    if (from.style === 'beam') sfx.beam?.(); else if (from.style !== 'bus' && from.style !== 'boat') sfx.tunnel(); // (the bus honks, the boat hoots)
     buzz(30);
     // Squeeze in, nose first (or, scooped up in a net: just away she goes; or up a beam of light, slowly turning).
     const y0 = P.pos.y, sx = P.pos.x, sz = P.pos.z, at = from.at ?? { x: sx, z: sz };
@@ -109,6 +109,16 @@ export class Trips {
         P.heading += dt * (1 + 4 * k);
         P.dog.body.rotation.x = -0.25 * Math.sin(k * Math.PI);
         f.style.opacity = Math.max(0, (k - 0.6) / 0.4).toFixed(3);
+        return k >= 1;
+      }));
+    } else if (from.style === 'boat') {
+      // Into the tender at the end of the jetty, and off it chugs out to sea (from.ride moves the boat, and her).
+      sfx.horn?.(0.6);
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 2.8);
+        from.ride?.(k, P, 'out');
+        f.style.opacity = Math.max(0, (k - 0.62) / 0.38).toFixed(3);
         return k >= 1;
       }));
     } else {
@@ -188,7 +198,7 @@ export class Trips {
     this.busy = true;
     const P = this.player, town = this.town;
     this.hold();
-    if (style === 'beam') sfx.beam?.(); else if (style === 'bus') sfx.honk?.(0.6); else sfx.tunnel();
+    if (style === 'beam') sfx.beam?.(); else if (style === 'bus') sfx.honk?.(0.6); else if (style === 'boat') sfx.horn?.(0.5); else sfx.tunnel();
     buzz(20);
     await this.fadeTo(1, 0.4);
     // Back across: the sun and the dog to the town, the camera free again, and the trip thrown away.
@@ -224,6 +234,19 @@ export class Trips {
         return k >= 1;
       }));
       P.pos.y = y1;
+    } else if (style === 'boat' && x.from.ride) {
+      // The tender chugs back in to the jetty, and she hops up onto the end of it.
+      const f = this.paper();
+      let t = 0;
+      x.from.ride(0, P, 'in');
+      this.follow.snap(P.pos);
+      await this.play(step((dt) => {
+        t += dt;
+        const k = Math.min(1, t / 2.6);
+        x.from.ride(k, P, 'in');
+        f.style.opacity = Math.max(0, 1 - t / 0.5).toFixed(3);
+        return k >= 1;
+      }));
     } else await this.fadeTo(0, 0.35);
     sfx.pop();
     this.release(P.pos.y);

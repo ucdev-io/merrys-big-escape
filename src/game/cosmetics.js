@@ -77,6 +77,10 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'collar-balloon', slot: 'collar', name: 'Funfair balloon', emoji: '🎈', color: 0xd9534f, level: 1, friend: 'rides', jobs: 5, style: 'balloon', hint: 'Go on 5 rides at Wagtail Wonderland (by bus)', boost: { speed: 2, zoomies: 1 } },
 );
+// A present from Captain Poppy on the Sunny Dolphin (out at sea, from the jetty at the beach).
+COSMETICS.push(
+  { id: 'hat-captain', slot: 'hat', name: 'Captain’s hat', emoji: '⚓', color: 0xfbfaf6, level: 1, friend: 'captain', jobs: 1, hint: 'Find Captain Poppy’s hat (on the cruise ship)', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

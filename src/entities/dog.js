@@ -645,6 +645,13 @@ export class Dog {
           mesh(new THREE.TubeGeometry(curve, 10, 0.0035, 5, false), 0x5a6a7a, g, [0, 0, 0]);
           mesh(SPHERE, s < 0 ? 0xffb0d0 : 0xfff17a, g, [s * 0.05, 0.13, 0.002], [0, 0, 0], [0.014, 0.014, 0.014]);
         }
+      } else if (hat.id === 'hat-captain') {
+        // Captain Poppy's spare: a white peaked cap, a navy band, a shiny black peak and a gold anchor badge.
+        mesh(new THREE.CylinderGeometry(0.05, 0.043, 0.032, 22), hat.color, g, [0, 0.016, -0.006]);
+        mesh(new THREE.CylinderGeometry(0.0445, 0.0445, 0.011, 22, 1, true), 0x2f3a52, g, [0, 0.006, -0.006]);
+        mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.005, 18, 1, false, -Math.PI / 2, Math.PI), 0x232b3d, g, [0, 0.0, 0.024], [0.14, Math.PI, 0], [1, 1, 1.15]);
+        mesh(SPHERE, 0xe0b04a, g, [0, 0.019, 0.044], [0, 0, 0], [0.008, 0.008, 0.003]);
+        mesh(new THREE.TorusGeometry(0.046, 0.0025, 4, 24), 0xe0b04a, g, [0, 0.031, -0.006], [Math.PI / 2, 0, 0]); // (a gold cord round the top)
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);

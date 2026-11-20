@@ -12,6 +12,7 @@ export const TRIPS = {
   pound: { n: 3, emoji: '🚐', name: 'Sunny Paws', load: () => import('./pound/index.js'), away: 'got scooped up by the dog warden!' },
   ufo: { n: 4, emoji: '🛸', name: 'Planet Boing', load: () => import('./ufo/index.js'), away: 'got beamed up by a flying saucer!' },
   fair: { n: 5, emoji: '🎡', name: 'Wagtail Wonderland', load: () => import('./fair/index.js'), away: 'went to Wagtail Wonderland on the bus!' },
+  cruise: { n: 6, emoji: '🚢', name: 'The Sunny Dolphin', load: () => import('./cruise/index.js'), away: 'sailed off on a cruise ship!' },
 };
 
 /** The trip with this number (from a friend's state), or null. */
