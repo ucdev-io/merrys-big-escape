@@ -196,14 +196,13 @@ export class TownChapter {
     progress.on((e) => { if (e.look || e.levelUp) this.pack.sendLook(); }); // friends see your outfit & level
     // 🕳️ Ways into trips (the alley's manhole down to the sewers, the beach's outfall pipe), and friends off on one.
     this.portals = new Portals({
-      scene, world, layout: this.layout, hud, tripState: (id) => this.state.trips[id] ?? {},
+      scene, world, layout: this.layout, hud, tripState: (id) => this.state.trips[id] ?? {}, why: () => travelBlock(this),
       go: (trip, from) => this.goTrip(trip, from), prefetch: (trip) => this.trips?.prefetch(trip),
     });
     // 🚐 Doug the dog warden, when there's been too much mischief (on your own, with nothing else going on).
     this.catcher = new Catcher({
       scene, world, hud, player, actions: this.actions, dogName: () => this.profile().name,
-      busy: () => !!(this.games.active || this.heists.target() || this.friends.objective() || this.actions.carry.held || this.away || this.travelling
-        || !this.hud.card.classList.contains('hidden')),
+      busy: () => this.wardenWait(),
       interrupt: () => !!(this.games.active || this.away || this.travelling),
       solo: () => !this.remotes.dogs.size, // (friends wouldn't see him: only when you're on your own)
       go: async (from) => !!(await this.trips?.go('pound', from)),
@@ -338,9 +337,22 @@ export class TownChapter {
   // ---------- trips (see ../trips/) ----------
 
   /** Off down a way in (the alley's drain…), if she can go just now. */
+  /**
+   * Not a moment for the dog warden to turn up: a game on, a card open, off on a trip or digging a tunnel, a
+   * sledge, ducklings or Pepper in tow, a race against the clock. (A neighbour's job, or something in her
+   * mouth, doesn't put him off: those can go on for ages.)
+   */
+  wardenWait() {
+    const P = this.player, f = this.friends, bj = f?.board?.job;
+    return !!(this.games.active || this.away || this.trips?.busy || this.travelling || !this.hud.card.classList.contains('hidden')
+      || P.frozen || P.scripted || P.sledging || this.seasons?.parts?.sledge?.state === 'towed'
+      || f?.duchess?.job?.ducklings?.some((k) => k.state === 'following') || f?.extras?.some((e) => e.state === 'follow')
+      || (bj?.twistOk && bj.spec?.twist === 'timer'));
+  }
+
   goTrip(trip, from) {
     const why = travelBlock(this);
-    if (why) { this.hud.showToastRaw('🐾', why, '', { tip: true }); return false; }
+    if (why) { this.hud.float(why, this.actions.anchor()); this.hud.showToastRaw('🐾', why, '', { tip: true }); return false; }
     this.trips?.go(trip, from);
     return true;
   }
@@ -531,7 +543,7 @@ export class TownChapter {
     if (b.reached) this.dispatch({ type: 'bone', id: b.reached });
     // What 🐾 would do here (grab, drop, dig something up) — that comes first in the prompt.
     const paw = canAct ? this.actions.carry.hint(this.actions.nose()) : null;
-    const door = canAct && !paw ? this.portals.hint(pos) : null; // (a way into a trip: the alley's drain…)
+    const door = canAct && !paw ? this.portals.hint(pos, this.actions.nose()) : null; // (a way into a trip: the alley's drain…)
     this.portals.update(pos);
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
     if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);

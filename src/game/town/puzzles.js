@@ -60,10 +60,29 @@ export class TownPuzzles {
     const binNear = (p) => (this.world.bins ?? []).some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 3);
     const score = (p) => (binNear(p) ? -100 : 0) + (b ? flat(p, b) : 0);
     const at = spots.sort((p, q) => score(q) - score(p))[0];
-    at.y = this.fenceTop(at.x, at.z);
+    const seat = this.onFence(at);
+    if (seat) at.set(seat.x, seat.y, seat.z); else at.y = this.fenceTop(at.x, at.z);
     this.cat.root.position.copy(at);
     this.cat.root.rotation.y = h.face; // looking out at the street
     this.cat.root.visible = true;
+  }
+
+  /** The nearest bit of fence or hedge to p, and a spot to sit on it: { x, y, z } (or null if there's none near). */
+  onFence(p) {
+    let best = null, bd = 1.6;
+    for (const c of this.world.colliders?.boxes ?? []) {
+      if (c.top >= 2 || c.top < 0.5 || Math.min(c.x1 - c.x0, c.z1 - c.z0) > 1) continue; // (fences and hedges: long and thin)
+      const cx = Math.max(c.x0, Math.min(p.x, c.x1)), cz = Math.max(c.z0, Math.min(p.z, c.z1)), d = Math.hypot(p.x - cx, p.z - cz);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (!best) return null;
+    const alongZ = best.x1 - best.x0 < best.z1 - best.z0, thin = Math.min(best.x1 - best.x0, best.z1 - best.z0) < 0.4;
+    const clampTo = (v, a, b) => Math.max(a + 0.3, Math.min(v, b - 0.3));
+    return {
+      x: alongZ ? (best.x0 + best.x1) / 2 : clampTo(p.x, best.x0, best.x1),
+      z: alongZ ? clampTo(p.z, best.z0, best.z1) : (best.z0 + best.z1) / 2,
+      y: best.top - (thin ? 0.1 : 0.05), // (a picket fence's points stick up round her a bit; a hedge is a cushion)
+    };
   }
 
   /** How high the fence is here (a hedge or a wooden fence is a bit taller than a white picket one). */

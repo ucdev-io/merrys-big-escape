@@ -11,6 +11,15 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.3.3', date: '2026-11-20', title: 'Tidying up',
+    notes: [
+      '🚐 Doug comes for you even in the middle of a job for a neighbour (and if he catches you, you drop what you’re carrying).',
+      '🕳️ The drain says why you can’t go down just now (Pepper can’t come too!), and it’s easier to reach.',
+      '🌳 No more trees in the road at the edge of town, and a pavement along the far side of the outer road.',
+      '🐈 Pickles sits properly on the fence, and the park paths meet the pavement neatly.',
+    ],
+  },
+  {
     version: '0.3.2', date: '2026-11-20', title: 'Dig it!',
     notes: [
       '🦴 Lots more buried treasure: sniff out spots in gardens, the park, the woods and the farm, then dig! Bones, marbles, toy soldiers, truffles… and the odd time capsule.',

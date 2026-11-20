@@ -285,6 +285,7 @@ export class Catcher {
   catch() {
     this.set('caught', pick(LINES.caught));
     const P = this.player, w = this.who;
+    if (this.actions.carry.held) this.actions.carry.drop(this.actions.nose()); // (it stays here: no loot in the van)
     w.arms[1].rotation.x = -2.2;
     P.frozen = true;
     P.vel.set(0, 0);

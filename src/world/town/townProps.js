@@ -226,14 +226,17 @@ export function hedge(x0, z0, x1, z1, rng, col, { height = 0.9, skipFrom = -1, s
 }
 
 /** Flat ribbon path following points (for park paths). */
-export function pathRibbon(points, width, color) {
+/** edge: past this (|x| or |z|, in the block), the path slopes down off the lawn onto the pavement (0.045). */
+export function pathRibbon(points, width, color, { edge = Infinity } = {}) {
+  const y = (x, z) => { const m = Math.max(Math.abs(x), Math.abs(z)) - edge; return m <= 0 ? 0.066 : Math.max(0.05, 0.066 - m * 0.03); };
   const curve = new THREE.CatmullRomCurve3(points.map(([x, z]) => new THREE.Vector3(x, 0, z)), true);
   const segs = 120, pos = [], idx = [];
   for (let i = 0; i <= segs; i++) {
     const p = curve.getPointAt(i / segs), t = curve.getTangentAt(i / segs);
     const nx = -t.z, nz = t.x;
     const w = width * (0.9 + 0.2 * Math.sin(i * 0.7));
-    pos.push(p.x + nx * w / 2, 0.066, p.z + nz * w / 2, p.x - nx * w / 2, 0.066, p.z - nz * w / 2); // (just above the lawn's top, 0.06)
+    const ax = p.x + nx * w / 2, az = p.z + nz * w / 2, bx = p.x - nx * w / 2, bz = p.z - nz * w / 2;
+    pos.push(ax, y(ax, az), az, bx, y(bx, bz), bz); // (just above the lawn's top, 0.06)
     if (i < segs) { const a = i * 2; idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3); }
   }
   const geo = new THREE.BufferGeometry();

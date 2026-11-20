@@ -14,7 +14,7 @@ import {
 } from './townProps.js';
 import { bakeryHeist, butcherHeist } from './heistProps.js';
 import { groundAt } from '../areas/terrain.js';
-import { areaBounds, areaAt } from '../areas/areas.js';
+import { areaBounds, areaAt, toWorld } from '../areas/areas.js';
 import { layoutAreas, areaFlats, areaGround, buildAreas, areaClear } from '../areas/build.js';
 
 const H = TOWN.BLOCK / 2;          // 15: half block
@@ -103,6 +103,24 @@ function streets(g, layout, rng, col, bones) {
     const lawnColor = b.type === 'alley' ? 0xc9bfae : b.type === 'bakery' ? 0xa9c47a : PALETTE.grass;
     const lw = mesh(new RoundedBoxGeometry(TOWN.BLOCK, 0.12, TOWN.BLOCK, 2, 0.05), lawnColor, g, [b.x, 0, b.z]);
     lw.castShadow = false;
+  }
+  // The far side of the outer road: a pavement all round the edge of town (as wide as the roads in town are),
+  // broken where a lane heads out to the woods, the farm, the beach…
+  const P0 = S / 2 - TOWN.ROAD / 2 + 3, P1 = S / 2 + 3; // (the road's centre line + 3, like a block's kerb; out to the tarmac's edge)
+  const gaps = (layout.areas ?? []).map((a) => { const [x, z] = toWorld(a, a.lane.u, S / 2); return { x, z }; });
+  for (const [ax, sgn] of [['z', 1], ['z', -1], ['x', 1], ['x', -1]]) {
+    const len = ax === 'z' ? P1 : P0; // (the north and south ones run right to the corners; east and west in between)
+    const cuts = gaps.filter((p) => Math.abs(ax === 'z' ? p.z - sgn * S / 2 : p.x - sgn * S / 2) < 1).map((p) => (ax === 'z' ? p.x : p.z)).sort((a, b) => a - b);
+    let from = -len;
+    for (const c of [...cuts, null]) {
+      const to = c === null ? len : c - 3.2;
+      if (to - from > 1) {
+        const mid = (from + to) / 2, along = to - from, off = sgn * (P0 + P1) / 2, across = P1 - P0;
+        const pv = mesh(new RoundedBoxGeometry(ax === 'z' ? along : across, 0.09, ax === 'z' ? across : along, 2, 0.04), 0xddd2bf, g, ax === 'z' ? [mid, 0, off] : [off, 0, mid]);
+        pv.castShadow = false;
+      }
+      if (c !== null) from = c + 3.2;
+    }
   }
   // Dashed centre lines.
   const step = TOWN.BLOCK + TOWN.ROAD;
@@ -246,7 +264,7 @@ function parkBlock(g, lc, rng) {
   }
   g.add(pathRibbon(loop, 2.0, 0xe2d3b8));
   // Spokes to the entrances.
-  for (const [x, z] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) g.add(pathRibbon([[x * 7, z * 7], [x * 11, z * 11], [x * 15, z * 15], [x * 11.1, z * 11.1]], 1.6, 0xe2d3b8));
+  for (const [x, z] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) g.add(pathRibbon([[x * 7, z * 7], [x * 11, z * 11], [x * 15.8, z * 15.8], [x * 11.1, z * 11.1]], 1.6, 0xe2d3b8, { edge: TOWN.BLOCK / 2 - 0.05 }));
 
   const free = (x, z) => { const r = Math.hypot(x, z); return Math.abs(r - 8.5) > 2.6 && Math.abs(x) > 1.5 && Math.abs(z) > 1.5; };
   const trees = []; // (where they are, for the squirrels who live in them)
@@ -454,7 +472,8 @@ export function buildTown(layout) {
   for (let i = 0; i < 60; i++) {
     const a = rng.float(0, Math.PI * 2), r = rng.float(TOWN.SIZE / 2 + 12, TOWN.SIZE / 2 + 60);
     const t = tree(Math.cos(a) * r, Math.sin(a) * r, rng.float(1.2, 2), rng, null, { detail: 1, blobs: 3 });
-    if (!areaAt(layout.areas, t.position.x, t.position.z, 3) && areaClear(areaData, t.position.x, t.position.z)) root.add(t); // (an area has trees of its own, out of the way of its paths; none in the sea)
+    const out = Math.max(Math.abs(t.position.x), Math.abs(t.position.z)) > TOWN.SIZE / 2 + 9; // (not on the outer road: the town's square)
+    if (out && !areaAt(layout.areas, t.position.x, t.position.z, 3) && areaClear(areaData, t.position.x, t.position.z)) root.add(t); // (an area has trees of its own, out of the way of its paths; none in the sea)
   }
   // The areas themselves: after everything else, so the town's own colliders and dice are just as they were.
   globalThis.__mark?.('build: countryside');

@@ -23,7 +23,7 @@ export function travelBlock(ch) {
   if (P.sledging || ch.seasons?.parts?.sledge?.state === 'towed') return 'Not with a sledge in tow!';
   if (P.swim > 0.4 || P.inWater) return 'Out of the water first!';
   if (f?.duchess?.job?.ducklings?.some((k) => k.state === 'following')) return 'The ducklings can’t dig that fast! Walk them home first.';
-  if (f?.extras?.some((e) => e.state === 'follow')) return 'Pepper’s on a walk with you!';
+  if (f?.extras?.some((e) => e.state === 'follow')) return 'Pepper’s on a walk with you! Take her to the flowerbeds first.';
   const bj = f?.board?.job;
   if (bj?.twistOk && bj.spec?.twist === 'timer') return 'No shortcuts against the clock!';
   if (P.frozen || P.scripted || !P.grounded || !ch.hud.card.classList.contains('hidden')) return 'Not just now!';

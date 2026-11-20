@@ -26,8 +26,8 @@ const mesh = (geo, color, parent, pos, rot = [0, 0, 0]) => {
 
 export class Portals {
   /** go(trip, from): off down it; prefetch(trip): start the trip's download (she's getting close). */
-  constructor({ scene, world, layout, tripState, go, prefetch, hud }) {
-    Object.assign(this, { scene, world, layout, tripState, go, prefetch, hud });
+  constructor({ scene, world, layout, tripState, go, prefetch, hud, why = null }) {
+    Object.assign(this, { scene, world, layout, tripState, go, prefetch, hud, why });
     this.list = [];
     this.group = new THREE.Group();
     scene.add(this.group);
@@ -133,19 +133,27 @@ export class Portals {
   /** Where she comes back out of a way in (or null). */
   out(id) { return this.get(id)?.out ?? null; }
 
-  /** The way in the dog's standing at (within reach of 🐾), or null. */
-  at(pos) { return this.list.find((p) => (pos.x - p.x) ** 2 + (pos.z - p.z) ** 2 < p.r * p.r) ?? null; }
+  /** The way in the dog's at (her body or her nose within reach of 🐾), or null. */
+  at(pos, nose = null) {
+    const near = (q, p, r) => q && (q.x - p.x) ** 2 + (q.z - p.z) ** 2 < r * r;
+    return this.list.find((p) => near(pos, p, p.r) || near(nose, p, p.r * 0.9)) ?? null;
+  }
+
+  /** Why she can't go down just now (Pepper's on a walk with her…), or null. (Not the moment-to-moment ones.) */
+  blocked() { const w = this.why?.(); return w && w !== 'Not just now!' ? w : null; }
 
   /** What 🐾 does here: { text, paw } or null. */
-  hint(pos) {
-    const p = this.at(pos);
+  hint(pos, nose = null) {
+    const p = this.at(pos, nose);
     if (!p) return null;
-    return p.open() ? { text: p.text, paw: 'squeeze' } : { text: p.shut, paw: 'dig' };
+    if (!p.open()) return { text: p.shut, paw: 'dig' };
+    const why = this.blocked();
+    return why ? { text: `🕳️ ${why}`, paw: 'dig' } : { text: p.text, paw: 'squeeze' };
   }
 
   /** 🐾 pressed: down the way in she's at (true if there was one). */
   onDig(nose, pos) {
-    const p = this.at(pos);
+    const p = this.at(pos, nose);
     if (!p) return false;
     if (!p.open()) { this.hud.float('Locked! 🔒', V(pos.x, 1.2, pos.z)); return true; }
     this.go(p.trip, { id: p.id, at: p.at ?? { x: p.x, z: p.z } });
