@@ -13,7 +13,7 @@ const CELL = 0.6;          // metres per cell
 const WALK = 1, VIEW = 2;  // cell flags: can't walk here · can't see through here
 const STEP = 0.36;         // (a grown-up steps over anything lower than this)
 const TALL = 1.7;          // (and can't see past anything taller)
-const MAX_OPEN = 9000;     // give up on a path after this many cells (and just head straight for it)
+const MAX_OPEN = 20000;    // give up on a path after this many cells (and just head straight for it)
 
 export class Nav {
   /** rect: { x0, z0, x1, z1 } to cover. keepOut: rects nobody follows you into (your own garden). */
@@ -23,9 +23,14 @@ export class Nav {
     const n = this.w * this.h;
     this.f = new Uint8Array(n);
     const R = 0.32; // (his radius: cells this close to a wall are walls too)
+    // (A cell's marked when its middle is inside: narrow gaps — a garden gate, a gap in a hedge — stay open,
+    // as they are to his feet. Anything thinner than a cell still gets at least the cells it crosses.)
     const mark = (x0, z0, x1, z1, flag) => {
-      const i0 = Math.max(0, Math.floor((x0 - this.x0) / CELL)), i1 = Math.min(this.w - 1, Math.floor((x1 - this.x0) / CELL));
-      const j0 = Math.max(0, Math.floor((z0 - this.z0) / CELL)), j1 = Math.min(this.h - 1, Math.floor((z1 - this.z0) / CELL));
+      let i0 = Math.ceil((x0 - this.x0) / CELL - 0.5), i1 = Math.floor((x1 - this.x0) / CELL - 0.5);
+      let j0 = Math.ceil((z0 - this.z0) / CELL - 0.5), j1 = Math.floor((z1 - this.z0) / CELL - 0.5);
+      if (i1 < i0) i0 = i1 = Math.floor(((x0 + x1) / 2 - this.x0) / CELL);
+      if (j1 < j0) j0 = j1 = Math.floor(((z0 + z1) / 2 - this.z0) / CELL);
+      i0 = Math.max(0, i0); j0 = Math.max(0, j0); i1 = Math.min(this.w - 1, i1); j1 = Math.min(this.h - 1, j1);
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) this.f[j * this.w + i] |= flag;
     };
     const C = world.colliders;
@@ -50,6 +55,27 @@ export class Nav {
         if (waterAt(world.water, this.x0 + (i + 0.5) * CELL, this.z0 + (j + 0.5) * CELL)) this.f[j * this.w + i] |= WALK; // (he is NOT getting his boots wet)
       }
     }
+    // Which cells join up with the streets (the biggest stretch of walkable cells all joined together)?
+    // Some gardens are pockets only a dog can get into (over the fence): never somewhere for him to aim for.
+    this.region = new Int32Array(n).fill(-1);
+    let label = 0, best = -1, bestN = 0;
+    const stack = [];
+    for (let c0 = 0; c0 < n; c0++) {
+      if (this.region[c0] >= 0 || (this.f[c0] & WALK)) continue;
+      let size = 0;
+      stack.push(c0); this.region[c0] = label;
+      while (stack.length) {
+        const c = stack.pop(), i = c % this.w, j = (c - i) / this.w;
+        size++;
+        if (i > 0 && this.region[c - 1] < 0 && !(this.f[c - 1] & WALK)) { this.region[c - 1] = label; stack.push(c - 1); }
+        if (i < this.w - 1 && this.region[c + 1] < 0 && !(this.f[c + 1] & WALK)) { this.region[c + 1] = label; stack.push(c + 1); }
+        if (j > 0 && this.region[c - this.w] < 0 && !(this.f[c - this.w] & WALK)) { this.region[c - this.w] = label; stack.push(c - this.w); }
+        if (j < this.h - 1 && this.region[c + this.w] < 0 && !(this.f[c + this.w] & WALK)) { this.region[c + this.w] = label; stack.push(c + this.w); }
+      }
+      if (size > bestN) { bestN = size; best = label; }
+      label++;
+    }
+    this.main = best;
     // A* scratch space (reused: no garbage).
     this.g = new Float32Array(n);
     this.from = new Int32Array(n);
@@ -66,32 +92,45 @@ export class Nav {
   }
   centre(c) { return { x: this.x0 + ((c % this.w) + 0.5) * CELL, z: this.z0 + (Math.floor(c / this.w) + 0.5) * CELL }; }
   free(c) { return c >= 0 && !(this.f[c] & WALK); }
+  /** Walkable and joined up with the streets. */
+  reach(c) { return c >= 0 && this.region[c] === this.main; }
 
   /** Can he walk here? (Off the grid counts as yes: out of town, nothing's marked.) */
   walkable(x, z) { const c = this.cell(x, z); return c < 0 || !(this.f[c] & WALK); }
 
-  /** Is the straight line a → b clear of `flag` (WALK: nothing in the way; VIEW: nothing to block the view)? */
+  /**
+   * Is the straight line a → b clear of `flag` (WALK: nothing in the way; VIEW: nothing to block the view)?
+   * Walking, it's checked across his width too (either side of the line), so a shortcut never grazes a corner.
+   */
   clear(ax, az, bx, bz, flag = WALK) {
     const d = Math.hypot(bx - ax, bz - az), n = Math.max(1, Math.ceil(d / (CELL * 0.5)));
+    const side = flag === WALK && d > 1e-6 ? 0.24 / d : 0, px = -(bz - az) * side, pz = (bx - ax) * side;
     for (let k = 1; k < n; k++) {
-      const c = this.cell(ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n);
-      if (c >= 0 && this.f[c] & flag) return false;
+      const x = ax + ((bx - ax) * k) / n, z = az + ((bz - az) * k) / n;
+      for (const s of side ? [0, 1, -1] : [0]) {
+        const c = this.cell(x + px * s, z + pz * s);
+        if (c >= 0 && this.f[c] & flag) return false;
+      }
     }
     return true;
   }
   sees(ax, az, bx, bz) { return this.clear(ax, az, bx, bz, VIEW); }
 
-  /** The nearest walkable cell to (x, z), within `r` metres (null if there isn't one). */
+  /** The nearest walkable cell to (x, z) that joins up with the streets, within `r` metres (null if none). */
   nearestFree(x, z, r = 12) {
+    if (this.cell(x, z) < 0) { // (off the edge of the grid: the nearest point on it)
+      x = Math.min(this.x0 + this.w * CELL - 0.01, Math.max(this.x0 + 0.01, x));
+      z = Math.min(this.z0 + this.h * CELL - 0.01, Math.max(this.z0 + 0.01, z));
+    }
     const c0 = this.cell(x, z);
-    if (c0 < 0 || this.free(c0)) return { x, z };
+    if (this.reach(c0)) return { x, z };
     const ci = c0 % this.w, cj = Math.floor(c0 / this.w), R = Math.ceil(r / CELL);
     let best = null, bd = Infinity;
     for (let ring = 1; ring <= R && !best; ring++) {
       for (let dj = -ring; dj <= ring; dj++) for (let di = -ring; di <= ring; di++) {
         if (Math.max(Math.abs(di), Math.abs(dj)) !== ring) continue;
         const i = ci + di, j = cj + dj;
-        if (i < 0 || j < 0 || i >= this.w || j >= this.h || (this.f[j * this.w + i] & WALK)) continue;
+        if (i < 0 || j < 0 || i >= this.w || j >= this.h || !this.reach(j * this.w + i)) continue;
         const d = di * di + dj * dj;
         if (d < bd) { bd = d; best = j * this.w + i; }
       }
@@ -103,10 +142,17 @@ export class Nav {
    * A path from a to b: a short list of points to walk to in turn (corners only: the straight bits are
    * straightened out). Null if there's no way there (then: head straight for it, and slide along walls).
    */
-  path(ax, az, bx, bz) {
-    const s = this.cell(ax, az), t = this.cell(bx, bz);
+  path(ax, az, bx, bz, { careful = false } = {}) {
+    let s = this.cell(ax, az);
+    const t = this.cell(bx, bz);
     if (s < 0 || t < 0) return null;
-    if (this.clear(ax, az, bx, bz)) return [{ x: bx, z: bz }];
+    if (!this.reach(s)) { // (in a pocket, or wedged in a hedge: back out to the streets first, then on from there)
+      const out = this.nearestFree(ax, az, 6);
+      if (!out) return null;
+      const rest = this.path(out.x, out.z, bx, bz, { careful });
+      return rest ? [out, ...rest] : [out];
+    }
+    if (!careful && this.clear(ax, az, bx, bz)) return [{ x: bx, z: bz }];
     const W = this.w, g = this.g, from = this.from, seen = this.seen, shut = this.shut, heap = this.heap, hf = this.hf;
     const gen = ++this.gen;
     const ti = t % W, tj = Math.floor(t / W);
@@ -149,6 +195,7 @@ export class Nav {
     // Straighten it out: from each corner, on to the furthest point in plain sight.
     const pts = cells.map((c) => this.centre(c));
     pts[pts.length - 1] = { x: bx, z: bz };
+    if (careful) return pts.slice(1); // (every cell's middle, one after another)
     const out = [];
     let at = { x: ax, z: az }, k = 0;
     while (k < pts.length - 1) {

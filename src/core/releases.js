@@ -11,6 +11,13 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.3.4', date: '2026-11-20', title: 'Unstuck',
+    notes: [
+      '🚐 Doug finds his way back to his van (no more walking into corners after he gives up).',
+      '⚽ A football wedged in a corner pops back out after a few nudges, so the job can always be finished.',
+    ],
+  },
+  {
     version: '0.3.3', date: '2026-11-20', title: 'Tidying up',
     notes: [
       '🚐 Doug comes for you even in the middle of a job for a neighbour (and if he catches you, you drop what you’re carrying).',

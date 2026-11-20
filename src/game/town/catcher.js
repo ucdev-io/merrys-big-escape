@@ -174,10 +174,16 @@ export class Catcher {
       const step = this.follow(nav, pos, to, dt);
       if (step) { face = Math.atan2(step.x - pos.x, step.z - pos.z); speed = this.stun > 0 || !canAct ? 0 : SPEED; }
       else face = sees ? Math.atan2(dx, dz) : face + Math.sin(this.t * 1.3) * dt * 1.6; // (there: looking round for her)
-    } else if (this.s === 'leave') { // back to the van, and away
-      const v = this.van.position, lx = v.x - pos.x, lz = v.z - pos.z, l = Math.hypot(lx, lz);
-      if (l > 0.8) { face = Math.atan2(lx, lz); speed = 2.2; }
-      else if (w.root.visible) { w.root.visible = false; this.drive = 0; }
+    } else if (this.s === 'leave') { // back to his van (round walls and hedges, like the chase), and away
+      if (w.root.visible) {
+        const nav = this.navFor(), door = this.door ?? { x: this.van.position.x, z: this.van.position.z };
+        // (Stood still for a few seconds, for all his trying? He's in a muddle: he's back in the van all the same.)
+        if (this.t < dt * 1.5) this.stallT = 0;
+        const muddle = this.stallT > 4 || this.t > 45;
+        const step = muddle ? null : this.follow(nav, pos, nav.nearestFree(door.x, door.z) ?? door, dt);
+        if (step) { face = Math.atan2(step.x - pos.x, step.z - pos.z); speed = 2.2; }
+        else { w.root.visible = false; this.drive = 0; } // (in he hops. Or, if he got himself in a muddle, he's back in it all the same)
+      }
       if (!w.root.visible) {
         this.drive += dt;
         this.van.position.addScaledVector(this.vanDir, Math.min(14, this.drive * 7) * dt);
@@ -185,6 +191,15 @@ export class Catcher {
       }
     }
     if (this.s === 'off') return;
+    // Not getting anywhere (wedged on a corner)? For a few seconds he goes carefully, cell by cell.
+    this.chk = (this.chk ?? 0) + dt;
+    if (this.chk > 0.8) {
+      const moved = this.lastAt ? Math.hypot(pos.x - this.lastAt.x, pos.z - this.lastAt.z) : 1;
+      if (speed > 0 && moved < 0.3) { this.carefulT = 4; this.repath = 0; this.stallT = (this.stallT ?? 0) + this.chk; } else this.stallT = 0;
+      this.lastAt = { x: pos.x, z: pos.z };
+      this.chk = 0;
+    }
+    this.carefulT = Math.max(0, (this.carefulT ?? 0) - dt);
     // Walking (round walls and things: he can't jump hedges like a dog can).
     if (speed > 0) {
       pos.x += Math.sin(face) * speed * dt;
@@ -199,7 +214,11 @@ export class Catcher {
   /** The town's way-finding grid (built the first time he's out; again if home moves). */
   navFor() {
     const home = this.homeGarden?.() ?? null, key = home ? `${home.x0},${home.z0}` : '-';
-    if (!this.nav || this.navKey !== key) { this.nav = new Nav(this.world, this.town, [home]); this.navKey = key; }
+    if (!this.nav || this.navKey !== key) { // (the whole town, out past the pavement round the outer road)
+      const E = TOWN.SIZE / 2 + 10;
+      this.nav = new Nav(this.world, { x0: -E, z0: -E, x1: E, z1: E }, [home]);
+      this.navKey = key;
+    }
     return this.nav;
   }
 
@@ -207,12 +226,12 @@ export class Catcher {
   follow(nav, pos, to, dt) {
     this.repath = (this.repath ?? 0) - dt;
     const moved = !this.pathTo || Math.hypot(to.x - this.pathTo.x, to.z - this.pathTo.z) > 1.2;
-    if (moved || this.repath <= 0 || !this.route?.length) {
-      this.route = nav.path(pos.x, pos.z, to.x, to.z) ?? [{ x: to.x, z: to.z }];
+    if ((moved && this.repath < 0.35) || this.repath <= 0 || !this.route?.length) { // (not more than ~3 times a second)
+      this.route = nav.path(pos.x, pos.z, to.x, to.z, { careful: this.carefulT > 0 }) ?? [{ x: to.x, z: to.z }];
       this.pathTo = { x: to.x, z: to.z };
       this.repath = 0.7;
     }
-    while (this.route.length > 1 && Math.hypot(this.route[0].x - pos.x, this.route[0].z - pos.z) < 0.45) this.route.shift();
+    while (this.route.length > 1 && Math.hypot(this.route[0].x - pos.x, this.route[0].z - pos.z) < 0.6) this.route.shift(); // (past a corner: on to the next)
     const next = this.route[0];
     if (!next || Math.hypot(next.x - pos.x, next.z - pos.z) < 0.5) return null;
     return next;
@@ -253,6 +272,7 @@ export class Catcher {
     this.scene.add(this.van);
     this.who = warden();
     this.who.root.position.set(vx - n[0] * 1.4, 0, vz - n[1] * 1.4); // (on the pavement side)
+    this.door = { x: vx - n[0] * 1.4, z: vz - n[1] * 1.4 }; // (and that's where he gets back in)
     this.who.root.rotation.y = Math.atan2(P.x - vx, P.z - vz);
     this.scene.add(this.who.root);
     this.heat = MAX;
@@ -269,6 +289,7 @@ export class Catcher {
 
   giveUp(line) {
     if (line) this.say(line, 2.8);
+    this.route = this.pathTo = null; // (a fresh path: back to the van)
     this.heat = 0; // (he's off: the meter's clear)
     if (this.s === 'chase' && line) { progress.stat('warden'); progress.award(10, 'Got away!'); }
     this.set('leave');

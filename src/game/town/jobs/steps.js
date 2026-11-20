@@ -328,12 +328,43 @@ function nudge(c, dog, vel, kicked) {
   return kicked;
 }
 
+/** Somewhere near (x, z) a dog can get all the way round: the nearer home the better. */
+function popSpot(w, x, z, home) {
+  let best = null, bd = Infinity;
+  for (let r = 1; r <= 3; r += 0.5) for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * r, pz = z + Math.sin(a) * r;
+    if (blocked(w, px, pz, 0.55)) continue;
+    const d = Math.hypot(px - home.x, pz - home.z) + r * 0.5; // (not too far, either)
+    if (d < bd) { bd = d; best = { x: px, z: pz }; }
+  }
+  return best;
+}
+
 function ballStep(r, dt, P, ctx) {
   const c = r.c, w = r.rt.world;
+  if (c.pop) { // popping out of a corner: a little hop to somewhere a dog can get round it
+    c.pop.t += dt;
+    const k = Math.min(1, c.pop.t / 0.55);
+    c.pos.x = c.pop.from.x + (c.pop.to.x - c.pop.from.x) * k;
+    c.pos.z = c.pop.from.z + (c.pop.to.z - c.pop.from.z) * k;
+    c.hop = Math.sin(k * Math.PI) * 0.6;
+    if (k >= 1) { c.pop = null; c.hop = 0; c.vx = c.vz = 0; c.anchor = null; }
+    c.speed = 2;
+    return;
+  }
   let kicked = nudge(c, P.pos, P.vel, false);
   for (const o of ctx.others) kicked = nudge(c, o, null, kicked);
   if (kicked && (c.kickT ?? 0) <= 0) { fsfx.kick(); c.kickT = 0.25; }
   c.kickT = (c.kickT ?? 0) - dt;
+  // Stuck? (Nudged and nudged, and it's hardly moved: wedged in a corner, behind a bin…)
+  if (!c.anchor || Math.hypot(c.pos.x - c.anchor.x, c.pos.z - c.anchor.z) > 0.7) { c.anchor = { x: c.pos.x, z: c.pos.z }; c.kicks = 0; c.anchorT = 0; }
+  c.anchorT += dt;
+  if (kicked) c.kicks++;
+  if (c.kicks >= 4 && c.anchorT > 2) {
+    const to = popSpot(w, c.pos.x, c.pos.z, r.home);
+    if (to) { c.pop = { from: { x: c.pos.x, z: c.pos.z }, to, t: 0 }; fsfx.kick(); r.rt.hud.float('Boing! ⚽', c.pos.clone().add(V(0, 0.5, 0)), 'xp'); return; }
+    c.anchor = null;
+  }
   const nx = c.pos.x + c.vx * dt, nz = c.pos.z + c.vz * dt, pad = 0.12;
   if (!blocked(w, nx, nz, pad)) { c.pos.x = nx; c.pos.z = nz; }
   else if (!blocked(w, nx, c.pos.z, pad)) { c.pos.x = nx; c.vz *= -0.6; }
@@ -371,6 +402,7 @@ const herd = {
     else ballStep(r, dt, P, ctx);
     r.model.position.x = c.pos.x;
     r.model.position.z = c.pos.z;
+    if (!hen) r.model.position.y = 0.15 + (c.hop ?? 0); // (resting on the grass: or hopping out of a corner)
     if (hen) hen.update(dt, { moving: Math.min(1, c.speed / 1.6) });
     else if (c.speed > 0.01) r.model.rotateOnWorldAxis(V(c.vz, 0, -c.vx).normalize(), (c.speed * dt) / 0.11);
     if (r.homeT === undefined && flat(c.pos, r.home) < 2) {
