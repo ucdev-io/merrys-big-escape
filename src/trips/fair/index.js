@@ -107,8 +107,9 @@ class FairChapter extends TripChapter {
       m(new THREE.CylinderGeometry(0.1, 0.12, 3.2, 10), 0xf7f3ea, [cx, 1.6, cz]);
       m(new THREE.SphereGeometry(0.2, 12, 8), 0xfff1a0, [cx, 3.3, cz], { emissive: 0x8a7a40 }).castShadow = false;
     }
-    m(RB(3.4, 0.7, 0.12, 0.06), 0xd9534f, [d.x, 2.6, z1 + 0.05]);
-    for (const [cx] of [[d.x - 1.5], [d.x + 1.5]]) m(new THREE.CylinderGeometry(0.06, 0.06, 2.3, 8), 0xf7f3ea, [cx, 1.15, z1 + 0.05]);
+    // The sign: on the far side, looking back at the way in (not between the camera and a dog in a car).
+    m(RB(3.4, 0.7, 0.12, 0.06), 0xd9534f, [d.x, 2.6, z0 - 0.05]);
+    for (const [cx] of [[d.x - 1.5], [d.x + 1.5]]) m(new THREE.CylinderGeometry(0.06, 0.06, 2.3, 8), 0xf7f3ea, [cx, 1.15, z0 - 0.05]);
     // The other cars, each with a dog driving (and the player's, parked at the side till she hops in).
     const keys = BREED_KEYS.filter((k) => k !== this.player.breedKey).sort(() => Math.random() - 0.5);
     this.cars = [0x5b86c4, 0x6f9a52, 0xf2a0c8].map((c, i) => {
@@ -134,6 +135,7 @@ class FairChapter extends TripChapter {
     this.placeMe();
     this.ctx.follow.snap(P.pos);
     this.ctx.follow.yaw = 0;
+    this.ctx.follow.pitch = Math.max(this.ctx.follow.pitch, 0.7); // (looking down into the arena)
     sfx.honk?.(0.5);
     this.say('Ding ding! Off you go!', () => this.dyn.localToWorld(A.door.clone().add(V(0, 2.4, -1))), 2);
   }
