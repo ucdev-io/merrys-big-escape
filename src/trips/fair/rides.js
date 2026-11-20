@@ -180,7 +180,7 @@ export class BigWheel {
       mesh(RB(1.5, 0.55, 1.2, 0.1), c, gd, [0, -1.25, 0]);
       mesh(RB(1.4, 0.06, 1.1, 0.03), 0xf7f3ea, gd, [0, -0.95, 0]);
       for (const sx of [-0.62, 0.62]) mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), 0xf7f3ea, gd, [sx, -0.5, 0]);
-      mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.12, 20, 1, false, 0, Math.PI), c, gd, [0, 0.02, 0], [0, 0, Math.PI / 2], undefined, [1, 1, 0.7]);
+      mesh(new THREE.SphereGeometry(0.8, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), c, gd, [0, -0.05, 0], [0, 0, 0], undefined, [1, 0.32, 0.8]); // (a little domed roof)
       this.gondolas.push({ g: gd, k });
     }
     this.angle = 0;
