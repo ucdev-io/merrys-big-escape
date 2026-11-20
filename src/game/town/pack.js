@@ -210,7 +210,7 @@ export class Pack {
     this.net = null;
     this.updateBadge();
     this.reconnecting = true;
-    this.hud.showToastRaw('📡', 'Reconnecting to the pack…', 'Hang on a sec!');
+    this.hud.showToastRaw('📡', 'Reconnecting to the pack…', 'Hang on a sec!', { always: true }); // (her own connection: worth knowing even on a trip)
     this.tryRejoin(0);
   }
 
@@ -230,11 +230,11 @@ export class Pack {
       }
       this.reconnecting = false;
       this.attach(net, w, { rejoin: true });
-      this.hud.showToastRaw('🐾', 'Back with the pack!', '');
+      this.hud.showToastRaw('🐾', 'Back with the pack!', '', { always: true });
     } catch {
       if (attempt >= 5) {
         this.reconnecting = false;
-        this.hud.showToastRaw('📡', 'Lost the pack!', 'Couldn’t reconnect — you can keep playing on your own.');
+        this.hud.showToastRaw('📡', 'Lost the pack!', 'Couldn’t reconnect — you can keep playing on your own.', { always: true });
         return;
       }
       setTimeout(() => this.tryRejoin(attempt + 1), 1000 * 2 ** attempt);

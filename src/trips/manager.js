@@ -117,7 +117,7 @@ export class Trips {
       const tb = performance.now();
       built = m.build({
         id, from: from.id, origin: tripOrigin(T.n),
-        hud: this.hud, input: this.input, player: P, pipeline: this.pipeline, follow: this.follow, camera: this.camera,
+        hud: this.hud.forTrip?.() ?? this.hud, input: this.input, player: P, pipeline: this.pipeline, follow: this.follow, camera: this.camera,
         town: town.tripInfo(id), leave: (exit) => this.leave(exit),
       });
       built.ms = performance.now() - tb;

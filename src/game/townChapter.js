@@ -132,7 +132,7 @@ export class TownChapter {
       teleport: (x, z, face) => this.teleport(x, z, face), showRecords: records, away: () => !!this.away,
     });
     this.pack.onGame = (m) => {
-      if (this.away) { if (m.a === 'start') this.hud.showToastRaw('🎮', 'Your pack started a game!', 'Come back up in time for the next one.'); return; } // (off on a trip)
+      if (this.away) { if (m.a === 'start') this.hud.showToastRaw('🎮', 'Your pack started a game!', 'Come back up in time for the next one.', { always: true }); return; } // (off on a trip)
       this.games.handle(m);
     };
     this.pack.onStartGame = (kind) => this.games.start(kind);

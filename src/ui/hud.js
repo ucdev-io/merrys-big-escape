@@ -17,6 +17,7 @@ import { whatsNewHtml, markNewsSeen } from '../core/releases.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
+const HELD_FRESH_MS = 90000; // (town news held back while she was off on a trip: older than this when she's back, it's dropped)
 
 /** All the HTML overlay bits: objective, prompts, speech bubbles, Sniff Book, cards. */
 export class HUD {
@@ -361,19 +362,30 @@ export class HUD {
   /**
    * A news note (newest on top, up to three). On a phone just its first line shows: tap it for the rest,
    * unless it's a `tip` that's needed right now. Callers may fill in hud.toast's .t-head / .t-blurb just
-   * after (as text: names are untrusted).
+   * after (as text: names are untrusted). Off on a trip, the town's notes wait till she's back (see setAway):
+   * `trip` (a trip's own: see forTrip()), `tip` and `always` notes show anyway.
    */
-  showToastRaw(emoji, head, blurb = '', { tip = false } = {}) {
-    const key = `${emoji}|${head}`, top = this.toasts.firstElementChild;
+  showToastRaw(emoji, head, blurb = '', { tip = false, trip = false, always = false } = {}) {
+    const key = `${emoji}|${head}`;
+    if (this.away && !trip && !tip && !always) { this.holdNote(emoji, head, blurb, key); return; }
+    const top = this.toasts.firstElementChild;
     if (head && top?.dataset.key === key) { // (the same news again: freshen that note up)
       top.querySelector('.t-blurb').innerHTML = blurb;
       this.toast = top;
       queueMicrotask(() => this.holdToast(top));
       return;
     }
+    this.showNote(this.makeNote(emoji, head, blurb, key, tip));
+  }
+
+  makeNote(emoji, head, blurb, key, tip = false) {
     const t = el('div', `toast${tip ? ' tip' : ''}`, `<span class="emoji">${emoji}</span><span class="t-text"><span class="t-head">${head}</span><span class="t-blurb">${blurb}</span></span>`);
     t.dataset.key = key;
     t.onclick = () => { t.classList.toggle('open'); this.holdToast(t, 7000); };
+    return t;
+  }
+
+  showNote(t) {
     this.toasts.prepend(t);
     while (this.toasts.children.length > 3) this.toasts.lastElementChild.remove();
     this.toast = t;
@@ -381,6 +393,28 @@ export class HUD {
     void t.offsetWidth;
     t.classList.add('show');
     queueMicrotask(() => this.holdToast(t)); // (once the caller has filled in its words)
+  }
+
+  /**
+   * A note from the town while she's off on a trip: made now (so the caller can still fill in its words through
+   * hud.toast), kept until she's back. The same news twice is kept once (with the newer words).
+   */
+  holdNote(emoji, head, blurb, key) {
+    const held = (this.held ??= []);
+    let n = head ? held.find((h) => h.key === key) : null;
+    if (n) { held.splice(held.indexOf(n), 1); n.t.querySelector('.t-blurb').innerHTML = blurb; }
+    else n = { key, t: this.makeNote(emoji, head, blurb, key) };
+    n.at = performance.now();
+    held.push(n);
+    if (held.length > 8) held.shift();
+    this.toast = n.t;
+  }
+
+  /** Back from a trip: the town's news that's still fresh (the newest few), as if it had just come in. */
+  showHeld() {
+    const now = performance.now(), fresh = (this.held ?? []).filter((n) => now - n.at < HELD_FRESH_MS);
+    this.held = [];
+    for (const n of fresh.slice(-3)) this.showNote(n.t); // (oldest first, so the newest ends up on top)
   }
 
   /** Keep a note up for a while (longer for more words), then let it fade away. */
@@ -461,8 +495,33 @@ export class HUD {
     this.bubbles = [];
   }
 
-  /** Off on a trip (true) or back in town: the town's own bits of HUD (friends' name tags, its game banner…) hide meanwhile. */
-  setAway(on) { this.root.classList.toggle('away', !!on); }
+  /**
+   * Off on a trip (true) or back in town: the town's own bits of HUD (friends' name tags, its game banner…) hide
+   * meanwhile, and its news notes (a BBQ party, a friend's sandcastle…) wait till she's back. Then the ones still
+   * fresh pop up, once the paper's gone.
+   */
+  setAway(on) {
+    this.root.classList.toggle('away', !!on);
+    this.away = !!on;
+    clearTimeout(this._heldT);
+    if (!on && this.held?.length) this._heldT = setTimeout(() => this.showHeld(), 1100);
+  }
+
+  /** The HUD as a trip sees it (trips/manager.js hands it over): just the same, except its notes show while she's away. */
+  forTrip() {
+    if (this._tripHud) return this._tripHud;
+    const bound = new Map(), show = (emoji, head, blurb, o = {}) => this.showToastRaw(emoji, head, blurb, { ...o, trip: true });
+    return (this._tripHud = new Proxy(this, {
+      get: (t, k) => {
+        if (k === 'showToastRaw') return show;
+        const v = t[k];
+        if (typeof v !== 'function') return v;
+        let f = bound.get(k);
+        if (f?.of !== v) { f = v.bind(t); f.of = v; bound.set(k, f); } // (its methods run on the HUD itself)
+        return f;
+      },
+    }));
+  }
 
   /** Little word that pops up and floats away (WOOF!, sniff sniff…). */
   float(text, pos, cls = '') {
