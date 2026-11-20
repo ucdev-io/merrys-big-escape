@@ -52,7 +52,7 @@ export function build(ctx) {
     { id: 'alley', rect: R(-1.1, S.NORTH - 1.4, 1.1, S.NORTH), open: () => true, text: '🐾 Climb back up to the alley!', paw: 'squeeze' },
     { id: 'beach', rect: R(S.L - 2.2, -S.WALK, S.L, S.WALK), open: () => !!chapter.open, text: '🐾 Out the pipe to the beach!', paw: 'squeeze' },
   ];
-  world.update = () => {};
+  world.update = (t) => world.animate?.(t); // (glints on the water, dust in the daylight)
   world.dispose = () => {};
   const chapter = new SewerChapter(ctx, { scene, world, dyn, state });
   return {
