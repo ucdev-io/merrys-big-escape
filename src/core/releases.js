@@ -11,6 +11,17 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.5.0', date: '2026-11-20', title: 'Beam me up!',
+    notes: [
+      '🛸 A flying saucer hovers over the Farm’s field, with a crop circle underneath. Stand in the middle and up you go… to Planet Boing!',
+      '🌙 On Planet Boing everything’s floaty: super-high jumps and bouncy mushrooms. Find five star-sparks to fly Zib’s saucer home (and win the 👽 Space boppers), play hide-and-seek with the Blip kids, and keep Zob’s moon-ball up.',
+      '🔦 Bring Nibbles 3 lost things in the sewers for his lantern. It glows, and lights your way down there.',
+      '🧱 Prettier sewers: bricks, roots, puddles, sunbeams under the drains and twinkly water.',
+      '🔕 Town news waits while you’re off on a trip, and pops up when you’re back.',
+      '🚗 Riding on a car? Your friends now see you on a car too, not floating in the air.',
+    ],
+  },
+  {
     version: '0.4.0', date: '2026-11-20', title: 'All aboard!',
     notes: [
       '🚌 A bus stop on the edge of town: catch the bus to other towns, each with its own places to find (and back again any time).',
