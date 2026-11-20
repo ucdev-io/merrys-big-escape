@@ -1,5 +1,6 @@
 import { STOPS, SHOTS, TAGLINE, ABOUT, IPHONE_TIP } from '../shared/content.js';
 import { playButtons, prefersStill, bringMerry, dogSwatches } from '../shared/common.js';
+import { RELEASES, COMING, versionLine, niceDate } from '../../src/core/releases.js';
 
 /*
  * "The Walk". The page scrolls as normal (so keys, screen readers and scroll bars all just work), but
@@ -34,11 +35,17 @@ const stops = STOPS.map((s, i) => {
     tag.className = 'tagline';
     tag.textContent = TAGLINE;
     sec.querySelector('.title').after(tag);
-    extra.innerHTML = playHtml(true);
+    extra.innerHTML = `${playHtml(true)}<p class="beta-line"><span class="beta"></span> <a class="news-link" href="#play">What’s new?</a></p>`;
+    extra.querySelector('.beta').textContent = versionLine();
   }
   if (s.id === 'dogs') { extra.className += ' dogs'; dogSwatches(extra); }
   if (s.id === 'play') {
-    extra.innerHTML = `${playHtml(true)}<p class="about"></p><p class="about tip"></p>`;
+    extra.innerHTML = `${playHtml(true)}<div class="whats-new"><p class="news-head"><span class="beta"></span></p><ul></ul><p class="coming"></p></div><p class="about"></p><p class="about tip"></p>`;
+    // What's new in this beta: the newest version's lines (plain text: they're ours, but no HTML needed).
+    const news = extra.querySelector('.whats-new'), r = RELEASES[0];
+    news.querySelector('.beta').textContent = `✨ New in ${r.version}: ${r.title} (${niceDate(r.date)})`;
+    for (const t of r.notes) { const li = document.createElement('li'); li.textContent = t; news.querySelector('ul').appendChild(li); }
+    news.querySelector('.coming').textContent = `🐾 ${COMING}`;
     extra.querySelector('.about').textContent = ABOUT;
     extra.querySelector('.tip').textContent = IPHONE_TIP;
   }
@@ -74,6 +81,8 @@ playButtons();
 // ---------- where we are ----------
 const H = () => stops[0].sec.offsetHeight || innerHeight;
 const go = (i) => { i = Math.max(0, Math.min(N - 1, i)); scrollTo({ top: i * H(), behavior: still ? 'auto' : 'smooth' }); };
+// "What's new?" (under the first Play button): walk to the last stop, where it's listed.
+document.querySelector('.news-link')?.addEventListener('click', (e) => { e.preventDefault(); go(N - 1); });
 addEventListener('keydown', (e) => {
   if (e.target.closest?.('input, textarea')) return;
   if (e.key === 'ArrowRight') { e.preventDefault(); go(Math.round(scrollY / H()) + 1); }

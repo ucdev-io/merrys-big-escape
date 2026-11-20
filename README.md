@@ -34,6 +34,8 @@ This builds the game and starts the home server on port 8080. It prints the game
 | `npm run site:dev` | The merry.ucdev.io page on port 5183. |
 | `npm run site` | Builds the page and the one-dog demo into `dist-site/`, which is what merry.ucdev.io serves. |
 
+The game is in beta, with new adventures added often. Each version and what's new in it lives in `src/core/releases.js` (newest first): the game's title screen and Merry's page both show the latest. For a new version, add it at the top and set `version` in `package.json` to match.
+
 Made with [three.js](https://threejs.org), [Vite](https://vite.dev) and a hand-tuned watercolour shader, built with Claude Code.
 
 ## Licence

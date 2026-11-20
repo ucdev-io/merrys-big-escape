@@ -92,6 +92,15 @@ body { min-height: 100svh; }
 .stop[data-id='play'] .words { max-width: 36rem; }
 .stop[data-id='play'] .play { font-size: 34px; margin: 6px 0 14px; }
 .about { font-size: 14px; color: var(--ink-soft); margin: 10px 0 0; }
+/* The beta: its version and date (under the first Play button), and what's new (by the last). */
+.beta-line { display: inline-block; font-size: 14px; margin: 10px 0 0; padding: 3px 10px 3px 4px; border-radius: 14px; background: rgba(255, 250, 240, 0.85); color: var(--ink); }
+.beta-line .beta, .whats-new .beta { background: #f2c94c; color: var(--ink); border-radius: 10px; padding: 1px 8px; }
+.beta-line .news-link { color: inherit; }
+.whats-new { font-size: 15px; margin: 4px 0 0; text-align: left; max-width: 34em; }
+.whats-new .news-head { margin: 0 0 4px; }
+.whats-new ul { margin: 0; padding-left: 20px; }
+.whats-new li { margin: 2px 0; }
+.whats-new .coming { margin: 6px 0 0; color: var(--ink-soft); }
 
 .hint {
   position: fixed; z-index: 3; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%);

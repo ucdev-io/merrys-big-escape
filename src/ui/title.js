@@ -5,6 +5,7 @@ import { getSettings, setSetting, TEXTURE_NAMES } from '../core/settings.js';
 import { autoFullscreen, toggleFullscreen, fullscreenButtonUseful, isTouchDevice } from './fullscreen.js';
 import { watchPacks, renderPackRows } from '../net/packs.js';
 import { DEMO } from '../core/demo.js';
+import { versionLine, whatsNewHtml, newsUnseen, markNewsSeen } from '../core/releases.js';
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
 
@@ -45,6 +46,7 @@ export function showTitle(save) {
         <div class="paws">🐾 🐾 🐾</div>
         <h1>Merry's Big Escape</h1>
         <p class="tag">A muddy-pawed adventure for dogs who follow their noses.</p>
+        <p class="version"><span class="beta">${versionLine()}</span> · <button class="link news-btn">✨ What’s new${newsUnseen() ? ' <b class="new">New!</b>' : ''}</button></p>
         <div class="pack">${featured.map((k) => `<span title="${BREEDS[k].breed}">${BREEDS[k].swatch.map((c) => `<i style="background:${c}"></i>`).join('')}<b>${BREEDS[k].dogName}</b></span>`).join('')}<span class="more">…and ${BREED_KEYS.length - featured.length} more dogs!</span></div>
         <div class="friends hidden"><h3>👥 Friends playing now</h3><div class="list"></div></div>
         <div class="choices">
@@ -85,6 +87,12 @@ export function showTitle(save) {
       friends.classList.toggle('hidden', !n);
     });
     el.querySelector('.fs-link')?.addEventListener('click', () => toggleFullscreen(titleCards));
+    // ✨ What's new (in this beta): the latest versions, and what's on the way.
+    el.querySelector('.news-btn').onclick = (e) => {
+      markNewsSeen();
+      e.currentTarget.querySelector('.new')?.remove();
+      titleCards.showCard(whatsNewHtml(), [['Lovely!']]);
+    };
 
     const phone = el.querySelector('.phone'), settings = el.querySelector('.settings');
     const showPhone = async (show) => {

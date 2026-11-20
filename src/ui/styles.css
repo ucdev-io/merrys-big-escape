@@ -295,7 +295,18 @@ body:has(.lobby) .touch, body:has(.title-screen) .touch, body:has(.big-card:not(
 .title-screen .page { max-width: 620px; background: transparent; box-shadow: none; }
 .title-screen .paws { font-size: 26px; opacity: 0.5; letter-spacing: 10px; }
 .title-screen h1 { font-weight: normal; font-size: clamp(40px, 9vw, 72px); margin: 4px 0 0; line-height: 1; }
-.title-screen .tag { font-size: 20px; opacity: 0.75; margin: 8px 0 18px; }
+.title-screen .tag { font-size: 20px; opacity: 0.75; margin: 8px 0 6px; }
+/* The beta's version and date, and ✨ What's new. */
+.title-screen .version { font-size: 15px; margin: 0 0 16px; opacity: 0.85; }
+.title-screen .version .beta { background: #f2c94c; border-radius: 10px; padding: 1px 8px; }
+.title-screen .version .link { font-size: 15px; }
+.version .new, .news-btn .new { background: #d9534f; color: #fff; border-radius: 8px; padding: 0 6px; font-size: 12px; font-weight: normal; margin-left: 4px; }
+.big-card .news-ver { margin: -4px 0 8px; opacity: 0.75; }
+.big-card .news h3 { margin: 10px 0 2px; font-size: 19px; }
+.big-card .news h3 small { opacity: 0.6; font-size: 14px; }
+.big-card .news ul { margin: 4px 0 0; padding-left: 20px; text-align: left; }
+.big-card .news li { margin: 3px 0; }
+.big-card .news-coming { margin-top: 12px; font-size: 17px; }
 .title-screen .pack { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 16px; margin-bottom: 22px; }
 .title-screen .pack span { display: flex; align-items: center; gap: 6px; font-size: 18px; }
 .title-screen .pack i { width: 14px; height: 14px; border-radius: 50%; margin-right: -4px; border: 1.5px solid rgba(59, 43, 37, 0.35); display: inline-block; }

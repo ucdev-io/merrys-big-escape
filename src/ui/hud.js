@@ -13,6 +13,7 @@ import { sfx } from '../core/audio.js';
 import { DEMO } from '../core/demo.js';
 import { HOME } from '../net/links.js';
 import { buzz } from '../core/haptics.js';
+import { whatsNewHtml, markNewsSeen } from '../core/releases.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -209,6 +210,7 @@ export class HUD {
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
     item('🐶 My dog', () => this.showMyDog());
     item('❓ How to play', () => this.showHelp());
+    item('✨ What’s new', () => { markNewsSeen(); this.showCard(whatsNewHtml(), [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]); });
     if (this.onGames) item('🎮 Games', () => this.onGames());
     if (this.onPuzzles) item('🧩 Puzzles', () => this.onPuzzles());
     if (this.onSeasons) item('🌦️ Seasons', () => this.onSeasons());
