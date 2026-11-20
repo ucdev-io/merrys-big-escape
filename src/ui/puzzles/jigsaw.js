@@ -11,8 +11,15 @@ const SIZES = { 3: { stars: 15 }, 4: { stars: 25 } };
 const MAX_W = 720; // (the postcard's size: plenty for a phone's card, and quick to copy)
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
+/** The middle of the picture, in a card shape (not a sliver): { x, y, w, h } in its pixels, and its aspect. */
+export function cardCrop(W, H) {
+  const ar = Math.min(16 / 9, Math.max(3 / 4, W / H)); // (very wide or very tall screens: the middle of it)
+  const w = Math.min(W, H * ar), h = w / ar;
+  return { x: (W - w) / 2, y: (H - h) / 2, w, h, ar };
+}
+
 /** A copy of the finished picture (a landscape or portrait card shape, not a sliver), as a JPEG. */
-function postcard(canvas) {
+export function postcard(canvas) {
   const W = canvas.width, H = canvas.height;
   const ar = Math.min(16 / 9, Math.max(3 / 4, W / H)); // (very wide or very tall screens: the middle of it)
   const sw = Math.min(W, H * ar), sh = sw / ar;
@@ -115,7 +122,7 @@ function finish(S, card, where, n, secs, swaps) {
     ? r.prev !== null ? `🎉 A new best! (It was ${r.prev}s.)` : 'Your first one this size: now try to beat it!'
     : `Your best is ${r.best}s.`;
   S.show(`<h1>📮 Greetings from ${esc(where)}!</h1>${picture(card, 'done')}
-    <p>All ${n * n} pieces in <b>${secs}s</b> (${swaps} swaps). ${how}</p>${prizeLine(r.prize)}
+    <p>All ${n * n} pieces in <b>${secs}s</b> (${swaps} swaps). ${how}</p>${prizeLine(r.prize, r.unlocked)}
     <p class="small">Go somewhere new for a different postcard!</p>`,
   [['🔁 Again!', () => play(S, card, where, n)], ['Close', () => S.close()]]);
 }

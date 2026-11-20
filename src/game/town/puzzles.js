@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import { Cat } from '../../entities/cat.js';
 import { sfx } from '../../core/audio.js';
-import { puzzleSave, showPuzzleList } from '../../ui/puzzles/puzzle.js';
+import { puzzleSave, showPuzzleList, unlockMore, PUZZLES } from '../../ui/puzzles/puzzle.js';
 import { openPawMatch } from '../../ui/puzzles/pawMatch.js';
 import { openJigsaw } from '../../ui/puzzles/jigsaw.js';
+import { openRiddles } from '../../ui/puzzles/riddles.js';
+import { openSlider } from '../../ui/puzzles/slider.js';
+import { openSpotDiff } from '../../ui/puzzles/spotDiff.js';
+import { openTreats, openGnomes, openBones } from '../../ui/puzzles/arcadeGames.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const flat = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -19,7 +23,9 @@ const TAUNTS = [
 /**
  * 🧩 Puzzles in town: Pickles sits on your garden fence (a few steps from the gate) and dares you to a
  * game of Paw Match (woof at her to take her on: just walking past doesn't); the 📮 postcard jigsaw comes
- * along with the first place in your Sniff Book. Both then live in ☰ → Puzzles (see ../../ui/puzzles/).
+ * along with the first place in your Sniff Book. Each puzzle you finish, Pickles brings out another of her
+ * games (riddles, catch the treats, the sliding postcard, whack-a-gnome, spot the difference, bone stack:
+ * see PUZZLES' `after`). Woof at her for one, or play any you've found from ☰ → Puzzles (../../ui/puzzles/).
  */
 export class TownPuzzles {
   /**
@@ -40,6 +46,7 @@ export class TownPuzzles {
     this.tauntT = 3;
     this.hint = null;
     this.places = -1;
+    this.caughtUp = false;
     hud.onPuzzles = () => this.showList();
   }
 
@@ -95,6 +102,11 @@ export class TownPuzzles {
   /** Per frame (canAct: the dog's free to do things; barked: she woofed just now). */
   update(dt, canAct, barked = false) {
     this.placeCat();
+    if (!this.caughtUp) { // (puzzles finished before Pickles had more games: she brings them out now)
+      this.caughtUp = true;
+      const got = unlockMore();
+      if (got.length) this.hud.showToastRaw('🐈', 'Pickles has new games for you!', `${got.map((id) => `${PUZZLES[id].emoji} ${PUZZLES[id].name}`).join(', ')}: woof at her, or ☰ → Puzzles.`);
+    }
     const n = this.found();
     if (n !== this.places) { // the first place found brings the postcard jigsaw
       this.places = n;
@@ -115,18 +127,49 @@ export class TownPuzzles {
       cat.laugh = 1;
       this.hud.say(`🐈 ${pick(TAUNTS)}`, () => cat.bubbleAnchor(V()), 3.2);
     }
-    if (d < 5) this.hint = '🐈 Woof at Pickles for a game of Paw Match';
+    if (d < 5) this.hint = this.hers().length > 1 ? '🐈 Woof at Pickles for a game' : '🐈 Woof at Pickles for a game of Paw Match';
     if (barked && d < 4.5 && this.cool <= 0) this.offer();
   }
 
-  /** Pickles dares you to a game. */
+  /** Pickles' own games you've found (Paw Match, and the ones she's brought out since). */
+  hers() { return Object.keys(PUZZLES).filter((id) => id !== 'jigsaw' && (id === 'pawmatch' || puzzleSave.found(id))); }
+
+  /** Pickles dares you to a game (once she's more than Paw Match: the newest, the one you've not tried…). */
   offer() {
     sfx.meow?.();
     if (puzzleSave.find('pawmatch')) this.hud.showToastRaw('🧩', 'New puzzle: Pickles’ Paw Match!', 'Play it any time from ☰ → Puzzles.');
-    this.hud.showCard(`<h1>🐈 Pickles</h1><p class="pm-offer">“Oh. It’s you. Fancy a game of <b>Paw Match</b>? Twelve cards, face down: six smells, two of each. Find all the pairs. I bet you can’t.”</p>`, [
-      ['🐾 You’re on!', () => this.playPawMatch()],
-      ['Not now', () => { this.hud.hideCard(); this.cool = 3; }],
+    const hers = this.hers(), play = this.plays();
+    const no = ['Not now', () => { this.hud.hideCard(); this.cool = 3; }];
+    if (hers.length <= 1) {
+      this.hud.showCard(`<h1>🐈 Pickles</h1><p class="pm-offer">“Oh. It’s you. Fancy a game of <b>Paw Match</b>? Twelve cards, face down: six smells, two of each. Find all the pairs. I bet you can’t.”</p>`, [
+        ['🐾 You’re on!', () => this.playPawMatch()], no,
+      ]);
+      return;
+    }
+    // Her newest games first (any you've never tried before the rest), then Paw Match.
+    const fresh = hers.filter((id) => id !== 'pawmatch').sort((a, b) => (puzzleSave.plays(a) > 0) - (puzzleSave.plays(b) > 0) || PUZZLES[b].after - PUZZLES[a].after);
+    const top = [...fresh.slice(0, 2), 'pawmatch'];
+    const newOne = fresh.find((id) => puzzleSave.plays(id) === 0);
+    const line = newOne ? `Oh. It’s you. I’ve got a new one: <b>${PUZZLES[newOne].name}</b>. Bet you can’t.` : pick(['Back again? What’ll it be, dog?', 'Oh, it’s you. Go on then, pick a game.', 'Bored? Me too. Pick one.']);
+    this.hud.showCard(`<h1>🐈 Pickles</h1><p class="pm-offer">“${line}”</p>`, [
+      ...top.map((id) => [`${PUZZLES[id].emoji} ${PUZZLES[id].name.replace('Pickles’ ', '')}`, () => play[id]()]),
+      ['🧩 All her games…', () => this.showList()], no,
     ]);
+  }
+
+  /** How to open each puzzle (ids as in PUZZLES). */
+  plays() {
+    const ctx = this.ctx(), end = { onEnd: () => { this.cool = 10; } };
+    return {
+      pawmatch: () => this.playPawMatch(),
+      jigsaw: () => this.playJigsaw(),
+      riddles: () => { this.cat.laugh = 1; openRiddles(ctx, end); },
+      slider: () => openSlider(ctx, { pipeline: this.pipeline, where: this.where(), ...end }),
+      spotdiff: () => openSpotDiff(ctx, { pipeline: this.pipeline, scene: this.scene, camera: this.hud.camera, world: this.world, where: this.where(), ...end }),
+      treats: () => openTreats(ctx, end),
+      gnome: () => openGnomes(ctx, end),
+      bones: () => openBones(ctx, end),
+    };
   }
 
   playPawMatch() {
@@ -140,6 +183,6 @@ export class TownPuzzles {
 
   /** ☰ → 🧩 Puzzles. */
   showList() {
-    showPuzzleList(this.hud, { pawmatch: () => this.playPawMatch(), jigsaw: () => this.playJigsaw() }, { why: this.why });
+    showPuzzleList(this.hud, this.plays(), { why: this.why });
   }
 }

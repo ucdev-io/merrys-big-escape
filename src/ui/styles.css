@@ -640,3 +640,42 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 .bus-row .bus-go { padding: 4px 12px; }
 .lobby .mytowns .list { display: flex; flex-wrap: wrap; gap: 6px; }
 .lobby .town-chip { font-size: 0.9rem; padding: 4px 10px; }
+
+/* ===== 🧩 Pickles' games, part 2 (src/ui/puzzles/: riddles, sliding postcard, spot the difference, arcade) ===== */
+.big-card .page p.rd-q { font-size: 21px; margin: 4px 0 10px; }
+.rd-opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; max-width: 620px; margin: 0 auto; }
+.rd-opt {
+  pointer-events: auto; cursor: pointer; font: inherit; font-size: 20px; color: var(--ink); padding: 10px 12px; min-height: 52px;
+  border: 2px solid rgba(59, 43, 37, 0.3); border-radius: var(--wobbly); background: #fffaf0; box-shadow: 0 2px 0 rgba(59, 43, 37, 0.15);
+}
+.rd-opt:active { transform: scale(0.97); }
+.rd-opt.right { background: #e2edd0; border-color: #8fae6a; }
+.rd-opt.wrong { background: #f6d9d4; border-color: #d9534f; }
+.rd-opt:disabled { cursor: default; }
+.big-card .page p.rd-say { min-height: 1.4em; margin: 8px 0 4px; font-size: 18px; }
+.rd-next { pointer-events: auto; margin: 0 auto; display: block; font-size: 20px; }
+.sl-board .jg-tile.gap { background: rgba(59, 43, 37, 0.08); cursor: default; }
+.sl-board .jg-tile { transition: none; }
+.big-card .page:has(.sd-pair, .ar-canvas) { max-width: min(1100px, 100%); }
+.sd-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: min(100%, calc((100vh - 230px) * var(--ar, 1.6) * 2 + 10px)); margin: 6px auto; }
+.sd-pair.done { grid-template-columns: 1fr; width: min(100%, calc((100vh - 290px) * var(--ar, 1.6))); }
+.sd-pic { position: relative; pointer-events: auto; cursor: crosshair; aspect-ratio: var(--ar); border: 5px solid #fffaf0; border-radius: 4px; box-shadow: 0 0 0 2px rgba(59, 43, 37, 0.2); overflow: hidden; touch-action: manipulation; }
+.sd-pic img { display: block; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; }
+.sd-pic.miss { animation: sd-miss 0.3s; }
+@keyframes sd-miss { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.sd-ring { position: absolute; transform: translate(-50%, -50%); border: 4px solid #d9534f; border-radius: 50%; box-shadow: 0 0 0 2px #fffaf0; pointer-events: none; }
+.sd-ring.hint { border-style: dashed; border-color: #f2c14e; animation: sd-hint 0.8s ease-in-out 2; }
+@keyframes sd-hint { 50% { transform: translate(-50%, -50%) scale(1.25); } }
+@media (orientation: portrait) { .sd-pair { grid-template-columns: 1fr; width: min(100%, calc((100vh - 290px) / 2 * var(--ar, 1.6))); } }
+.ar-wrap { width: min(100%, 720px, calc((100vh - 230px) * 4 / 3)); margin: 6px auto; }
+.ar-canvas { display: block; width: 100%; aspect-ratio: 4 / 3; pointer-events: auto; touch-action: none; border-radius: 10px; box-shadow: 0 0 0 2px rgba(59, 43, 37, 0.2), 0 3px 0 rgba(59, 43, 37, 0.15); }
+@media (max-height: 520px) {
+  .big-card .page:has(.rd-opts, .sd-pair, .ar-canvas, .sl-board) { padding: 8px 14px; }
+  .big-card .page:has(.rd-opts, .sd-pair, .ar-canvas, .sl-board) h1 { font-size: 24px; margin: 0; }
+  .big-card .page:has(.rd-opts, .sd-pair, .ar-canvas, .sl-board) p { margin: 3px 0; }
+  .rd-opt { font-size: 17px; min-height: 42px; padding: 6px 10px; }
+  .sd-pair { width: min(100%, calc((100vh - 170px) * var(--ar, 1.6) * 2 + 10px)); }
+  .ar-wrap { width: min(100%, calc((100vh - 170px) * 4 / 3)); }
+}
+.big-card:not(.hidden):has(.rd-opts, .sd-pair, .ar-canvas) ~ .bubble { visibility: hidden; }
+/* ===== end of Pickles' games, part 2 ===== */

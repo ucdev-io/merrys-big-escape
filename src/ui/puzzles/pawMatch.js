@@ -90,6 +90,6 @@ function finish(S, moves) {
     ? r.prev !== null ? `🎉 A new best! (It was ${r.prev}.)` : 'Your first go: now try to beat it!'
     : `Your best is ${r.best} goes.`;
   S.show(`<h1>🐾 All ${PAIRS} pairs!</h1><p>You did it in <b>${moves}</b> goes. ${how}</p>
-    <p class="pm-cat"><span class="pm-who">🐈 Pickles:</span> “${line}”</p>${prizeLine(r.prize)}`,
+    <p class="pm-cat"><span class="pm-who">🐈 Pickles:</span> “${line}”</p>${prizeLine(r.prize, r.unlocked)}`,
   [['🔁 Again!', () => play(S)], ['Close', () => S.close()]]);
 }
