@@ -322,7 +322,7 @@ export function buildSewer(origin) {
   // ---- the ladder up to the alley, and the light coming down the drain ----
   for (const s of [-1, 1]) box(g, 0.07, H + 0.3, 0.07, 0x6b6964, s * 0.32, (H + 0.3) / 2, NORTH - 0.12);
   for (let k = 0; k < 5; k++) box(g, 0.64, 0.04, 0.05, 0x6b6964, 0, 0.25 + k * 0.28, NORTH - 0.12, { cast: false });
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 1.0, 5, 16, 1, true), paint(LIGHT, BEAM));
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 5, 16, 1, true), paint(LIGHT, { ...BEAM, opacity: 0.1 })); // (slim and faint: she arrives right under it, and the camera looks through it)
   shaft.position.set(0, 2.2, NORTH - 0.7);
   g.add(shaft);
   flat(g, new THREE.CircleGeometry(0.9, 18), 0xe8dcb0, 0, 0.01, NORTH - 0.9, 0, WET);

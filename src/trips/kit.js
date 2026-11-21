@@ -56,7 +56,7 @@ export class TripChapter {
     const ex = canAct ? this.exitAt(P.pos) : null;
     if (ex?.walk) { ex.onTake?.(); this.ctx.leave(ex.id, ex.style); return; }
     const h = canAct ? (ex ? { text: ex.text, paw: ex.paw ?? 'squeeze' } : this.hint?.()) : this.heldHint?.() ?? null;
-    this.hud.setPawAction(h?.paw ?? 'dig');
+    this.hud.setPawAction(h?.paw ?? (canAct ? 'dig' : 'wait')); // (held still on a ride: 🐾 does nothing, so it doesn't say Dig)
     if (canAct || h) this.hud.setPrompt(h?.text ?? '');
     const acted = this.actions.update(dt, {
       canAct, goal: this.goal?.() ?? null,
