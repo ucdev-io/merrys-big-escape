@@ -11,6 +11,14 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.8.1', date: '2026-11-22', title: 'Quicker on phones',
+    notes: [
+      '⚡ Everything runs smoother, especially on phones: the town, the beach, the farm and every day out draw far less behind the scenes. The theme park does half the work it did!',
+      '🐶 Dogs out of sight (round a corner, or right down the road) no longer slow things down, and nor do the gulls, crabs and farm animals when you’re nowhere near them.',
+      '🐛 A friend who leaves while you’re on a trip doesn’t get left behind as a statue any more.',
+    ],
+  },
+  {
     version: '0.8.0', date: '2026-11-21', title: 'Every day’s a new walk',
     notes: [
       '📅 Today’s walk: three new goals every day, from all over town and beyond (☰ → Today’s walk). Finish all three for bonus stars. Full walks win the 🦮 Walkies collar and the 🧭 Explorer’s hat!',
