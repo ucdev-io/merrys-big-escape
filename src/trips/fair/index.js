@@ -10,7 +10,7 @@ import { progress } from '../../game/progress.js';
 import { COSMETICS } from '../../game/cosmetics.js';
 import { TripChapter } from '../kit.js';
 import { buildFair, PLAN } from './build.js';
-import { Carousel, BigWheel, Helter, Coaster, dodgemModel, sitStill, seatAt } from './rides.js';
+import { Carousel, BigWheel, Helter, Coaster, dodgemModel, sitStill, seatAt, coasterCar } from './rides.js';
 
 /*
  * 🎡 Wagtail Wonderland: a day out on the bus (from any town's bus stop: see game/town/busStop.js). Five rides,
@@ -33,6 +33,7 @@ const RIDES = {
   dodgems: { emoji: '🚗', name: 'the dodgems', hop: '🐾 Hop in a dodgem!' },
 };
 const DODGE_SECS = 40;
+const RIDE_N = { carousel: 1, wheel: 2, helter: 3, coaster: 4, dodgems: 5 }; // (which ride she's on, as friends are told: 4 bits)
 const LINES = {
   carousel: ['Round and round!', 'Giddy-up!', 'Wheee, round we go!'],
   wheel: ['What a view! 🎡', 'Look how tiny everything is!', 'Up, up, up…'],
@@ -81,6 +82,7 @@ class FairChapter extends TripChapter {
     this.makePeople();
     this.riding = null;
     this.dodge = null;
+    this.props = new Map(); // friends on rides: what they're sat in (by friend id)
     this.later = [];
     this.dodgeBest = bests().bumps ?? 0;
     this.objective();
@@ -129,7 +131,7 @@ class FairChapter extends TripChapter {
   startDodgems() {
     const P = this.player, A = this.arena;
     // She's held still in the car (sitting up nicely): the stick drives the car, not her (see tickDodgems).
-    Object.assign(P, { frozen: true, lockY: true });
+    Object.assign(P, { frozen: true, lockY: true, rideN: RIDE_N.dodgems });
     P.vel.set(0, 0);
     this.dodge = { t: DODGE_SECS, bumps: 0, p: V((A.x0 + A.x1) / 2, 0, A.z1 - 1.6), vel: new THREE.Vector2(), heading: Math.PI };
     this.placeMe();
@@ -152,7 +154,7 @@ class FairChapter extends TripChapter {
   endDodgems() {
     const P = this.player, D = this.dodge, A = this.arena, o = this.O;
     this.dodge = null;
-    Object.assign(P, { frozen: false, lockY: false });
+    Object.assign(P, { frozen: false, lockY: false, rideN: 0 });
     P.dog.stopEmote();
     P.pos.set(A.door.x + o.x, 0, A.door.z + 0.4 + o.z);
     P.vy = 0; P.grounded = true;
@@ -225,6 +227,16 @@ class FairChapter extends TripChapter {
         other.dog.bark();
       }
     }
+    // Friends in dodgems too: bump into them (they're where their game says; only you bounce off here).
+    if (D) for (const pr of this.props.values()) {
+      if (pr.kind !== 'dodgem') continue;
+      const fx = pr.obj.position.x - this.O.x, fz = pr.obj.position.z - this.O.z, dx = fx - D.p.x, dz = fz - D.p.z, l = Math.hypot(dx, dz);
+      if (l > 1.42 || l < 1e-4) continue;
+      const nx = dx / l, nz = dz / l;
+      D.p.x -= nx * (1.42 - l); D.p.z -= nz * (1.42 - l);
+      D.vel.x -= nx * 3.4; D.vel.y -= nz * 3.4;
+      if ((pr.cool ?? 0) < this.time) { pr.cool = this.time + 0.6; D.bumps++; sfx.bonk?.(); buzz(20); this.hud.float(pick(LINES.dodge), this.actions.anchor()); }
+    }
     if (D) this.placeMe();
     const far = Math.hypot(this.player.pos.x - this.O.x - (A.x0 + A.x1) / 2, this.player.pos.z - this.O.z - (A.z0 + A.z1) / 2) > 28; // (the dogs at the wheel are only drawn from close by: a dog's a lot of shape)
     for (const c of this.cars) {
@@ -235,6 +247,26 @@ class FairChapter extends TripChapter {
       sitStill(c.dog);
       c.dog.update(dt, { speed: 0, turnRate: 0, sniff: false, dig: false, happy: 1 });
     }
+  }
+
+  /**
+   * A friend on one of the rides (see net/remoteDogs.js): on the carousel and the big wheel they're already sat on
+   * ours (both turn by the clock); on the coaster and the dodgems we draw them a car of their own, under them.
+   */
+  remoteRide(r, ride) {
+    const want = ride === RIDE_N.coaster ? 'coaster' : ride === RIDE_N.dodgems ? 'dodgem' : null, have = this.props.get(r.id);
+    if (have && have.kind !== want) { have.obj.removeFromParent(); this.props.delete(r.id); }
+    if (!want) return;
+    let p = this.props.get(r.id);
+    if (!p) {
+      p = { kind: want, obj: want === 'coaster' ? coasterCar(0x6f9a52) : dodgemModel(0xf2c94c) };
+      this.scene.add(p.obj);
+      this.props.set(r.id, p);
+    }
+    const root = r.dog.root;
+    p.obj.position.copy(root.position);
+    p.obj.position.y = want === 'coaster' ? root.position.y - 0.42 : 0;
+    p.obj.rotation.y = root.rotation.y;
   }
 
   // ---------- people ----------
@@ -338,6 +370,7 @@ class FairChapter extends TripChapter {
     P.vy = 0;
     this.hud.setPrompt('');
     r.board(P);
+    P.rideN = RIDE_N[k];
     this.riding = { k, r, t: 0, said: 0, dist: this.ctx.follow.distance };
     if (k === 'wheel') { this.ctx.follow.distance = 11; this.ctx.follow.yaw = Math.PI; this.ctx.follow.pitch = 0.28; } // (looking out over the park)
     sfx.boing?.();
@@ -369,6 +402,7 @@ class FairChapter extends TripChapter {
   getOff() {
     const R = this.riding, P = this.player, off = R.r.offFrom(P.pos);
     this.riding = null;
+    P.rideN = 0;
     P.frozen = false;
     P.lockY = false;
     P.object.visible = true;

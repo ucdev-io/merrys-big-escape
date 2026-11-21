@@ -1,3 +1,4 @@
+import { tripByN } from '../../trips/registry.js';
 import { BREEDS } from '../../entities/breeds.js';
 import { NetClient } from '../../net/client.js';
 import { packLink, packPath, fillShareBox } from '../../net/links.js';
@@ -86,12 +87,13 @@ export class Pack {
     this.updateBadge();
   }
 
-  /** Send my dog's state (~12×/s). `trip`: off on a trip (its number, 1–15: see trips/registry.js), seen from where she went. */
+  /** Send my dog's state (~12×/s). `trip`: off on a trip (its number, 1–15: see trips/registry.js), her real place in it. */
   sendState(dt, P, sniffing, trip = 0) {
     if (!this.net) return;
     const flags = (sniffing ? 1 : 0) | (P.digTimer > 0 ? 2 : 0) | (P.grounded ? 0 : 4) | (P.inWater ? 8 : 0) | (P.swim > 0.5 ? 16 : 0) | (P.sledging ? 32 : 0)
       | (((P.mudLevel ?? 0) & 3) << 6) // (+ how muddy: 0–3)
-      | ((trip & 15) << 8); // (+ which trip she's away on: friends don't see her dog meanwhile)
+      | ((trip & 15) << 8) // (+ which trip she's away on: only friends on the same trip see her dog meanwhile)
+      | (((P.rideN ?? 0) & 15) << 12); // (+ which of that trip's rides she's sat on, if any)
     this.net.sendState(dt, P.pos, P.heading, P.speed, flags);
   }
 
@@ -152,6 +154,7 @@ export class Pack {
     this.hud.showCard(`
       <h1>👥 Your pack</h1>
       <p class="pack-list"></p>
+      <div class="pack-trips"></div>
       <h3>🎮 Games &amp; challenges</h3>
       <div class="game-btns challenges"></div>
       <p class="rec-link"><button class="pill g-records">🏆 Pack records</button></p>
@@ -162,6 +165,25 @@ export class Pack {
         <div class="invite"></div></details>`, [['OK', () => this.hud.hideCard()]]);
     const card = this.hud.card;
     card.querySelector('.pack-list').textContent = ['You', ...names].join(' · ') + (code ? `  (pack ${code})` : '');
+    // Friends off on a trip: where, and (one tap) follow them there.
+    const trips = card.querySelector('.pack-trips');
+    for (const r of this.remotes.dogs.values()) {
+      const T = r.away ? tripByN(r.away) : null;
+      if (!T) continue;
+      const row = document.createElement('div'), label = document.createElement('span');
+      row.className = 'bus-row';
+      label.className = 'bus-name';
+      label.textContent = `${T.emoji} ${r.name} · ${T.name}`;
+      row.appendChild(label);
+      if (T.follow && this.onFollow) {
+        const b = document.createElement('button');
+        b.className = 'pill bus-go';
+        b.textContent = '🐾 Follow';
+        b.onclick = () => this.onFollow(r);
+        row.appendChild(b);
+      }
+      trips.appendChild(row);
+    }
     const dogs = this.remotes.dogs.size + 1, btns = card.querySelector('.challenges');
     for (const [kind, C] of Object.entries(CHALLENGES)) {
       const b = document.createElement('button');

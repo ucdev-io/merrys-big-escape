@@ -111,8 +111,24 @@ export class RemoteDogs {
     return out;
   }
 
-  update(dt) {
-    const renderT = performance.now() - DELAY;
+  /** Every dog back in the town's scene (before a trip's scene is thrown away: they'd go with it). */
+  home() {
+    for (const r of this.dogs.values()) if (r.dog.root.parent !== this.scene) this.scene.add(r.dog.root);
+    this.myTrip = 0;
+  }
+
+  /**
+   * where: { trip, scene, chapter } while I'm off on a trip myself: friends on the same trip are drawn there (in its
+   * scene), everyone else is hidden, and the trip's chapter can dress a friend who's on one of its rides
+   * (chapter.remoteRide(r, ride): ride 0 when they're off it, or gone).
+   */
+  update(dt, where = null) {
+    const renderT = performance.now() - DELAY, myTrip = where?.trip ?? 0, scene = where?.scene ?? this.scene, chap = where?.chapter ?? null;
+    if (myTrip !== (this.myTrip ?? 0)) {
+      this.myTrip = myTrip;
+      const here = myTrip ? [...this.dogs.values()].filter((r) => (r.away ?? 0) === myTrip) : [];
+      if (here.length) this.onFriendsHere?.(here); // (already there when she arrives)
+    }
     // (Where your own dog is on screen: a friend's name tag over it goes see-through.)
     const mine = this.hud.dogAnchor ? this.hud.project(this.hud.dogAnchor()) : null, cam = this.hud.camera.position;
     for (const r of this.dogs.values()) {
@@ -123,22 +139,31 @@ export class RemoteDogs {
       const k = c.t > a.t ? THREE.MathUtils.clamp((renderT - a.t) / (c.t - a.t), 0, 1) : 1;
       const root = r.dog.root;
       // Away on a trip (down a drain…): no dog to see here until they're back.
-      const away = (c.f >> 8) & 15;
-      if (away !== (r.away ?? 0)) { r.away = away; this.onAway?.(r, away); }
-      if (away) { root.visible = false; r.tag.style.opacity = 0; this.rides?.update(dt, r.id, root.position, { grounded: false }); continue; } // (and any car she was on drives off)
+      const away = (c.f >> 8) & 15, ride = myTrip ? (c.f >> 12) & 15 : 0;
+      if (away !== (r.away ?? 0)) { const was = r.away ?? 0; r.away = away; this.onAway?.(r, away, was, myTrip); }
+      if (away !== myTrip) { // (somewhere else: in town while I'm on a trip, or on another trip)
+        root.visible = false; r.tag.style.opacity = 0;
+        if (!myTrip) this.rides?.update(dt, r.id, root.position, { grounded: false }); // (and any car she was on drives off)
+        if (r.ride) { r.ride = 0; chap?.remoteRide?.(r, 0); }
+        continue;
+      }
+      if (root.parent !== scene) scene.add(root);
       root.visible = true;
       root.position.set(a.x + (c.x - a.x) * k, a.y + (c.y - a.y) * k, a.z + (c.z - a.z) * k);
       // On top of one of their own cars (we've none of those here: every game drives its own)? One of ours, under them.
-      this.rides?.update(dt, r.id, root.position, { grounded: !(c.f & 4), own: c.v, other: !!(c.f & (8 | 32)) });
+      if (!myTrip) this.rides?.update(dt, r.id, root.position, { grounded: !(c.f & 4), own: c.v, other: !!(c.f & (8 | 32)) });
       const h = a.h + wrap(c.h - a.h) * k;
       const turn = wrap(h - r.heading) / Math.max(dt, 1e-3);
       r.heading = h;
       root.rotation.y = h;
       r.digT = Math.max(0, r.digT - dt);
-      if (c.v > 0.6 && (r.dog.emoteT ?? 0) > 0.25) r.dog.stopEmote(); // they've walked off
+      if (ride) { // (sat on one of the trip's rides: sitting still, and the trip draws what they're sat on)
+        if (r.dog.emoteKind === 'sit' && (r.dog.emoteT ?? 0) > 0.3) r.dog.emoteT = Math.max(r.dog.emoteT, 1.5); else r.dog.emote('sit');
+      } else if (c.v > 0.6 && (r.dog.emoteT ?? 0) > 0.25) r.dog.stopEmote(); // they've walked off
+      if (ride !== (r.ride ?? 0) || ride) { r.ride = ride; chap?.remoteRide?.(r, ride); }
       r.dog.update(dt, { speed: a.v + (c.v - a.v) * k, turnRate: turn, sniff: !!(c.f & 1), dig: r.digT > 0 || !!(c.f & 2), happy: c.v > 2.8 ? 1 : 0.6, air: c.f & 4 ? 1 : 0, vy: (c.y - a.y) * 8, swim: c.f & 16 ? 1 : 0 });
       // Splash when they hit the water; little rings while they paddle about.
-      const inW = !!(c.f & 8);
+      const inW = !!(c.f & 8) && !myTrip; // (the splashes are the town's: not on a trip)
       if (inW && !r.inW) this.onSplash?.(root.position, Math.min(1.2, (c.v + 1) / 3));
       if (inW) { r.ringT = (r.ringT ?? 0) - dt; if (r.ringT <= 0) { r.ringT = c.v > 0.3 ? 0.4 : 0.9; this.onRipple?.(root.position); } }
       if (!inW && r.inW) r.shakeIn = 0.5;
@@ -154,6 +179,6 @@ export class RemoteDogs {
       r.tag.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%) scale(${far.toFixed(2)})`;
       r.tag.style.opacity = s.behind ? 0 : over ? 0.22 : 0.9;
     }
-    this.rides?.tick(dt, this.dogs);
+    if (!myTrip) this.rides?.tick(dt, this.dogs);
   }
 }

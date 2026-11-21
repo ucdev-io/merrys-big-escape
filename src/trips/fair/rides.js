@@ -16,6 +16,9 @@ const RB = (w, h, d, r = 0.08) => new RoundedBoxGeometry(w, h, d, 3, r);
 const UP = V(0, 1, 0);
 const _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 
+/** How far round something turning at `speed` (rad/s) is right now, by the clock: the same on every friend's screen. */
+const clockAngle = (speed) => { const period = ((Math.PI * 2) / speed) * 1000; return ((Date.now() % period) / 1000) * speed; };
+
 function mesh(geo, color, parent, pos = [0, 0, 0], rot = [0, 0, 0], opts, scale) {
   const m = new THREE.Mesh(geo, paint(color, opts));
   m.position.set(...pos);
@@ -100,8 +103,8 @@ export class Carousel {
       this.top.add(h);
       this.horses.push({ g: h, a });
     }
-    this.spin = 0;
-    this.speed = 0.45;
+    this.speed = 0.6; // (steady, and by the clock: friends riding it are on the same horses as here)
+    this.spin = clockAngle(this.speed);
     this.t = 0;
   }
 
@@ -111,8 +114,7 @@ export class Carousel {
 
   update(dt) {
     this.t += dt;
-    this.speed += ((this.riding ? 0.85 : 0.45) - this.speed) * (1 - Math.exp(-dt * 0.8));
-    this.spin += this.speed * dt;
+    this.spin = clockAngle(this.speed);
     this.top.rotation.y = this.spin;
     for (const h of this.horses) h.g.position.y = 1.0 + Math.sin(this.spin * 3 + h.a * 2) * 0.22;
     this.top.updateMatrixWorld(true); // (so she sits where the horse is this frame, not last)
@@ -122,7 +124,7 @@ export class Carousel {
     // The horse nearest her.
     let best = null, bd = Infinity;
     for (const h of this.horses) { const d = h.g.getWorldPosition(_v).distanceToSquared(P.pos); if (d < bd) { bd = d; best = h; } }
-    this.riding = { h: best, t: 0, laps: 0, start: this.spin };
+    this.riding = { h: best, t: 0, done: 0 };
   }
 
   carry(dt, P) {
@@ -130,7 +132,8 @@ export class Carousel {
     R.t += dt;
     const h = R.h.g, at = h.localToWorld(V(0, 0.22, -0.02)), dir = V(0, 0, 1).transformDirection(h.matrixWorld);
     seat(P, at, Math.atan2(dir.x, dir.z), 0);
-    if (this.spin - R.start > Math.PI * 4) { this.riding = null; return true; } // (twice round)
+    R.done += this.speed * dt;
+    if (R.done > Math.PI * 3) { this.riding = null; return true; } // (round and a half)
     return false;
   }
 
@@ -183,8 +186,8 @@ export class BigWheel {
       mesh(new THREE.SphereGeometry(0.8, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), c, gd, [0, -0.05, 0], [0, 0, 0], undefined, [1, 0.32, 0.8]); // (a little domed roof)
       this.gondolas.push({ g: gd, k });
     }
-    this.angle = 0;
-    this.speed = 0.18;
+    this.speed = 0.3; // (steady, by the clock, like the carousel)
+    this.angle = clockAngle(this.speed);
   }
 
   /** The boarding platform, in front of the bottom of the wheel. */
@@ -192,8 +195,7 @@ export class BigWheel {
   near(l) { return Math.hypot(l.x - this.door.x, l.z - this.door.z) < 2; }
 
   update(dt) {
-    this.speed += ((this.riding ? 0.38 : 0.18) - this.speed) * (1 - Math.exp(-dt * 0.8));
-    this.angle += this.speed * dt;
+    this.angle = clockAngle(this.speed);
     this.wheel.rotation.z = this.angle;
     for (const G of this.gondolas) {
       const a = this.angle + (G.k / 8) * Math.PI * 2;
@@ -206,7 +208,7 @@ export class BigWheel {
     // The gondola nearest the bottom.
     let best = null, bd = Infinity;
     for (const G of this.gondolas) { const d = G.g.position.y; if (d < bd) { bd = d; best = G; } }
-    this.riding = { G: best, t: 0, start: this.angle };
+    this.riding = { G: best, t: 0, done: 0 };
   }
 
   carry(dt, P) {
@@ -214,7 +216,8 @@ export class BigWheel {
     R.t += dt;
     const at = R.G.g.localToWorld(V(0, -0.92, 0));
     seat(P, at, 0, 0); // (looking out over the park)
-    if (this.angle - R.start > Math.PI * 2) { this.riding = null; return true; }
+    R.done += this.speed * dt;
+    if (R.done > Math.PI * 2) { this.riding = null; return true; }
     return false;
   }
 
@@ -346,16 +349,7 @@ export class Coaster {
     for (let k = 0; k < 11; k++) mesh(new THREE.BoxGeometry(st.len / 11, 0.06, 3.8), k % 2 ? 0xfffaf0 : 0x5b86c4, g, [st.x - st.len / 2 + (k + 0.5) * (st.len / 11), 3.35, st.z + 0.8], [0, 0, 0]);
     mesh(RB(3.2, 0.6, 0.1, 0.05), 0xf2c94c, g, [st.x, 3.85, st.z + 2.7]);
     // The train: three little cars, red, yellow and blue, with a safety bar.
-    this.cars = [0xd9534f, 0xf2c94c, 0x5b86c4].map((c) => {
-      const car = new THREE.Group();
-      parent.add(car);
-      mesh(RB(0.95, 0.42, 1.25, 0.14), c, car, [0, 0.28, 0]);
-      mesh(RB(0.78, 0.1, 1.0, 0.04), 0x2f3a52, car, [0, 0.46, 0]);
-      mesh(RB(0.85, 0.36, 0.14, 0.06), c, car, [0, 0.6, -0.5]);
-      mesh(new THREE.TorusGeometry(0.3, 0.025, 6, 16, Math.PI), 0xe0b04a, car, [0, 0.42, 0.58], [-0.35, 0, 0]).castShadow = false; // (the safety bar, at the front)
-      for (const sx of [-0.4, 0.4]) for (const sz of [-0.42, 0.42]) mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.08, 10), 0x3a3a3a, car, [sx, 0.06, sz], [0, 0, Math.PI / 2]);
-      return car;
-    });
+    this.cars = [0xd9534f, 0xf2c94c, 0x5b86c4].map((c) => { const car = coasterCar(c); parent.add(car); return car; });
     // Where the station is along the track, and the top of the lift hill.
     let s0 = 0, sTop = 0, yTop = -1, bd = Infinity;
     for (let s = 0; s < L; s += 0.25) {
@@ -407,6 +401,17 @@ export class Coaster {
   }
 
   offFrom() { const d = this.door; return { x: d.x + this.O.x, z: d.z + 0.3 + this.O.z, face: 0 }; }
+}
+
+/** One of the Wiggly Woof's little cars (a dog sits at 0.42 up, looking along +z), with a safety bar. */
+export function coasterCar(c) {
+  const car = new THREE.Group();
+  mesh(RB(0.95, 0.42, 1.25, 0.14), c, car, [0, 0.28, 0]);
+  mesh(RB(0.78, 0.1, 1.0, 0.04), 0x2f3a52, car, [0, 0.46, 0]);
+  mesh(RB(0.85, 0.36, 0.14, 0.06), c, car, [0, 0.6, -0.5]);
+  mesh(new THREE.TorusGeometry(0.3, 0.025, 6, 16, Math.PI), 0xe0b04a, car, [0, 0.42, 0.58], [-0.35, 0, 0]).castShadow = false; // (the safety bar, at the front)
+  for (const sx of [-0.4, 0.4]) for (const sz of [-0.42, 0.42]) mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.08, 10), 0x3a3a3a, car, [sx, 0.06, sz], [0, 0, Math.PI / 2]);
+  return car;
 }
 
 // ======================================================================= 🚗 the dodgems

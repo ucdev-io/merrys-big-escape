@@ -69,5 +69,5 @@ export class TripChapter {
   /** Say something from somewhere (a 3D point, or a function giving one). */
   say(text, at, dur = 3.4) { this.hud.say(text, typeof at === 'function' ? at : () => at, dur); }
 
-  dispose() { this.hud.clearBubbles(); this.hud.setPrompt(''); this.pipeline.sniff = 0; }
+  dispose() { this.hud.clearBubbles(); this.hud.setPrompt(''); this.pipeline.sniff = 0; this.player.rideN = 0; }
 }

@@ -144,7 +144,7 @@ function onMessage(p, msg) {
     }
     case 's': // my dog's state
       if (!room) return;
-      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 0xfff, num(msg.y, 50)]; // (f: sniffing, digging…; 32: on a sledge; 64 + 128: how muddy; 256–2048: away on a trip)
+      p.state = [p.id, num(msg.x), num(msg.z), num(msg.h, 100), num(msg.v, 50), (msg.f | 0) & 0xffff, num(msg.y, 50)]; // (f: sniffing, digging…; 32: on a sledge; 64 + 128: how muddy; 256–2048: away on a trip; 4096–32768: on which of the trip's rides)
       p.dirty = true;
       return;
     case 'act': // bark / dig — instant, relay to the others

@@ -36,7 +36,7 @@ export class Trips {
   /** Every frame, from main (before the chapter's own update). */
   update(dt) {
     this.anim?.(dt);
-    if (this.cur) this.town.awayTick(dt, this.cur.n); // (still in the pack: friends know she's away)
+    if (this.cur) this.town.awayTick(dt, this.cur.n, this.cur.scene, this.cur.chapter); // (still in the pack: friends know where she is, and friends on the same trip are drawn here)
   }
 
   /** Start fetching a trip's download (near the way in, say), so going there doesn't wait for it. */
@@ -99,7 +99,7 @@ export class Trips {
     const y0 = P.pos.y, sx = P.pos.x, sz = P.pos.z, at = from.at ?? { x: sx, z: sz };
     let t = 0;
     const f = this.paper();
-    if (from.style === 'net') await this.fadeTo(1, 0.6);
+    if (from.style === 'net' || from.style === 'follow') await this.fadeTo(1, 0.6); // (scooped up, or off after a friend: just away she goes)
     else if (from.style === 'bus') await this.fadeTo(1, 0.01); // (off on the bus: the paper's already up)
     else if (from.style === 'beam') {
       await this.play(step((dt) => {
@@ -206,6 +206,7 @@ export class Trips {
     this.setActive(null);
     this.follow.setOccluders(town.world.occluders ?? {});
     this.follow.setLimits(null);
+    town.bringBack?.(); // (friends' dogs out of the trip's scene first: it's about to be thrown away)
     x.chapter.dispose?.();
     x.world.dispose?.();
     P.gravity = 1; // (back on Earth)

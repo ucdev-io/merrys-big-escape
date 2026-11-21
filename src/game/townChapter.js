@@ -33,7 +33,7 @@ import { Beach } from './town/beach/index.js';
 import { travelBlock, landingFor, digTravel } from './town/travel.js';
 import { Portals } from './town/portals.js';
 import { Catcher } from './town/catcher.js';
-import { tripByN } from '../trips/registry.js';
+import { tripByN, TRIPS } from '../trips/registry.js';
 import { TownPuzzles } from './town/puzzles.js';
 import { RideCars } from '../net/rideCars.js';
 
@@ -240,11 +240,21 @@ export class TownChapter {
     });
     // 😈 Naughty things that aren't garden mischief fill the meter too: pinching treats, chasing the postman.
     this.heists.onNaughty = this.life.onNaughty = () => this.catcher.onMischief();
-    this.remotes.onAway = (r, n) => {
+    // Friends off on trips (and coming back), and friends on the same trip as you.
+    const who = (r) => { this.hud.toast.querySelector('.who').textContent = r.name; }; // (names are untrusted: as text)
+    this.remotes.onAway = (r, n, was, mine) => {
       const T = tripByN(n);
-      this.hud.showToastRaw(n ? T?.emoji ?? '🧳' : '👋', n ? `<span class="who"></span> ${T?.away ?? 'went off exploring!'}` : '<span class="who"></span> is back!');
-      this.hud.toast.querySelector('.who').textContent = r.name;
+      if (mine && n === mine) { this.hud.showToastRaw(T?.emoji ?? '🐾', '<span class="who"></span> is here too!', '', { trip: true }); who(r); return; }
+      if (mine && was === mine) { this.hud.showToastRaw('👋', n ? `<span class="who"></span> went off to ${T?.name ?? 'somewhere else'}.` : '<span class="who"></span> went back to town.', '', { trip: true }); who(r); return; }
+      this.hud.showToastRaw(n ? T?.emoji ?? '🧳' : '👋', n ? `<span class="who"></span> ${T?.away ?? 'went off exploring!'}` : '<span class="who"></span> is back!', n && T?.follow ? 'Tap 👥 to follow them!' : '');
+      who(r);
     };
+    this.remotes.onFriendsHere = (list) => {
+      const T = tripByN(list[0].away);
+      this.hud.showToastRaw(T?.emoji ?? '🐾', `<span class="who"></span> ${list.length > 1 ? 'are' : 'is'} here too!`, '', { trip: true });
+      this.hud.toast.querySelector('.who').textContent = list.map((r) => r.name).join(' and ');
+    };
+    this.pack.onFollow = (r) => this.followFriend(r);
     this.goHome(0);
     // 🐾 Fast travel from the Sniff Book: dig a tunnel to any place you've found (or home).
     hud.onTravel = (id) => this.travelTo(id);
@@ -430,9 +440,21 @@ export class TownChapter {
   beam(secs) { this.portals.beam(secs); }
 
   /** Still in the pack while she's away: friends are told which trip (an older server just shows her dog at the drain). */
-  awayTick(dt, n) {
-    this.awayAs.mudLevel = this.player.mudLevel;
-    this.pack.sendState(dt, this.awayAs, false, n);
+  awayTick(dt, n, scene = null, chapter = null) {
+    const P = this.player;
+    this.pack.sendState(dt, P, !P.frozen && this.input.sniff, n); // (her real place on the trip: friends on it too see her there)
+    this.remotes.update(dt, { trip: n, scene, chapter }); // (and friends on the same trip, there with her)
+  }
+
+  /** Friends' dogs back into the town's scene (a trip's about to be thrown away). */
+  bringBack() { this.remotes.home(); }
+
+  /** 👥 → Follow: straight to the trip a friend's on (the way in she'd have taken). */
+  followFriend(r) {
+    const id = Object.entries(TRIPS).find(([, t]) => t.n === r.away)?.[0], T = TRIPS[id];
+    if (!T?.follow) return false;
+    this.hud.hideCard();
+    return this.goTrip(id, { id: T.follow, style: 'follow' });
   }
 
   /** Back from a trip, out at `exit` (the way in she took, or another: the beach pipe…). */
