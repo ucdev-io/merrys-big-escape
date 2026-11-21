@@ -108,7 +108,17 @@ class UfoChapter extends TripChapter {
     this.makeRocks();
     this.hunt = { start: 0, best: bests().sparkTime ?? null };
     this.ballBest = bests().bops ?? 0;
+    if (this.share) for (const [k, v] of Object.entries(this.share.v)) this.onShared(k, v, -1); // (found before she got here)
     this.objective();
+  }
+
+  /** With friends: a spark or a Blip kid found (by anyone: your own come back too, and are already done). */
+  onShared(k, v, by) {
+    if (by === this.share.me) return;
+    const quiet = by === -1, m = /^([sk])(\d)$/.exec(k);
+    if (!m) return;
+    if (m[1] === 's') { const sp = this.sparks.find((q) => q.i === Number(m[2])); if (sp && !sp.got) this.gotSpark(sp, by, quiet); }
+    else { const kid = this.kids[Number(m[2])]; if (kid && kid.state === 'hiding') this.findKid(kid, by, quiet); }
   }
 
   /** (x, z) in the planet's own coordinates, at ground height (plus `up`). */
@@ -154,9 +164,9 @@ class UfoChapter extends TripChapter {
   makeSparks() {
     const spots = sparkSpots();
     let pickd;
-    if (!this.saved.fixed) pickd = [spots[0], spots.find((s) => s.name === 'saucer'), spots.find((s) => s.name === 'mushroom'), spots[1], spots[9]]; // (a gentle first lot)
+    if (!this.saved.fixed && !this.share) pickd = [spots[0], spots.find((s) => s.name === 'saucer'), spots.find((s) => s.name === 'mushroom'), spots[1], spots[9]]; // (a gentle first lot, on your own)
     else {
-      const easy = spots.filter((s) => s.easy).sort(() => Math.random() - 0.5), hard = spots.filter((s) => !s.easy).sort(() => Math.random() - 0.5);
+      const easy = this.shuffled(spots.filter((s) => s.easy)), hard = this.shuffled(spots.filter((s) => !s.easy)); // (with friends: the same five for everyone)
       pickd = [...easy.slice(0, 2), ...hard.slice(0, 3)];
     }
     const shape = new THREE.Shape();
@@ -174,7 +184,7 @@ class UfoChapter extends TripChapter {
       m.position.copy(p);
       m.castShadow = true;
       this.scene.add(m);
-      return { mesh: m, pos: p, got: false, t: i * 1.3, glowT: Math.random() * 0.2 };
+      return { i, mesh: m, pos: p, got: false, t: i * 1.3, glowT: Math.random() * 0.2 };
     });
     this.got = 0;
   }
@@ -193,7 +203,7 @@ class UfoChapter extends TripChapter {
       return a;
     });
     // The Blip kids, hiding (somewhere different each time).
-    const spots = HIDES.slice().sort(() => Math.random() - 0.5).slice(0, 3);
+    const spots = this.shuffled(HIDES).slice(0, 3); // (with friends: the same hiding places for everyone)
     this.kids = KIDS.map((k, i) => {
       const [x, z] = spots[i], a = A({ ...k, size: 0.6, eyes: i === 1 ? 2 : 1 }, x, z);
       a.heading = Math.atan2(x, z) + Math.PI; // (peeking back towards the saucer)
@@ -303,16 +313,26 @@ class UfoChapter extends TripChapter {
     if (w) { this.later.push([0.35, () => { this.say(pick(LINES.copy), () => w.top(), 1.8); sfx.blip(w.voice); w.cheer(0.8); }]); }
   }
 
-  findKid(kid) {
+  /** A Blip kid found: by her (by null), or by a friend (by their id; quiet: before she got here). */
+  findKid(kid, by = null, quiet = false) {
     kid.state = 'home';
     kid.cheer(1.4);
     kid.goTo(kid.home);
     kid.hopLen = 1.6;
     this.found++;
+    if (by === null) this.share?.set(`k${this.kids.indexOf(kid)}`);
+    if (quiet) { kid.pos.copy(kid.home); kid.target = null; this.objective(); return; }
     sfx.found?.();
     sfx.blip(kid.voice);
-    this.say(pick(LINES.found), () => kid.top(), 2.6);
     this.actions.sparkle(kid.pos.clone().add(V(0, 0.4, 0)), 12);
+    if (by !== null) { // (a friend found this one)
+      this.say(`Found by ${this.friend(by)}! Hee hee!`, () => kid.top(), 2.6);
+      progress.award(2, `${this.friend(by)} found a Blip kid!`);
+      if (this.found === 3) this.later.push([2.6, () => this.zibSay('All three found! What a team!', 3.2)]);
+      this.objective();
+      return;
+    }
+    this.say(pick(LINES.found), () => kid.top(), 2.6);
     progress.stat('blips');
     progress.award(6, 'Found a Blip kid!');
     if (this.found === 3) {
@@ -377,9 +397,30 @@ class UfoChapter extends TripChapter {
   }
 
   collect(s) {
+    this.share?.set(`s${s.i}`);
+    this.gotSpark(s, null);
+  }
+
+  /** A spark found: by her (by null), or by a friend (by their id; quiet: before she got here). */
+  gotSpark(s, by, quiet = false) {
     s.got = true;
     s.mesh.visible = false;
     this.got++;
+    if (quiet) {
+      if (this.got >= NEED && !this.ready) { this.ready = true; if (!this.saved.fixed) { this.ctx.town.save({ fixed: true }); this.saved = { ...this.saved, fixed: true }; } } // (the pack filled it before she arrived)
+      this.objective();
+      return;
+    }
+    if (by !== null) { // (a friend's)
+      sfx.spark?.();
+      this.actions.sparkle(s.mesh.position.clone(), 18);
+      this.hud.float(`${this.friend(by)} found one! ✨ ${this.got}/${NEED}`, s.mesh.position.clone().add(V(0, 0.6, 0)));
+      progress.award(1, `${this.friend(by)} found a star-spark!`);
+      if (this.got === 3 && !this.ready) this.zibSay(LINES.three, 2.6);
+      if (this.got >= NEED) this.allFound();
+      this.objective();
+      return;
+    }
     sfx.spark?.();
     buzz(15);
     this.actions.sparkle(s.mesh.position.clone(), 18);
@@ -402,6 +443,13 @@ class UfoChapter extends TripChapter {
       progress.award(30, 'The saucer’s full of fizz!');
       this.zibSay(LINES.done, 4);
       for (const k of COSMETICS) if (k.friend === 'saucer' && before < k.jobs && before + 1 >= k.jobs) this.later.push([1.2, () => this.hud.showToastRaw(k.emoji, `New: ${k.name}!`, 'A present from Zib. Wear it from ☰ → My dog → Dress up.')]);
+    } else if (this.share) {
+      // (found with friends: no race against the clock, just a cheer for the pack)
+      this.ctx.town.save({ hunts: (this.saved.hunts ?? 0) + 1 });
+      progress.stat('saucer');
+      progress.award(10, 'All five star-sparks, together!');
+      this.hud.showToastRaw('✨', 'All five star-sparks, together!', 'Zib’s jumping for joy.', { trip: true });
+      this.zibSay('All five! What a team!', 2.8);
     } else {
       const secs = this.time - this.hunt.start, best = keepBest('sparkTime', Math.round(secs), true);
       this.ctx.town.save({ hunts: (this.saved.hunts ?? 0) + 1 });

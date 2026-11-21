@@ -76,8 +76,11 @@ class SewerChapter extends TripChapter {
     this.makeOutfall();
     this.makeBucket();
     // Three lost things this visit (somewhere different each time).
-    const spots = SPOTS.slice().sort(() => Math.random() - 0.5).slice(0, 3), kinds = LOST.slice().sort(() => Math.random() - 0.5);
+    // (With friends: the same three in the same places for everyone, one dog's at a time, and handed over for the pack.)
+    const spots = this.shuffled(SPOTS).slice(0, 3), kinds = this.shuffled(LOST);
     this.lost = spots.map(([x, z, b], i) => { const p = this.W(x, z); return this.actions.carry.add(kinds[i], p.x, p.z, { buried: b ? 2 : 0, job: 'nibbles' }); });
+    this.lost.forEach((it, i) => this.shareItem(`lost${i}`, it));
+    if (this.share?.v.sluice && !this.open) { this.setOpen(true, true); this.ctx.town.save({ open: true }); } // (a friend's already opened it)
     // 🔦 Nibbles' lantern, if she's wearing it: turned up down here, with a warm pool of light round her.
     this.glow = new THREE.Group(); // (two soft rings of it, brighter in the middle)
     for (const [r, o] of [[1.15, 0.1], [0.6, 0.12]]) {
@@ -199,6 +202,40 @@ class SewerChapter extends TripChapter {
     this.inBucket = []; // (the ducks you've rescued, bobbing in it)
   }
 
+  /** A shared lost thing put down again (by a friend): it's a new carry item now. */
+  onSharedMoved(k, item) {
+    const i = Number(k.slice(4));
+    if (k.startsWith('lost') && Number.isInteger(i)) this.lost[i] = item;
+  }
+
+  /** A friend handed one of the lost things over (or had, before she got here: by -1). */
+  onSharedDone(k, by) {
+    const i = Number(k.slice(4));
+    if (!k.startsWith('lost') || !Number.isInteger(i)) return;
+    const it = this.lost[i];
+    this.lost[i] = null;
+    this.nibbles.done++;
+    if (by !== -1) {
+      sfx.found?.();
+      this.actions.sparkle(this.rat.at().add(V(0, -0.4, 0)), 12);
+      progress.award(3, `${this.friend(by)} found Nibbles’ ${it?.def.name ?? 'lost thing'}!`);
+      this.say(this.nibbles.done < this.nibbles.total ? `Thank you, ${this.friend(by)}! The ${it?.def.name ?? 'lost thing'}, on the shelf it goes.` : 'That’s all three! What a team you are!', this.rat.at, 3.4);
+      if (this.nibbles.done >= this.nibbles.total) progress.award(8, '🐀 Everything back, together!');
+    }
+    this.objective();
+  }
+
+  /** With friends: the sluice wheel turned by somebody else. */
+  onShared(k, v, by) {
+    if (k !== 'sluice' || this.open || by === this.share.me) return;
+    this.setOpen(true);
+    this.grilleRise = 0;
+    this.ctx.town.save({ open: true });
+    sfx.clang?.();
+    this.hud.showToastRaw('🎡', `${this.friend(by)} turned the big wheel!`, 'The pipe to the beach is open.', { trip: true });
+    this.objective();
+  }
+
   setOpen(on, quiet = false) {
     this.open = on;
     this.daylight.material = paint(on ? 0xd9ecf0 : 0x2b2a28, on ? { emissive: 0x4a5a5c } : undefined);
@@ -256,6 +293,7 @@ class SewerChapter extends TripChapter {
       this.setOpen(true);
       this.grilleRise = 0;
       this.ctx.town.save({ open: true });
+      this.share?.set('sluice');
       sfx.clang?.();
       sfx.hooray?.();
       buzz([30, 40, 30]);
@@ -282,7 +320,7 @@ class SewerChapter extends TripChapter {
     if (canAct && !this.nibbles.met && this.near(r.pos, 5)) this.meet();
     // A lost thing put down by Nibbles' counter: he takes it.
     const carry = this.actions.carry;
-    for (const it of this.lost) if (carry.items.includes(it) && !it.buried && (it.pos.x - r.pos.x) ** 2 + (it.pos.z - r.pos.z) ** 2 < 2.3 ** 2) { this.handOver(it); break; }
+    for (const it of this.lost) if (it && carry.items.includes(it) && !it.buried && (!this.share || it.byMe) && (it.pos.x - r.pos.x) ** 2 + (it.pos.z - r.pos.z) ** 2 < 2.3 ** 2) { this.handOver(it); break; }
     // The sluice wheel slowly creeps back if you stop turning.
     const w = this.wheel;
     if (!this.open) w.turn = Math.max(0, w.turn - dt * 0.035);
@@ -308,7 +346,8 @@ class SewerChapter extends TripChapter {
 
   handOver(it) {
     this.actions.carry.remove(it);
-    this.lost = this.lost.filter((q) => q !== it);
+    if (it.shareKey) this.shareDone(it.shareKey);
+    this.lost = this.lost.map((q) => (q === it ? null : q));
     const n = this.nibbles;
     n.done++;
     n.saved++;

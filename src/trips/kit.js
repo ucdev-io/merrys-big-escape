@@ -55,7 +55,7 @@ export class TripChapter {
       const carry = this.actions.carry;
       this.actions.onCarry = (kind) => this.share.carry(kind);
       carry.onGrab = (it) => { if (it.shareKey) this.share.take(it.shareKey); };
-      carry.onDrop = (it) => { if (it.shareKey) this.share.drop(it.shareKey, it.pos.x, it.pos.z); };
+      carry.onDrop = (it) => { it.byMe = true; if (it.shareKey) this.share.drop(it.shareKey, it.pos.x, it.pos.z); };
       this.share.on((k, v, by) => (this.shared.has(k) ? this.sharedItem(k, v, by) : this.onShared?.(k, v, by)));
     }
   }
@@ -91,7 +91,9 @@ export class TripChapter {
       if (mine || inWorld) carry.remove(e.item);
     } else if (v[0] === 0 && !mine && by !== me) { // put down somewhere
       if (inWorld) { e.item.pos.x = v[1]; e.item.pos.z = v[2]; }
-      else { e.item = carry.add(e.kind, v[1], v[2], { job: e.job }); e.item.shareKey = k; }
+      else { e.item = carry.add(e.kind, v[1], v[2], { job: e.job }); e.item.shareKey = k; e.item.byMe = false; }
+      e.item.byMe = false;
+      this.onSharedMoved?.(k, e.item);
     } else if (v[0] === 2 && !e.done) { // handed over (by somebody else)
       e.done = true;
       if (mine || inWorld) carry.remove(e.item);
