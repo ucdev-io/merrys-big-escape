@@ -1,6 +1,7 @@
 import { STOPS, SHOTS, TAGLINE, ABOUT, IPHONE_TIP } from '../shared/content.js';
 import { playButtons, prefersStill, bringMerry, dogSwatches } from '../shared/common.js';
 import { RELEASES, COMING, versionLine, niceDate } from '../../src/core/releases.js';
+import { SOUNDS, TOOLS, soundPage } from '../../src/core/credits.js';
 
 /*
  * "The Walk". The page scrolls as normal (so keys, screen readers and scroll bars all just work), but
@@ -15,6 +16,40 @@ const N = STOPS.length;
 const playHtml = (big) => `<a class="play" data-play href="/play/"><span class="label">▶ Play the demo</span>${big ? '<small>Free · in your browser</small>' : ''}</a>`;
 
 // ---------- build the stops ----------
+// ---------- Thanks & credits: a card that pops up from the last stop ----------
+// Who recorded the sounds, and the code and font it's built with. While it's up, swipes and the wheel scroll the
+// list instead of walking Merry along.
+let creditsOpen = false;
+const credits = document.createElement('div');
+credits.className = 'credits';
+credits.hidden = true;
+credits.setAttribute('role', 'dialog');
+credits.setAttribute('aria-modal', 'true');
+credits.setAttribute('aria-label', 'Thanks and credits');
+{
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const link = (url, text, title = '') => `<a href="${url}" target="_blank" rel="noopener"${title ? ` title="${esc(title)}"` : ''}>${esc(text)}</a>`;
+  const groups = new Map();
+  for (const [, what, title, id, by] of SOUNDS) {
+    if (!groups.has(what)) groups.set(what, []);
+    groups.get(what).push(link(soundPage(id, by), by, title));
+  }
+  credits.innerHTML = `<div class="panel"><h2 class="hand">Thanks &amp; credits 🙏</h2>` +
+    `<p>The real woofs, splashes, crunches, waves and gulls are recordings shared freely (CC0) on ${link('https://freesound.org', 'freesound.org')}. Thank you to:</p>` +
+    `<ul>${[...groups].map(([what, who]) => `<li><b>${what[0].toUpperCase() + what.slice(1)}:</b> ${who.join(', ')}</li>`).join('')}</ul>` +
+    `<p>Built with:</p><ul>${TOOLS.map(([name, url, lic]) => `<li>${link(url, name)} (${lic})</li>`).join('')}</ul>` +
+    `<button type="button" class="close hand">Back to Merry</button></div>`;
+}
+document.body.appendChild(credits);
+function showCredits(on) {
+  creditsOpen = on;
+  credits.hidden = !on;
+  if (on) { credits.querySelector('.panel').scrollTop = 0; credits.querySelector('.close').focus({ preventScroll: true }); }
+}
+credits.querySelector('.close').addEventListener('click', () => showCredits(false));
+credits.addEventListener('click', (e) => { if (e.target === credits) showCredits(false); }); // a tap outside the card
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && creditsOpen) showCredits(false); });
+
 const stops = STOPS.map((s, i) => {
   const sec = tpl.content.firstElementChild.cloneNode(true);
   sec.id = s.id;
@@ -40,7 +75,8 @@ const stops = STOPS.map((s, i) => {
   }
   if (s.id === 'dogs') { extra.className += ' dogs'; dogSwatches(extra); }
   if (s.id === 'play') {
-    extra.innerHTML = `${playHtml(true)}<div class="whats-new"><p class="news-head"><span class="beta"></span></p><ul></ul><p class="coming"></p></div><p class="about"></p><p class="about tip"></p>`;
+    extra.innerHTML = `${playHtml(true)}<div class="whats-new"><p class="news-head"><span class="beta"></span></p><ul></ul><p class="coming"></p></div><p class="about"></p><p class="about tip"></p><button type="button" class="credits-link">🙏 Thanks &amp; credits</button>`;
+    extra.querySelector('.credits-link').addEventListener('click', () => showCredits(true));
     // What's new in this beta: the newest version's lines (plain text: they're ours, but no HTML needed).
     const news = extra.querySelector('.whats-new'), r = RELEASES[0];
     news.querySelector('.beta').textContent = `✨ New in ${r.version}: ${r.title} (${niceDate(r.date)})`;
@@ -84,7 +120,7 @@ const go = (i) => { i = Math.max(0, Math.min(N - 1, i)); scrollTo({ top: i * H()
 // "What's new?" (under the first Play button): walk to the last stop, where it's listed.
 document.querySelector('.news-link')?.addEventListener('click', (e) => { e.preventDefault(); go(N - 1); });
 addEventListener('keydown', (e) => {
-  if (e.target.closest?.('input, textarea')) return;
+  if (creditsOpen || e.target.closest?.('input, textarea')) return;
   if (e.key === 'ArrowRight') { e.preventDefault(); go(Math.round(scrollY / H()) + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); go(Math.round(scrollY / H()) - 1); }
 });
@@ -92,7 +128,7 @@ addEventListener('keydown', (e) => {
 // Trackpads can go sideways too: two fingers to the left goes on, like turning a page.
 let wheelUntil = 0;
 addEventListener('wheel', (e) => {
-  if (e.ctrlKey || open) return;
+  if (e.ctrlKey || open || creditsOpen) return;
   e.preventDefault();
   const now = performance.now(), d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
   if (now < wheelUntil) { wheelUntil = Math.max(wheelUntil, now + 220); return; }
@@ -108,7 +144,7 @@ addEventListener('wheel', (e) => {
 const root = document.documentElement;
 let drag = null, settleT = 0;
 addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'touch' || !e.isPrimary || open) return;
+  if (e.pointerType !== 'touch' || !e.isPrimary || open || creditsOpen) return;
   clearTimeout(settleT);
   drag = { x: e.clientX, y: e.clientY, y0: scrollY, axis: null, moved: 0, t: performance.now(), vt: performance.now(), vm: 0, v: 0 };
 }, { passive: true });
@@ -128,7 +164,7 @@ addEventListener('pointermove', (e) => {
   scrollTo({ top, behavior: 'instant' });
 }, { passive: true });
 // (iPhones: stop the page scrolling under the finger. One finger only, so pinching still zooms.)
-addEventListener('touchmove', (e) => { if (e.touches.length === 1 && !open) e.preventDefault(); }, { passive: false });
+addEventListener('touchmove', (e) => { if (e.touches.length === 1 && !open && !creditsOpen) e.preventDefault(); }, { passive: false });
 function endDrag(e) {
   if (!drag || !e.isPrimary) return;
   const d = drag;

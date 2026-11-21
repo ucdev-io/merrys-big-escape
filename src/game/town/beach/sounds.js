@@ -1,6 +1,7 @@
-import { getAudio, isMuted } from '../../../core/audio.js';
+import { getAudio, isMuted, sample, oneOf } from '../../../core/audio.js';
 
-// Beach noises, made on the fly like the rest of the game's sounds (no audio files): waves washing up the
+// Beach noises, mostly made on the fly like the rest of the game's sounds (waves and gulls are recordings, with these
+// as stand-ins until they've loaded): waves washing up the
 // sand and hissing back, seagulls, crabs going snip, sandcastles patted and squashed, the lifeguard's
 // whistle and the kiosk's bell. Played through the game's own output (the ☰ sound setting).
 
@@ -48,13 +49,19 @@ function swell(dur, vol, type, freq, { q = 0.7, delay = 0, attack = 0.08, freqEn
   s.stop(t + dur + 0.05);
 }
 
+const GULLS = ['gull-1', 'gull-2'];
+
 export const bsfx = {
   // 🌊 A wave washing up the sand (vol: how near the water you are).
-  wave(vol = 1) { swell(2.6, 0.13 * vol, 'lowpass', 700, { attack: 0.55, freqEnd: 380 }); swell(1.6, 0.05 * vol, 'highpass', 2600, { attack: 0.35, delay: 0.25 }); },
+  wave(vol = 1) {
+    if (sample('wave', { vol, rate: 0.94 + Math.random() * 0.12 })) return;
+    swell(2.6, 0.13 * vol, 'lowpass', 700, { attack: 0.55, freqEnd: 380 }); swell(1.6, 0.05 * vol, 'highpass', 2600, { attack: 0.35, delay: 0.25 }); },
   // …and hissing back down over the pebbles.
   backwash(vol = 1) { swell(1.8, 0.05 * vol, 'bandpass', 1800, { q: 0.6, attack: 0.3, freqEnd: 900 }); },
   // 🐦 A herring gull: kyow, kyow, ha-ha-ha.
   gull(vol = 1) {
+    const n = oneOf(GULLS);
+    if (n && sample(n, { vol, rate: 0.93 + Math.random() * 0.14 })) return;
     const p = 0.9 + Math.random() * 0.25;
     tone('triangle', 1250 * p, 820 * p, 0.32, 0.05 * vol, 0, { filter: { type: 'bandpass', freq: 1500, q: 1.2 } });
     tone('triangle', 1300 * p, 850 * p, 0.3, 0.045 * vol, 0.42, { filter: { type: 'bandpass', freq: 1500, q: 1.2 } });

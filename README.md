@@ -38,6 +38,8 @@ The game is in beta, with new adventures added often. Each version and what's ne
 
 Made with [three.js](https://threejs.org), [Vite](https://vite.dev) and a hand-tuned watercolour shader, built with Claude Code.
 
+The real woofs, splashes, waves and gulls are CC0 recordings from [freesound.org](https://freesound.org): who recorded each one is in [public/sfx/CREDITS.md](public/sfx/CREDITS.md).
+
 ## Licence
 
-[MIT](LICENSE)
+[MIT](LICENSE). The sounds in `public/sfx` are CC0 (public domain).

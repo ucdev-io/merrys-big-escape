@@ -37,7 +37,7 @@ export class Sprinkler {
     const d = Math.hypot(dogPos.x - this.pos.x, dogPos.z - this.pos.z);
     if (active && this.on <= 0 && this.cd <= 0 && d < 1.8) {
       this.on = 3.5; this.cd = 12; this.soaked = false;
-      sfx.splash();
+      sfx.puddle(1.2);
     }
     if (this.on > 0) {
       this.on -= dt;

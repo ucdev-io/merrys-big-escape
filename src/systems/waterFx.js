@@ -83,7 +83,8 @@ export class WaterFx {
         }));
       }
       if (this.ringT <= 0) { this.ringT = moving ? 0.35 : 0.9; this.ring(st.pos, st.surface, moving ? 0.7 : 0.5); }
-      if (mine && moving && this.plipT <= 0) { this.plipT = 0.45; sfx.plip?.(); }
+      // Splashing along through the shallows; plip-plip when swimming.
+      if (mine && moving && this.plipT <= 0) { this.plipT = st.swim < 0.5 ? 0.38 : 0.45; if (st.swim < 0.5) sfx.puddle(0.7); else sfx.plip?.(); }
     }
     if (st.leftWater) this.shake(dog, st.pos, mine);
     // Still dripping for a bit afterwards.
