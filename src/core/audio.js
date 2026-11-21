@@ -201,7 +201,13 @@ export const sfx = {
     tone('sawtooth', 820, 420, 0.3, 0.16, 0.18, { type: 'bandpass', freq: 1000, q: 3 });
   },
   hiss() { noise(0.5, 0.2, 'highpass', 3000, 0.7); },
-  splash() { const n = oneOf(SPLASHES); if (n && sample(n, { rate: jitter(0.06) })) return; noise(0.6, 0.25, 'bandpass', 1800, 0.8, 0, 500); },
+  // Landing in water (power: how hard, 0..1.5): a gentle step in is a puddle splash, a run and a leap a big one.
+  splash(power = 1) {
+    if (power < 0.45 && oneOf(PUDDLES)) { this.puddle(1.2); return; }
+    const n = oneOf(SPLASHES);
+    if (n && sample(n, { vol: Math.min(1.2, 0.55 + 0.45 * power), rate: jitter(0.06) })) return;
+    noise(0.6, 0.25, 'bandpass', 1800, 0.8, 0, 500);
+  },
   // Splashing through a puddle or the shallows (one step).
   puddle(vol = 1) { const n = oneOf(PUDDLES); if (n && sample(n, { vol, rate: jitter(0.1) })) return; this.plip(); },
   shake() {

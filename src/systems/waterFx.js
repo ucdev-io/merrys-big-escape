@@ -37,7 +37,7 @@ export class WaterFx {
     this.ring(at, surface, 1.6);
     this.ring(at, surface, 1.0, 0.25);
     if (mine) {
-      sfx.splash();
+      sfx.splash(power);
       buzz(30);
       this.hud.float('SPLASH!', V(at.x, surface + 0.9, at.z));
     }
