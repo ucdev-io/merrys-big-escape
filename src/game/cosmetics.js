@@ -81,6 +81,10 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-captain', slot: 'hat', name: 'Captain’s hat', emoji: '⚓', color: 0xfbfaf6, level: 1, friend: 'captain', jobs: 1, hint: 'Find Captain Poppy’s hat (on the cruise ship)', boost: { speed: 2, zoomies: 1 } },
 );
+// From the Big Dog Show (a day out on the bus): for winning rosettes (1st, 2nd or 3rd) in its rings.
+COSMETICS.push(
+  { id: 'collar-rosette', slot: 'collar', name: 'Best in Show rosette', emoji: '🏵️', color: 0xd9534f, level: 1, friend: 'rosettes', jobs: 5, style: 'rosette', hint: 'Win 5 rosettes at the Big Dog Show (by bus)', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };
