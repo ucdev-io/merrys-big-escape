@@ -11,6 +11,7 @@ import { progress } from '../progress.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const R = TOWN.BLOCK / 2 + 1; // the middle of the pavement round a block
+const WALKER_FAR = 125; // (the town's fog is all the way in by 120 m)
 const SHIRTS = [0xd9534f, 0x6f9a52, 0xe39a52, 0x8e6fb0, 0xf2a0b4, 0x4aa3a0, 0xf6d06a];
 const fill = (s, v) => s.replace(/\{(\w+)\}/g, (m, k) => v[k] ?? m);
 
@@ -66,7 +67,12 @@ export class TownLife {
   update(dt, { barked = false, canAct = true } = {}) {
     const P = this.player;
     this.updatePostman(dt, P, barked && canAct, canAct);
-    for (const w of this.walkers) this.updateWalker(dt, w, P, canAct);
+    for (const w of this.walkers) {
+      // Out past the fog (from the other side of town): not drawn, and not walked or posed either, till she's nearer.
+      const o = ring(w.block, w.s, w.dir), far = Math.hypot(P.pos.x - o.x, P.pos.z - o.z) > WALKER_FAR; // (where they are on their walk: placed or not yet)
+      if (far !== w.far) { w.far = far; w.owner.root.visible = w.dog.root.visible = w.lead.visible = !far; }
+      if (!far) this.updateWalker(dt, w, P, canAct);
+    }
   }
 
   updatePostman(dt, P, barked, canAct) {

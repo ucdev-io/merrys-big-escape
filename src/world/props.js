@@ -101,12 +101,12 @@ export function picketFence(x0, z0, x1, z1, col, { color = PALETTE.fenceWhite, h
   const n = Math.floor(len / gap);
   // simple: plain boxes (12 triangles instead of ~200) for big towns.
   const picketGeo = simple ? new THREE.BoxGeometry(0.13, height, 0.04) : new RoundedBoxGeometry(0.13, height, 0.04, 2, 0.02);
-  const pickets = new THREE.InstancedMesh(picketGeo, paint(color), n);
+  const pickets = new THREE.InstancedMesh(picketGeo, paint(color, { kind: 'inst' }), n);
   const tipGeo = new THREE.ConeGeometry(0.075, 0.12, 4, 1);
   tipGeo.rotateY(Math.PI / 4);
   tipGeo.scale(1.25, 1, 0.38);
   tipGeo.translate(0, 0.06, 0);
-  const tips = new THREE.InstancedMesh(tipGeo, paint(color), n);
+  const tips = new THREE.InstancedMesh(tipGeo, paint(color, { kind: 'inst' }), n);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
   const up = new THREE.Vector3();
   for (let i = 0; i < n; i++) {
@@ -252,8 +252,8 @@ export function flowerBed(x, z, w, d, rng, col) {
   const n = Math.floor(w * d * 7);
   const stem = new THREE.CylinderGeometry(0.012, 0.015, 1, 3);
   const head = new THREE.IcosahedronGeometry(1, 0);
-  const stems = new THREE.InstancedMesh(stem, paint(PALETTE.leafDark), n);
-  const heads = new THREE.InstancedMesh(head, paint(0xffffff), n);
+  const stems = new THREE.InstancedMesh(stem, paint(PALETTE.leafDark, { kind: 'inst' }), n);
+  const heads = new THREE.InstancedMesh(head, paint(0xffffff, { kind: 'inst' }), n);
   const m = new THREE.Matrix4(), c = new THREE.Color();
   for (let i = 0; i < n; i++) {
     const fx = rng.float(-0.45, 0.45) * w, fz = rng.float(-0.45, 0.45) * d;
@@ -293,7 +293,7 @@ export function grassTufts(count, area, rng, accept = () => true) {
     parts.push(b);
   }
   const geo = mergeGeos(parts);
-  const im = new THREE.InstancedMesh(geo, paint(0xffffff), count);
+  const im = new THREE.InstancedMesh(geo, paint(0xffffff, { kind: 'inst' }), count);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), c = new THREE.Color(), e = new THREE.Euler();
   const cols = [PALETTE.grass, PALETTE.grassLight, 0x8fb565];
   let placed = 0, tries = 0;
@@ -328,7 +328,7 @@ function mergeGeos(geos) {
 }
 
 /** A soft watercolor sky dome: warm horizon, blue top, drifting cloud washes. */
-export function skyDome(radius = 160) {
+export function skyDome(radius = 196) {
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
@@ -360,7 +360,10 @@ export function skyDome(radius = 160) {
       }`,
   });
   const m = new THREE.Mesh(new THREE.SphereGeometry(radius, 32, 16), mat);
-  m.renderOrder = -1;
+  // Drawn last of the solid things, not first: it doesn't write depth, so it's still behind everything, and
+  // only the bits of sky that show get shaded (its clouds are the dearest shader on screen, per pixel). Which is
+  // why it's just inside the camera's reach (200 m): anything further off than the sky would now be hidden by it.
+  m.renderOrder = 999;
   m.name = 'sky';
   m.frustumCulled = false;
   return m;

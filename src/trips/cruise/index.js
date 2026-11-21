@@ -203,7 +203,7 @@ class CruiseChapter extends TripChapter {
     sband.position.set(0, 0.085, -0.01);
     this.cat.head.add(sailor, sband);
     this.cat.root.scale.setScalar(1.25);
-    bakeGroups(this.cat, [this.cat.body, this.cat.head, this.cat.tail], this.cat.eyes); // (its fur and stripes as a few meshes; the eyes stay, to blink)
+    this.cat.bake(); // (the hat joins the head's baked mesh; the eyes stay, to blink)
     const h = HIDES[Math.floor(this.random() * HIDES.length)]; // (the pack's dice: the same hiding place for everyone aboard)
     this.cat.root.position.copy(this.at(h[0], h[1], h[2]));
     this.cat.root.rotation.y = Math.random() * 6.28;

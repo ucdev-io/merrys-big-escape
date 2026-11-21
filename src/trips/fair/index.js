@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { paint } from '../../render/watercolorMaterial.js';
+import { mergeRigid } from '../../world/merge.js';
 import { Person } from '../../entities/person.js';
 import { Dog } from '../../entities/dog.js';
 import { BREED_KEYS } from '../../entities/breeds.js';
@@ -9,6 +10,7 @@ import { buzz } from '../../core/haptics.js';
 import { progress } from '../../game/progress.js';
 import { COSMETICS } from '../../game/cosmetics.js';
 import { TripChapter } from '../kit.js';
+import { disposeTree } from '../dispose.js';
 import { buildFair, PLAN } from './build.js';
 import { Carousel, BigWheel, Helter, Coaster, dodgemModel, sitStill, seatAt, coasterCar } from './rides.js';
 
@@ -112,6 +114,7 @@ class FairChapter extends TripChapter {
     // The sign: on the far side, looking back at the way in (not between the camera and a dog in a car).
     m(RB(3.4, 0.7, 0.12, 0.06), 0xd9534f, [d.x, 2.6, z0 - 0.05]);
     for (const [cx] of [[d.x - 1.5], [d.x + 1.5]]) m(new THREE.CylinderGeometry(0.06, 0.06, 2.3, 8), 0xf7f3ea, [cx, 1.15, z0 - 0.05]);
+    mergeRigid(g); // (the arena, its lights and sign: a few meshes, not dozens)
     // The other cars, each with a dog driving (and the player's, parked at the side till she hops in).
     const keys = BREED_KEYS.filter((k) => k !== this.player.breedKey).sort(() => Math.random() - 0.5);
     this.cars = [0x5b86c4, 0x6f9a52, 0xf2a0c8].map((c, i) => {
@@ -255,7 +258,7 @@ class FairChapter extends TripChapter {
    */
   remoteRide(r, ride) {
     const want = ride === RIDE_N.coaster ? 'coaster' : ride === RIDE_N.dodgems ? 'dodgem' : null, have = this.props.get(r.id);
-    if (have && have.kind !== want) { have.obj.removeFromParent(); this.props.delete(r.id); }
+    if (have && have.kind !== want) { have.obj.removeFromParent(); disposeTree(have.obj); this.props.delete(r.id); } // (its shapes too: a friend can hop on and off all day)
     if (!want) return;
     let p = this.props.get(r.id);
     if (!p) {

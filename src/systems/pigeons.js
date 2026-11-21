@@ -8,7 +8,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const smooth = (t) => t * t * (3 - 2 * t);
 
 const C = { body: 0x9aa3b4, wing: 0x7f8798, head: 0x8a93a6, neck: 0x6fae8f, beak: 0x4a4444, tail: 0x6f7788 };
-const POSE_FAR = 45; // metres: a flock on the ground further from the dog than this keeps its last pose
+const POSE_FAR = 40; // metres: a flock on the ground further from the dog than this keeps its last pose
+const POSE_HALF = 20; // …and one further than this is posed every other frame
 const _tmp = V(0, 0, 0), _prev = V(0, 0, 0), _vel = V(0, 0, 0), _goal = V(0, 0, 0), _to = V(0, 0, 0);
 
 function bezier(p0, p1, p2, p3, t, out) {
@@ -35,7 +36,7 @@ export class Pigeons {
     // and wings cast shadows (the head, neck, beak and tail's are a few pixels inside the body's).
     const body = new THREE.SphereGeometry(1, 10, 7), small = new THREE.SphereGeometry(1, 8, 6), flat = new THREE.SphereGeometry(1, 8, 4);
     const make = (geo, color, count = total, shadow = true) => {
-      const m = new THREE.InstancedMesh(geo, paint(color), count);
+      const m = new THREE.InstancedMesh(geo, paint(color, { kind: 'inst' }), count);
       m.castShadow = shadow; m.receiveShadow = true; m.frustumCulled = false;
       scene.add(m);
       return m;
@@ -173,11 +174,20 @@ export class Pigeons {
    * (a few pixels, in the haze) keeps its last pose: re-posing all ~65 birds every frame cost the most
    * on phones with slow JavaScript. Flying flocks always move.
    */
-  pose(dt, near) {
+  pose(frameDt, near) {
     const p = this.parts, r = this.r, tmp = _tmp;
-    let posed = false;
-    for (const f of this.flocks) {
-      if (f.state === 'ground' && near && !f.fresh && Math.hypot(near.x - f.home.x, near.z - f.home.z) > POSE_FAR) continue;
+    let posed = false, closest = Infinity;
+    this.frame = (this.frame ?? 0) + 1;
+    for (const [fi, f] of this.flocks.entries()) {
+      const at = f.state === 'flying' ? f.birds[0]?.pos ?? f.home : f.home, d = near ? Math.hypot(near.x - at.x, near.z - at.z) : 0;
+      closest = Math.min(closest, d);
+      f.since = (f.since ?? 0) + frameDt; // (time since this flock was last posed)
+      if (f.state === 'ground' && near && !f.fresh) {
+        if (d > POSE_FAR) continue;
+        if (d > POSE_HALF && (this.frame + fi) % 2) continue; // (a little way off: every other frame does)
+      }
+      const dt = Math.min(f.since, 0.1); // (all the time since it was last posed, so it keeps pace; not a leap after a long wait)
+      f.since = 0;
       f.fresh = false;
       posed = true;
       for (const b of f.birds) {
@@ -232,5 +242,8 @@ export class Pigeons {
       }
     }
     if (posed) for (const m of Object.values(p)) m.instanceMatrix.needsUpdate = true; // (nothing moved: nothing to send)
+    // Their shadows only with a flock near the dog (the sun's shadow map only covers a few metres round her).
+    const shadows = closest < 30;
+    if (shadows !== this.shadows) { this.shadows = shadows; p.body.castShadow = p.wing.castShadow = shadows; }
   }
 }

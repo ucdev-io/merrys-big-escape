@@ -99,7 +99,7 @@ export class Hens {
       if (h.speed > 0.05) { let dh = Math.atan2(h.vx, h.vz) - h.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); h.h += dh * (1 - Math.exp(-dt * 8)); }
       h.phase += dt * (6 + h.speed * 9);
     }
-    this.draw();
+    if (!this.hidden) this.draw(); // (not while the farm's lost in the fog)
   }
 
   draw() {

@@ -196,6 +196,10 @@ export class TownChapter {
       this.pack.onFarm = (m) => this.farm.handle(m);
     }
     globalThis.__mark?.('setup: farm');
+    // The town's own baked chunks, skipped when they're wholly beyond the fog, as the areas skip theirs (from the
+    // far end of the farm, say, most of the town is lost in it, and was all still drawn). Same rule as theirs.
+    const claimed = new Set([...(this.woods?.far ?? []), ...(this.beach?.far ?? []), ...(this.farm?.far ?? [])]);
+    this.townFar = (world.group?.children ?? []).filter((o) => o.isMesh && !o.isInstancedMesh && o.frustumCulled && !claimed.has(o) && o.geometry?.boundingSphere);
     // 🟤 Mud, from any area's muddy patches (the wood's, the farm's…): one coat of it per dog, friends see it,
     // a splash in water washes it off. (Prints sit on the ground you see.)
     const mudZones = (world.areas ?? []).flatMap((a) => a.mud ?? []);
@@ -214,7 +218,7 @@ export class TownChapter {
     this.busStop = new BusStop({
       scene, hud, player, follow: this.follow, actions: this.actions, stop: world.busStop, seed: this.layout.seed, name: this.layout.name,
       blocked: () => (this.catcher?.chasing ? 'No time for a bus: the warden’s right behind you!' : travelBlock(this)),
-      friends: () => this.remotes.dogs.size,
+      friends: () => this.remotes.dogs.size, prefetch: (trip) => this.trips?.prefetch(trip),
     });
     this.busStop.places = this.places.length;
     // A day out on the bus (the theme park): at the end of the ride the trip takes over, behind the bus's paper.
@@ -604,6 +608,17 @@ export class TownChapter {
 
   // ---------- per frame ----------
 
+  /** Hide the town's baked chunks that are wholly past the fog (see townFar). */
+  cullTown() {
+    const fog = this.scene.fog, cam = this.follow.camera;
+    if (!fog || !cam || !this.townFar.length) return;
+    const far = fog.far * 1.25 + 2, c = cam.position;
+    for (const o of this.townFar) {
+      const s = o.geometry.boundingSphere;
+      o.visible = c.distanceTo(s.center) - s.radius < far;
+    }
+  }
+
   update(dt) {
     if (this.away) return; // (off on a trip: the town waits)
     this.time += dt;
@@ -655,6 +670,7 @@ export class TownChapter {
     if (this.woods) { if (acted.barked) this.woods.onBark(pos); this.woods.update(dt, { canAct }); }
     if (this.beach) { if (acted.barked) this.beach.onBark(pos); this.beach.update(dt, { canAct }); }
     this.farm?.update(dt, { canAct, barked: acted.barked });
+    this.cullTown();
     this.mud?.update(dt, canAct);
     if (this.pond) { // frogs croak as you get near the pond
       const dp = Math.hypot((pos.x - this.pond.x) / (this.pond.rx + 8), (pos.z - this.pond.z) / (this.pond.rz + 8));

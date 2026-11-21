@@ -17,7 +17,7 @@ const cache = {};
 
 /** One instanced mesh of a part: n of them, painted with its own vertex colours (times an instance colour). */
 export function instancedPart(geo, n, { shadow = true } = {}) {
-  const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true }), Math.max(1, n));
+  const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true, kind: 'inst' }), Math.max(1, n));
   m.count = n;
   m.castShadow = shadow;
   m.receiveShadow = true;

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mesh } from '../world/props.js';
+import { mergeRigid } from '../world/merge.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -49,6 +50,19 @@ export class Cat {
     this.startle = 0;       // fur-up jump when barked at
     this.laugh = 0;         // shoulders shaking
     this.lookAt = new THREE.Vector3();
+    this.bake();
+  }
+
+  /**
+   * Her ~25 little meshes baked into a few (world/merge.js): body, head and tail (her eyes stay their own: they
+   * blink). Call it again after giving her a hat (before she's first drawn) and that joins in too.
+   */
+  bake() {
+    for (const g of [this.head, this.tail, this.body]) for (const o of g.children) if (o.isMesh && !this.eyes.includes(o)) o.castShadow = true; // (a hat added since, too)
+    for (const e of this.eyes) e.userData.noMerge = true;
+    for (const g of [this.head, this.tail]) { mergeRigid(g); g.userData.noMerge = true; }
+    mergeRigid(this.body);
+    return this;
   }
 
   /** Hop along the fence to a new spot. */

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mesh } from '../world/props.js';
+import { mergeRigid } from '../world/merge.js';
 
 const group = (parent, pos = [0, 0, 0]) => { const g = new THREE.Group(); g.position.set(...pos); parent.add(g); return g; };
 const SKINS = [0xf2d3b8, 0xe0b48e, 0xc68e64, 0x9a6440, 0x6e4630];
@@ -47,6 +48,19 @@ export class Person {
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.phase = Math.random() * 6;
     this.wave = 0;
+    this.bake();
+  }
+
+  /**
+   * Each moving part (each leg, each arm, the head, the body) baked into one mesh: ~6 draws instead of ~20,
+   * and as many again for the shadow, and still walking, waving and turning its head. Done when made. After
+   * adding a hat or an apron, call it again (before the first picture's drawn) and those join in too.
+   */
+  bake() {
+    this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; }); // (a hat or a tie added since, too: all one shadow)
+    for (const g of [...this.legs, ...this.arms, this.head]) { mergeRigid(g); g.userData.noMerge = true; }
+    mergeRigid(this.body);
+    return this;
   }
 
   /** speed: metres per second (0 = standing). wave: 0..1, an arm up to wave hello. */

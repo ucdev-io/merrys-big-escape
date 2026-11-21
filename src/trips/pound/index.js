@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { mergeRigid } from '../../world/merge.js';
+import { paint } from '../../render/watercolorMaterial.js';
 import { Person } from '../../entities/person.js';
 import { Dog } from '../../entities/dog.js';
 import { BREEDS, BREED_KEYS } from '../../entities/breeds.js';
@@ -77,12 +79,13 @@ class PoundChapter extends TripChapter {
       const panel = new THREE.Group();
       panel.position.x = Y.PEN.gate;
       hinge.add(panel);
-      const mat = (c) => new THREE.MeshLambertMaterial({ color: c });
+      const mat = (c) => paint(c);
       for (const y of [0.1, 1.45]) { const b = new THREE.Mesh(new THREE.BoxGeometry(2 * Y.PEN.gate, 0.06, 0.06), mat(0x5c5f66)); b.position.y = y; panel.add(b); }
       for (let k = -3; k <= 3; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.35, 0.03), mat(0x8c8f93)); b.position.set(k * 0.22, 0.78, 0); panel.add(b); }
       const lock = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.08), mat(i === 0 ? 0x8c8f93 : 0xc9a24a));
       lock.position.set(Y.PEN.gate - 0.08, 0.8, 0.06);
       panel.add(lock);
+      mergeRigid(panel); // (bars, rails and lock: one mesh that swings open)
       const colBox = world.C.box(cx - Y.PEN.gate, Y.PEN.z0 - 0.08, cx + Y.PEN.gate, Y.PEN.z0 + 0.08);
       const pen = { i, cx, hinge, open: false, swing: 0, col: colBox, gate: this.W(cx, Y.PEN.z0 - 0.15) };
       if (i > 0) {
@@ -99,7 +102,7 @@ class PoundChapter extends TripChapter {
     // The keys, on the stool by the desk.
     this.putKeys();
     // The soft earth's hole (it grows as she digs).
-    this.hole = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshLambertMaterial({ color: 0x3a2a1e }));
+    this.hole = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), paint(0x3a2a1e));
     this.hole.rotation.x = -Math.PI / 2;
     this.hole.position.copy(this.W(Y.dig.x + 0.15, Y.dig.z)).setY(0.02);
     this.hole.scale.setScalar(0.01);

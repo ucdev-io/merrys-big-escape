@@ -1,15 +1,18 @@
 import * as THREE from 'three';
-import { SPHERE, bake, bakedMesh, group } from './shapes.js';
+import { bake, bakedMesh, group } from './shapes.js';
 
 const FACE = 0xdcb48c, FUR = 0x6e5240, BASE = 0x6a4e3c, TIP = 0xd9c4a2, NOSE = 0x1d1614, PINK = 0xe8a49a;
 let cache = null;
+// (She's a hand's length long: her face and body need only middling spheres, her eyes, nose and cheeks little ones.
+// Full-size spheres made her 21,000 triangles; now about 6,000, and she looks the same.)
+const MID = new THREE.SphereGeometry(1, 16, 11), LOW = new THREE.SphereGeometry(1, 9, 6);
 
 /**
  * Spines on an egg shape: little cones pointing out (and swept back), dark at the root, pale at the tip.
  * keep(n): which way-out directions get spines (the back and sides; for a curled-up ball, all round).
  */
 function spines(rx, ry, rz, cy, cz, count, keep, sweep = 0.9) {
-  const parts = [], cone = new THREE.ConeGeometry(0.014, 0.05, 8, 1);
+  const parts = [], cone = new THREE.ConeGeometry(0.014, 0.05, 6, 1, true); // (open: its base is always inside her)
   cone.translate(0, 0.025, 0); // (base at the origin, pointing up)
   const up = new THREE.Vector3(0, 1, 0), q = new THREE.Quaternion(), e = new THREE.Euler();
   const golden = Math.PI * (3 - Math.sqrt(5));
@@ -31,28 +34,28 @@ function build() {
   if (cache) return cache;
   // Walking: a round, prickly back over a pale face and tummy.
   const body = bake([
-    [SPHERE, FACE, [0, 0.085, 0.01], [0, 0, 0], [0.105, 0.078, 0.135]],          // tummy and face fur
-    [SPHERE, FUR, [0, 0.105, -0.02], [0, 0, 0], [0.124, 0.106, 0.15]],           // under the spines
+    [MID, FACE, [0, 0.085, 0.01], [0, 0, 0], [0.105, 0.078, 0.135]],          // tummy and face fur
+    [MID, FUR, [0, 0.105, -0.02], [0, 0, 0], [0.124, 0.106, 0.15]],           // under the spines
     ...spines(0.112, 0.096, 0.14, 0.105, -0.02, 460, (n) => n.y > -0.2 && n.z < 0.84 - Math.max(0, -n.y) * 0.6), // (from her forehead to her bottom)
   ]);
   const head = bake([
-    [SPHERE, FACE, [0, 0, 0.03], [0, 0, 0], [0.06, 0.055, 0.075]],                // a pointy face…
+    [MID, FACE, [0, 0, 0.03], [0, 0, 0], [0.06, 0.055, 0.075]],                // a pointy face…
     [new THREE.ConeGeometry(0.035, 0.07, 14), FACE, [0, -0.008, 0.1], [Math.PI / 2, 0, 0]],
-    [SPHERE, NOSE, [0, -0.006, 0.14], [0, 0, 0], [0.022, 0.019, 0.019]],          // …with a little black nose
-    [SPHERE, 0xffffff, [0.007, 0.003, 0.155], [0, 0, 0], [0.005, 0.005, 0.003]],
-    [SPHERE, NOSE, [0.03, 0.022, 0.07], [0, 0, 0], [0.013, 0.015, 0.01]],          // shiny black eyes
-    [SPHERE, NOSE, [-0.03, 0.022, 0.07], [0, 0, 0], [0.013, 0.015, 0.01]],
-    [SPHERE, 0xffffff, [0.033, 0.027, 0.077], [0, 0, 0], [0.0035, 0.0035, 0.002]],
-    [SPHERE, 0xffffff, [-0.027, 0.027, 0.077], [0, 0, 0], [0.0035, 0.0035, 0.002]],
-    [SPHERE, PINK, [0.038, 0.0, 0.06], [0, 0, 0], [0.012, 0.008, 0.008]],          // rosy cheeks
-    [SPHERE, PINK, [-0.038, 0.0, 0.06], [0, 0, 0], [0.012, 0.008, 0.008]],
-    [SPHERE, FACE, [0.045, 0.045, 0.01], [0, 0, 0], [0.016, 0.019, 0.009]],        // round ears
-    [SPHERE, FACE, [-0.045, 0.045, 0.01], [0, 0, 0], [0.016, 0.019, 0.009]],
+    [LOW, NOSE, [0, -0.006, 0.14], [0, 0, 0], [0.022, 0.019, 0.019]],          // …with a little black nose
+    [LOW, 0xffffff, [0.007, 0.003, 0.155], [0, 0, 0], [0.005, 0.005, 0.003]],
+    [LOW, NOSE, [0.03, 0.022, 0.07], [0, 0, 0], [0.013, 0.015, 0.01]],          // shiny black eyes
+    [LOW, NOSE, [-0.03, 0.022, 0.07], [0, 0, 0], [0.013, 0.015, 0.01]],
+    [LOW, 0xffffff, [0.033, 0.027, 0.077], [0, 0, 0], [0.0035, 0.0035, 0.002]],
+    [LOW, 0xffffff, [-0.027, 0.027, 0.077], [0, 0, 0], [0.0035, 0.0035, 0.002]],
+    [LOW, PINK, [0.038, 0.0, 0.06], [0, 0, 0], [0.012, 0.008, 0.008]],          // rosy cheeks
+    [LOW, PINK, [-0.038, 0.0, 0.06], [0, 0, 0], [0.012, 0.008, 0.008]],
+    [LOW, FACE, [0.045, 0.045, 0.01], [0, 0, 0], [0.016, 0.019, 0.009]],        // round ears
+    [LOW, FACE, [-0.045, 0.045, 0.01], [0, 0, 0], [0.016, 0.019, 0.009]],
   ]);
-  const foot = bake([[SPHERE, PINK, [0, 0.012, 0.012], [0, 0, 0], [0.018, 0.014, 0.026]]]);
+  const foot = bake([[LOW, PINK, [0, 0.012, 0.012], [0, 0, 0], [0.018, 0.014, 0.026]]]);
   // Curled up: a tight ball, prickles all round.
   const ball = bake([
-    [SPHERE, FUR, [0, 0, 0], [0, 0, 0], [0.112, 0.108, 0.116]],
+    [MID, FUR, [0, 0, 0], [0, 0, 0], [0.112, 0.108, 0.116]],
     ...spines(0.104, 0.1, 0.108, 0, 0, 380, (n) => n.y > -0.75, 0.3),
   ]);
   return (cache = { body, head, foot, ball });

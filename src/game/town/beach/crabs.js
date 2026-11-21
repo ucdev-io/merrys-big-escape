@@ -22,7 +22,7 @@ export class Crabs {
     this.B = B;
     const pools = B.area.pools;
     const mk = (geo) => {
-      const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true }), N);
+      const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true, kind: 'inst' }), N);
       m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
       B.scene.add(m);
       return m;

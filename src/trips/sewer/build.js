@@ -380,9 +380,9 @@ export function buildSewer(origin) {
   scene.add(dyn);
 
   // ---- what moves: glints on the water, drifting east with the current, and dust in the daylight ----
-  const glints = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 14).rotateX(-Math.PI / 2), paint(0xe4f3ec, { transparent: true, opacity: 0.5 }), 46);
+  const glints = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 14).rotateX(-Math.PI / 2), paint(0xe4f3ec, { transparent: true, opacity: 0.5, kind: 'inst' }), 46);
   const gl = Array.from({ length: glints.count }, () => ({ x: art() * 2 * L, z: (art() * 2 - 1) * (CW - 0.25), len: 0.22 + art() * 0.5, w: 0.025 + art() * 0.035, sp: FLOW * (0.85 + art() * 0.3), ph: art() * 6 }));
-  const motes = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), paint(0xfffbe8, { emissive: 0x8a7a50 }), 7 * (SHAFTS.length + 1));
+  const motes = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4), paint(0xfffbe8, { emissive: 0x8a7a50, kind: 'inst' }), 7 * (SHAFTS.length + 1));
   const ms = Array.from({ length: motes.count }, (_, i) => { const [x, z] = SHAFTS[Math.floor(i / 7)] ?? [0, NORTH - 0.7]; return { x, z, r: 0.1 + art() * 0.3, a: art() * 6.3, y: art() * 3.6, sp: 0.05 + art() * 0.08, s: 0.012 + art() * 0.012 }; });
   for (const m of [glints, motes]) { m.frustumCulled = false; dyn.add(m); } // (spread right along: never culled as one small shape)
   const M = new THREE.Matrix4(), P = new THREE.Vector3(), Q = new THREE.Quaternion(), K = new THREE.Vector3();

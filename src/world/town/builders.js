@@ -502,7 +502,7 @@ export function buildTown(layout) {
   const areas = buildAreas(root, layout, areaData, col, extra, TOWN.SIZE / 2 + 4, flats);
   const busStop = placeBusStop(root, layout, col); // (last: its solid bits are round ones, after everyone else's)
 
-  const sky = skyDome(190);
+  const sky = skyDome();
   root.add(sky);
 
   // Lawns (for the grass that follows Merry around): O(1) block lookup.

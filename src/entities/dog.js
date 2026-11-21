@@ -18,7 +18,9 @@ function mesh(geo, color, parent, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 
   m.position.set(...pos);
   m.rotation.set(...rot);
   m.scale.set(...scale);
-  m.castShadow = true;
+  // (Little parts (eyes, nose, a collar, a hat) sit inside the dog's own shadow: only the skin and its coat
+  // cast one. A dog is a dozen of them: as many draws again in the shadow pass, for nothing to see.)
+  m.castShadow = false;
   m.receiveShadow = true;
   parent.add(m);
   return m;
@@ -161,6 +163,9 @@ function splitJaw(geo, zc, tip, yf, rings = 40, radial = 32) {
 const MOUTH = new THREE.Color(0x9a4048), LIPS = new THREE.Color(0x3b2c2c); // inside the mouth; its dark edge
 
 const SPHERE = new THREE.SphereGeometry(1, 32, 22);
+// Eyes, noses, buttons and bobbles: a few millimetres to a few centimetres across, smooth enough at 16×12 (352
+// triangles, not 1,344: a dog has a dozen of them, and there can be several dogs about).
+const BALL = new THREE.SphereGeometry(1, 16, 12);
 // Nibbles' lantern's glass: aglow (and brighter somewhere dark, like the sewers' own lanterns turned up).
 const lanternGlow = (bright) => (bright ? paint(0xfff0c0, { emissive: 0xe0b050 }) : paint(0xffd98a, { emissive: 0x9a7020 }));
 
@@ -283,7 +288,7 @@ export class Dog {
     this.jaw = group(H, hinge);
     coat(jaw, 'head', this.jaw, H, null, null, undefined, HF / HW);
     const hf = HF / HW; // fluffy faces: sit the eyes, nose and brows on top of the fur
-    mesh(SPHERE, br.nose, H, [0, 0.0, tip + hf * 0.7], [0, 0, 0], [0.016, 0.014, 0.012]);
+    mesh(BALL, br.nose, H, [0, 0.0, tip + hf * 0.7], [0, 0, 0], [0.016, 0.014, 0.012]);
     if (br.beard) coat(FLUFF, 'extra', H, H, [0, -0.03, tip - 0.03], [0.3, 0, 0], [0.024, 0.02, 0.032]);
     // Droopy lips (boxers, bulldogs, Great Danes…).
     if (br.jowls) for (const s of [-1, 1]) coat(SPHERE, 'head', H, H, [s * 0.016 * MW, -0.022, tip - 0.026], [0, 0, s * 0.25], [0.014 * MW, 0.02, 0.025]);
@@ -291,21 +296,21 @@ export class Dog {
     this.eyeY = 0.012 * es;
     this.eyes = [-1, 1].map((s, i) => {
       const col = Array.isArray(br.eyeColor) ? br.eyeColor[i] : br.eyeColor ?? DARK_EYE;
-      const e = mesh(SPHERE, col, H, [s * (0.036 + hf * 0.6), 0.026 + hf * 0.2, 0.035 + hf * 0.6], [0, s * 0.35, 0], [0.011 * es, 0.012 * es, 0.009 * es]);
-      if (col !== DARK_EYE) mesh(SPHERE, 0x16110f, e, [0, 0, 0.62], [0, 0, 0], [0.55, 0.6, 0.45]); // pupil for pale eyes
-      mesh(SPHERE, 0xffffff, e, [s * 0.25, 0.35, 0.6], [0, 0, 0], [0.3, 0.3, 0.3]);
+      const e = mesh(BALL, col, H, [s * (0.036 + hf * 0.6), 0.026 + hf * 0.2, 0.035 + hf * 0.6], [0, s * 0.35, 0], [0.011 * es, 0.012 * es, 0.009 * es]);
+      if (col !== DARK_EYE) mesh(BALL, 0x16110f, e, [0, 0, 0.62], [0, 0, 0], [0.55, 0.6, 0.45]); // pupil for pale eyes
+      mesh(BALL, 0xffffff, e, [s * 0.25, 0.35, 0.6], [0, 0, 0], [0.3, 0.3, 0.3]);
       return e;
     });
     const bs = br.browSize ?? 1;
     this.browTilt = br.grumpy ? 0.45 : -0.3;
     this.browY = 0.044 + hf * 0.3;
-    this.brows = [-1, 1].map((s) => mesh(SPHERE, br.brow, H, [s * (0.034 + hf * 0.5), this.browY, 0.035 + hf * 0.6], [0, 0, s * this.browTilt], [0.012 * bs, 0.0035 * bs, 0.006 * bs]));
+    this.brows = [-1, 1].map((s) => mesh(BALL, br.brow, H, [s * (0.034 + hf * 0.5), this.browY, 0.035 + hf * 0.6], [0, 0, s * this.browTilt], [0.012 * bs, 0.0035 * bs, 0.006 * bs]));
     // A topknot with a bow (Maltese).
     if (br.topknot) {
       this.topknot = group(H, [0, 0.058 + hf * 0.6, -0.004]);
       coat(FLUFF, 'head', this.topknot, H, [0, 0.01, 0], [0, 0, 0], [0.024, 0.022, 0.024]);
       for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.012, 0.024, 12), br.topknot, this.topknot, [s * 0.012, 0.03, 0], [0, 0, (-s * Math.PI) / 2]);
-      mesh(SPHERE, br.topknot, this.topknot, [0, 0.03, 0], [0, 0, 0], [0.007, 0.007, 0.007]);
+      mesh(BALL, br.topknot, this.topknot, [0, 0.03, 0], [0, 0, 0], [0.007, 0.007, 0.007]);
     }
 
     // Ears.
@@ -349,7 +354,7 @@ export class Dog {
       return g;
     });
     const tz = Math.max(tip - 0.035, lerp(hinge[2], tip, 0.55)); // (in the jaw, even on a squashed pug face)
-    this.tongue = mesh(SPHERE, 0xe88a8f, this.jaw, [0, mouthLine(tz + 0.005) + 0.002 - hinge[1], tz - hinge[2]], [0.3, 0, 0], [0.016, 0.005, 0.028]);
+    this.tongue = mesh(BALL, 0xe88a8f, this.jaw, [0, mouthLine(tz + 0.005) + 0.002 - hinge[1], tz - hinge[2]], [0.3, 0, 0], [0.016, 0.005, 0.028]);
     this.tongue.visible = false;
     this.mouth = group(H, [0, -0.025, tip - 0.035]); // where carried things go
 
@@ -487,9 +492,9 @@ export class Dog {
       const { NL, nr } = this.dims, cy = 0.085 * NL, cr = 0.049 * nr + (F ?? 0) * 1.3, g = keep(group(this.neck, [0, cy, -cr]));
       const string = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.01, 0.12, -0.04), new THREE.Vector3(-0.01, 0.24, -0.05), new THREE.Vector3(0.0, 0.34, -0.06)]);
       mesh(new THREE.TubeGeometry(string, 10, 0.0025, 4, false), 0xf3ead8, g, [0, 0, 0]);
-      mesh(SPHERE, c('collar').color, g, [0.0, 0.41, -0.06], [0, 0, 0], [0.06, 0.072, 0.06]);
+      mesh(BALL, c('collar').color, g, [0.0, 0.41, -0.06], [0, 0, 0], [0.06, 0.072, 0.06]);
       mesh(new THREE.ConeGeometry(0.012, 0.018, 8), c('collar').color, g, [0.0, 0.335, -0.06], [Math.PI, 0, 0]);
-      mesh(SPHERE, 0xffffff, g, [0.022, 0.43, -0.02], [0, 0, 0], [0.012, 0.018, 0.008]); // (a shine)
+      mesh(BALL, 0xffffff, g, [0.022, 0.43, -0.02], [0, 0, 0], [0.012, 0.018, 0.008]); // (a shine)
     }
 
     if (c('collar')?.style === 'rosette') {
@@ -507,7 +512,7 @@ export class Dog {
       // A dapper bow tie under the chin.
       const g = keep(group(this.neck, [0, 0.04 * this.dims.NL, 0.05 * this.dims.nr + F * 1.3], [0.4, 0, 0]));
       for (const s of [-1, 1]) mesh(new THREE.ConeGeometry(0.022, 0.04, 4), c('neck').color, g, [s * 0.02, 0, 0], [0, 0, (s * Math.PI) / 2], [1, 1, 0.5]);
-      mesh(SPHERE, c('neck').color, g, [0, 0, 0.004], [0, 0, 0], [0.009, 0.009, 0.008]);
+      mesh(BALL, c('neck').color, g, [0, 0, 0.004], [0, 0, 0], [0.009, 0.009, 0.008]);
     } else if (c('neck')?.style === 'daisies') {
       keep(daisyChain(this.neck, this.dims)); // Pepper's daisy chain
     } else if (c('neck')?.style === 'whistle') {
@@ -577,90 +582,90 @@ export class Dog {
       if (hat.id === 'hat-party') {
         mesh(new THREE.ConeGeometry(0.032, 0.11, 18), hat.color, g, [0, 0.055, 0]);
         mesh(new THREE.TorusGeometry(0.031, 0.006, 6, 18), 0xf6d06a, g, [0, 0.008, 0], [Math.PI / 2, 0, 0]);
-        mesh(SPHERE, 0xf6d06a, g, [0, 0.115, 0], [0, 0, 0], [0.012, 0.012, 0.012]);
+        mesh(BALL, 0xf6d06a, g, [0, 0.115, 0], [0, 0, 0], [0.012, 0.012, 0.012]);
       } else if (hat.id === 'hat-cap') {
         mesh(new THREE.SphereGeometry(0.045, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.003, 0.03], [0, Math.PI, 0], [1, 1, 1.25]);
-        mesh(SPHERE, 0xffffff, g, [0, 0.046, 0], [0, 0, 0], [0.008, 0.006, 0.008]);
+        mesh(BALL, 0xffffff, g, [0, 0.046, 0], [0, 0, 0], [0.008, 0.006, 0.008]);
       } else if (hat.id === 'hat-crown') {
         mesh(new THREE.CylinderGeometry(0.036, 0.034, 0.03, 20, 1, true), hat.color, g, [0, 0.015, 0], [0, 0, 0], [1, 1, 1], );
         for (let i = 0; i < 5; i++) {
           const a = (i / 5) * Math.PI * 2;
           mesh(new THREE.ConeGeometry(0.01, 0.028, 6), hat.color, g, [Math.cos(a) * 0.034, 0.042, Math.sin(a) * 0.034]);
-          mesh(SPHERE, i % 2 ? 0xd9534f : 0x5b86c4, g, [Math.cos(a) * 0.036, 0.016, Math.sin(a) * 0.036], [0, 0, 0], [0.006, 0.006, 0.006]);
+          mesh(BALL, i % 2 ? 0xd9534f : 0x5b86c4, g, [Math.cos(a) * 0.036, 0.016, Math.sin(a) * 0.036], [0, 0, 0], [0.006, 0.006, 0.006]);
         }
       } else if (hat.id === 'hat-flowers') {
         mesh(new THREE.TorusGeometry(0.04, 0.006, 6, 24), hat.color, g, [0, 0.006, 0], [Math.PI / 2, 0, 0]);
         const petals = [0xf2a0b4, 0xf6d06a, 0xffffff, 0xb69be0, 0xf08a6a];
         for (let i = 0; i < 7; i++) {
           const a = (i / 7) * Math.PI * 2;
-          mesh(SPHERE, petals[i % petals.length], g, [Math.cos(a) * 0.04, 0.012, Math.sin(a) * 0.04], [0, 0, 0], [0.012, 0.009, 0.012]);
+          mesh(BALL, petals[i % petals.length], g, [Math.cos(a) * 0.04, 0.012, Math.sin(a) * 0.04], [0, 0, 0], [0.012, 0.009, 0.012]);
         }
       } else if (hat.id === 'hat-flatcap') {
         mesh(new THREE.SphereGeometry(0.047, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.55, 1.08]);
         mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.006, 18, 1, false, -Math.PI / 2, Math.PI), hat.color, g, [0, 0.0, 0.024], [0.12, Math.PI, 0], [1, 1, 1.15]);
-        mesh(SPHERE, 0x6a5a48, g, [0, 0.022, 0], [0, 0, 0], [0.006, 0.004, 0.006]);
+        mesh(BALL, 0x6a5a48, g, [0, 0.022, 0], [0, 0, 0], [0.006, 0.004, 0.006]);
       } else if (hat.id === 'hat-acorn') {
         // An acorn cup, worn at a jaunty angle (Nut & Meg's present), with its little stalk.
         mesh(new THREE.SphereGeometry(0.047, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.006, -0.004], [0, 0, 0.12], [1, 0.62, 1]);
         mesh(new THREE.TorusGeometry(0.045, 0.008, 8, 28), 0x6e4626, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0.12]);
-        for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; mesh(SPHERE, 0x7a4e2c, g, [Math.cos(a) * 0.03, 0.016, Math.sin(a) * 0.03 - 0.004], [0, 0, 0], [0.007, 0.004, 0.007]); } // knobbly
+        for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2; mesh(BALL, 0x7a4e2c, g, [Math.cos(a) * 0.03, 0.016, Math.sin(a) * 0.03 - 0.004], [0, 0, 0], [0.007, 0.004, 0.007]); } // knobbly
         mesh(new THREE.CylinderGeometry(0.004, 0.006, 0.026, 8), 0x5a3a20, g, [0.004, 0.036, -0.004], [0, 0, -0.35]);
       } else if (hat.id === 'hat-bobble') {
         // A woolly bobble hat (for building snowmen): stripy, with a big pom-pom.
         mesh(new THREE.SphereGeometry(0.047, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 1.2, 1]);
         mesh(new THREE.CylinderGeometry(0.0478, 0.0465, 0.012, 18, 1, true), 0xf7f3ea, g, [0, 0.017, -0.004]);
         mesh(new THREE.TorusGeometry(0.046, 0.009, 8, 24), 0xf7f3ea, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0]);
-        mesh(SPHERE, 0xf7f3ea, g, [0, 0.062, -0.004], [0, 0, 0], [0.019, 0.019, 0.019]);
+        mesh(BALL, 0xf7f3ea, g, [0, 0.062, -0.004], [0, 0, 0], [0.019, 0.019, 0.019]);
       } else if (hat.id === 'hat-leaves') {
         // A crown of autumn leaves on a twig.
         mesh(new THREE.TorusGeometry(0.04, 0.005, 6, 24), 0x7a5232, g, [0, 0.006, 0], [Math.PI / 2, 0, 0]);
         const cols = [0xd9893c, 0xc0632d, 0xe0b04a, 0xb5482a];
-        for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2; mesh(SPHERE, cols[i % 4], g, [Math.cos(a) * 0.041, 0.016, Math.sin(a) * 0.041], [0.35, -a, 0.55], [0.017, 0.006, 0.011]); }
+        for (let i = 0; i < 9; i++) { const a = (i / 9) * Math.PI * 2; mesh(BALL, cols[i % 4], g, [Math.cos(a) * 0.041, 0.016, Math.sin(a) * 0.041], [0.35, -a, 0.55], [0.017, 0.006, 0.011]); }
       } else if (hat.id === 'hat-bunny') {
         // Bunny ears (for sniffing out eggs), a bit floppy.
         for (const s of [-1, 1]) {
-          mesh(SPHERE, hat.color, g, [s * 0.022, 0.066, -0.006], [0.12, 0, s * -0.22], [0.014, 0.05, 0.008]);
-          mesh(SPHERE, 0xf2a0b4, g, [s * 0.022, 0.066, 0.0], [0.12, 0, s * -0.22], [0.008, 0.038, 0.004]);
-          mesh(SPHERE, hat.color, g, [s * 0.022, 0.018, -0.006], [0, 0, 0], [0.016, 0.012, 0.012]);
+          mesh(BALL, hat.color, g, [s * 0.022, 0.066, -0.006], [0.12, 0, s * -0.22], [0.014, 0.05, 0.008]);
+          mesh(BALL, 0xf2a0b4, g, [s * 0.022, 0.066, 0.0], [0.12, 0, s * -0.22], [0.008, 0.038, 0.004]);
+          mesh(BALL, hat.color, g, [s * 0.022, 0.018, -0.006], [0, 0, 0], [0.016, 0.012, 0.012]);
         }
       } else if (hat.id === 'hat-postie') {
         // The postman's peaked cap: navy, with a red band.
         mesh(new THREE.CylinderGeometry(0.042, 0.045, 0.034, 20), hat.color, g, [0, 0.014, -0.004]);
         mesh(new THREE.CylinderGeometry(0.0458, 0.0458, 0.009, 20, 1, true), 0xd9534f, g, [0, 0.005, -0.004]);
         mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.005, 18, 1, false, -Math.PI / 2, Math.PI), 0x232b3d, g, [0, 0.0, 0.026], [0.12, Math.PI, 0], [1, 1, 1.15]);
-        mesh(SPHERE, 0xe0b04a, g, [0, 0.016, 0.042], [0, 0, 0], [0.006, 0.006, 0.003]); // a little badge
+        mesh(BALL, 0xe0b04a, g, [0, 0.016, 0.042], [0, 0, 0], [0.006, 0.006, 0.003]); // a little badge
       } else if (hat.style === 'mask') { // a robber's mask across the eyes, which peep out through white holes
         const hf = this.dims.HF / this.breed.headW, es = this.breed.eyeSize ?? 1, m = keep(group(this.head));
         const o = hf * 0.6; // (fluffy faces: on top of the fur)
         for (const s of [-1, 1]) {
           const x = s * (0.036 + o), y = 0.026 + hf * 0.2, z = 0.035 + o;
-          mesh(SPHERE, hat.color, m, [x + s * 0.003, y + 0.001, z - 0.003], [0, s * 0.35, s * 0.22], [0.028 * es, 0.019 * es, 0.007]);
-          mesh(SPHERE, 0xf4efe6, m, [x, y, z - 0.0015], [0, s * 0.35, 0], [0.017 * es, 0.018 * es, 0.0095]);
-          mesh(SPHERE, hat.color, m, [s * (0.046 + o), 0.03, 0.002], [0, 0, 0], [0.005, 0.009, 0.032]); // the band round the side
-          mesh(SPHERE, hat.color, m, [s * 0.01, 0.022, -0.062 - o], [0.5, s * 0.6, 0], [0.004, 0.016, 0.006]); // a tail of the knot
+          mesh(BALL, hat.color, m, [x + s * 0.003, y + 0.001, z - 0.003], [0, s * 0.35, s * 0.22], [0.028 * es, 0.019 * es, 0.007]);
+          mesh(BALL, 0xf4efe6, m, [x, y, z - 0.0015], [0, s * 0.35, 0], [0.017 * es, 0.018 * es, 0.0095]);
+          mesh(BALL, hat.color, m, [s * (0.046 + o), 0.03, 0.002], [0, 0, 0], [0.005, 0.009, 0.032]); // the band round the side
+          mesh(BALL, hat.color, m, [s * 0.01, 0.022, -0.062 - o], [0.5, s * 0.6, 0], [0.004, 0.016, 0.006]); // a tail of the knot
         }
-        mesh(SPHERE, hat.color, m, [0, 0.044 + hf * 0.3, 0.046 + o], [0.45, 0, 0], [0.026, 0.006, 0.012]); // across the bridge of the nose
-        mesh(SPHERE, hat.color, m, [0, 0.034, -0.054 - o], [0, 0, 0], [0.011, 0.01, 0.008]);                // the knot at the back
+        mesh(BALL, hat.color, m, [0, 0.044 + hf * 0.3, 0.046 + o], [0.45, 0, 0], [0.026, 0.006, 0.012]); // across the bridge of the nose
+        mesh(BALL, hat.color, m, [0, 0.034, -0.054 - o], [0, 0, 0], [0.011, 0.01, 0.008]);                // the knot at the back
       } else if (hat.id === 'hat-bucket') {
         // A seaside bucket, upside down (for all those sandcastles), with its handle and a starfish sticker.
         mesh(new THREE.CylinderGeometry(0.032, 0.046, 0.07, 18, 1, true), hat.color, g, [0, 0.03, -0.004]);
         mesh(new THREE.CircleGeometry(0.032, 18), hat.color, g, [0, 0.065, -0.004], [-Math.PI / 2, 0, 0]);
         mesh(new THREE.TorusGeometry(0.046, 0.0045, 6, 24), 0xc95c2c, g, [0, -0.004, -0.004], [Math.PI / 2, 0, 0]);
         mesh(new THREE.TorusGeometry(0.044, 0.003, 4, 18, Math.PI), 0xf2c94e, g, [0, 0.002, -0.004], [0.5, Math.PI / 2, 0]);
-        mesh(SPHERE, 0xf2c94e, g, [0, 0.032, 0.038], [0.3, 0, 0], [0.011, 0.011, 0.004]);
+        mesh(BALL, 0xf2c94e, g, [0, 0.032, 0.038], [0.3, 0, 0], [0.011, 0.011, 0.004]);
       } else if (hat.id === 'hat-straw') {
         // Farmer Mabel's straw hat: a wide brim, a red band, and a daisy tucked into it.
         mesh(new THREE.CylinderGeometry(0.075, 0.078, 0.006, 24), hat.color, g, [0, -0.002, -0.004]);
         mesh(new THREE.CylinderGeometry(0.038, 0.043, 0.036, 20), hat.color, g, [0, 0.016, -0.004]);
         mesh(new THREE.CylinderGeometry(0.0436, 0.0436, 0.011, 20, 1, true), 0xd9534f, g, [0, 0.007, -0.004]);
-        mesh(SPHERE, 0xfbf7ee, g, [0.043, 0.008, 0.008], [0, 0, 0], [0.004, 0.009, 0.009]);
-        mesh(SPHERE, 0xf2c14e, g, [0.046, 0.008, 0.008], [0, 0, 0], [0.003, 0.004, 0.004]);
+        mesh(BALL, 0xfbf7ee, g, [0.043, 0.008, 0.008], [0, 0, 0], [0.004, 0.009, 0.009]);
+        mesh(BALL, 0xf2c14e, g, [0.046, 0.008, 0.008], [0, 0, 0], [0.003, 0.004, 0.004]);
       } else if (hat.id === 'hat-thinking') {
         // A mortarboard (for solving puzzles): a flat square on a little cap, with a gold tassel over the side.
         mesh(new THREE.SphereGeometry(0.044, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, -0.004, -0.004], [0, 0, 0], [1, 0.75, 1]);
         mesh(new THREE.BoxGeometry(0.105, 0.007, 0.105), hat.color, g, [0, 0.031, -0.004], [0, Math.PI / 4, 0]);
-        mesh(SPHERE, 0xe0b04a, g, [0, 0.036, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
+        mesh(BALL, 0xe0b04a, g, [0, 0.036, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
         mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.074, 5), 0xe0b04a, g, [0.037, 0.0355, -0.004], [0, 0, Math.PI / 2]); // the cord
         mesh(new THREE.CylinderGeometry(0.0035, 0.0065, 0.034, 6), 0xe0b04a, g, [0.074, 0.0175, -0.004]);                   // the tassel
       } else if (hat.id === 'hat-boppers') {
@@ -669,27 +674,27 @@ export class Dog {
         for (const s of [-1, 1]) {
           const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(s * 0.03, 0.0, -0.004), new THREE.Vector3(s * 0.045, 0.06, 0.004), new THREE.Vector3(s * 0.036, 0.095, -0.006), new THREE.Vector3(s * 0.05, 0.125, 0.002)]);
           mesh(new THREE.TubeGeometry(curve, 10, 0.0035, 5, false), 0x5a6a7a, g, [0, 0, 0]);
-          mesh(SPHERE, s < 0 ? 0xffb0d0 : 0xfff17a, g, [s * 0.05, 0.13, 0.002], [0, 0, 0], [0.014, 0.014, 0.014]);
+          mesh(BALL, s < 0 ? 0xffb0d0 : 0xfff17a, g, [s * 0.05, 0.13, 0.002], [0, 0, 0], [0.014, 0.014, 0.014]);
         }
       } else if (hat.id === 'hat-captain') {
         // Captain Poppy's spare: a white peaked cap, a navy band, a shiny black peak and a gold anchor badge.
         mesh(new THREE.CylinderGeometry(0.05, 0.043, 0.032, 22), hat.color, g, [0, 0.016, -0.006]);
         mesh(new THREE.CylinderGeometry(0.0445, 0.0445, 0.011, 22, 1, true), 0x2f3a52, g, [0, 0.006, -0.006]);
         mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.005, 18, 1, false, -Math.PI / 2, Math.PI), 0x232b3d, g, [0, 0.0, 0.024], [0.14, Math.PI, 0], [1, 1, 1.15]);
-        mesh(SPHERE, 0xe0b04a, g, [0, 0.019, 0.044], [0, 0, 0], [0.008, 0.008, 0.003]);
+        mesh(BALL, 0xe0b04a, g, [0, 0.019, 0.044], [0, 0, 0], [0.008, 0.008, 0.003]);
         mesh(new THREE.TorusGeometry(0.046, 0.0025, 4, 24), 0xe0b04a, g, [0, 0.031, -0.006], [Math.PI / 2, 0, 0]); // (a gold cord round the top)
       } else if (hat.id === 'hat-explorer') {
         // An explorer's sun helmet (for a week of walks): a rounded crown, a wide brim, a brown band with a little compass badge.
         mesh(new THREE.SphereGeometry(0.046, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, 0.0, -0.004], [0, 0, 0], [1, 0.95, 1.1]);
         mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.005, 26), hat.color, g, [0, -0.002, -0.002], [0.05, 0, 0], [1, 1, 1.12]);
         mesh(new THREE.CylinderGeometry(0.0468, 0.0468, 0.01, 22, 1, true), 0x7a5232, g, [0, 0.005, -0.004], [0, 0, 0], [1, 1, 1.1]);
-        mesh(SPHERE, 0x6a4a2c, g, [0, 0.045, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
+        mesh(BALL, 0x6a4a2c, g, [0, 0.045, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
         mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.003, 14), 0xe0b04a, g, [0, 0.006, 0.05], [Math.PI / 2, 0, 0]);
         mesh(new THREE.ConeGeometry(0.0025, 0.009, 4), 0xd9534f, g, [0, 0.008, 0.0518], [0, 0, 0]);
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);
-        for (let i = 0; i < 4; i++) mesh(SPHERE, 0xf6d06a, g, [Math.cos(i * 1.7) * 0.02, 0.04 + i * 0.022, Math.sin(i * 1.7) * 0.02 + 0.012], [0, 0, 0], [0.005, 0.005, 0.005]);
+        for (let i = 0; i < 4; i++) mesh(BALL, 0xf6d06a, g, [Math.cos(i * 1.7) * 0.02, 0.04 + i * 0.022, Math.sin(i * 1.7) * 0.02 + 0.012], [0, 0, 0], [0.005, 0.005, 0.005]);
       }
     }
   }

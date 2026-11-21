@@ -432,7 +432,7 @@ export function buildShip(origin) {
     scene.add(m);
     return { m, x, z };
   });
-  const sky = skyDome(170);
+  const sky = skyDome(); // (just inside the camera's reach: islands sliding past far off still show through the haze)
   scene.add(sky);
   const dyn = new THREE.Group();
   dyn.position.set(ox, 0, oz);

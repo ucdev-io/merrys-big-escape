@@ -94,17 +94,21 @@ export const shellTipGeometry = () => once('tip', () => bake([{ ...fan(0.05, 0xf
 // ---------------------------------------------------------------------------------------------
 // Seagulls (herring gulls: white, with grey wings tipped in black, a yellow beak with a red spot).
 
+// (Gulls and crabs are a few centimetres to a few tens of centimetres, and there are a lot of them about: rounder
+// spheres than these went unseen, at 660 triangles a ball. A gull was 6,000 triangles; now it's about 1,300.)
+const MID = new THREE.SphereGeometry(1, 14, 10), LOW = new THREE.SphereGeometry(1, 10, 6), DOT = new THREE.SphereGeometry(1, 6, 4);
+
 export function gullBodyGeometry() {
   return once('gull', () => bake([
-    [SPHERE, 0xf7f6f2, [0, 0.2, 0], [0, 0, 0], [0.1, 0.095, 0.19]],
-    [SPHERE, 0xc4cad2, [0, 0.235, -0.04], [-0.05, 0, 0], [0.095, 0.05, 0.17]],   // the grey back
-    [SPHERE, 0xf7f6f2, [0, 0.31, 0.14], [0, 0, 0], [0.07, 0.068, 0.078]],         // head
+    [MID, 0xf7f6f2, [0, 0.2, 0], [0, 0, 0], [0.1, 0.095, 0.19]],
+    [MID, 0xc4cad2, [0, 0.235, -0.04], [-0.05, 0, 0], [0.095, 0.05, 0.17]],   // the grey back
+    [MID, 0xf7f6f2, [0, 0.31, 0.14], [0, 0, 0], [0.07, 0.068, 0.078]],         // head
     [new THREE.ConeGeometry(0.017, 0.085, 8), 0xf2c94e, [0, 0.3, 0.245], [Math.PI / 2, 0, 0]],
-    [SPHERE, 0xd9534f, [0, 0.293, 0.245], [0, 0, 0], [0.008, 0.008, 0.012]],      // the red spot (it's where chicks peck)
-    [SPHERE, 0x2b2420, [0.042, 0.325, 0.17], [0, 0, 0], [0.01, 0.011, 0.01]], [SPHERE, 0x2b2420, [-0.042, 0.325, 0.17], [0, 0, 0], [0.01, 0.011, 0.01]],
-    [SPHERE, 0x3a3a40, [0, 0.215, -0.21], [-0.2, 0, 0], [0.06, 0.02, 0.07]],      // dark tail tips
+    [DOT, 0xd9534f, [0, 0.293, 0.245], [0, 0, 0], [0.008, 0.008, 0.012]],      // the red spot (it's where chicks peck)
+    [DOT, 0x2b2420, [0.042, 0.325, 0.17], [0, 0, 0], [0.01, 0.011, 0.01]], [DOT, 0x2b2420, [-0.042, 0.325, 0.17], [0, 0, 0], [0.01, 0.011, 0.01]],
+    [LOW, 0x3a3a40, [0, 0.215, -0.21], [-0.2, 0, 0], [0.06, 0.02, 0.07]],      // dark tail tips
     [new THREE.CylinderGeometry(0.008, 0.008, 0.12, 5), 0xe8a0a0, [0.035, 0.06, 0.0]], [new THREE.CylinderGeometry(0.008, 0.008, 0.12, 5), 0xe8a0a0, [-0.035, 0.06, 0.0]],
-    [SPHERE, 0xe8a0a0, [0.035, 0.004, 0.025], [0, 0, 0], [0.025, 0.006, 0.035]], [SPHERE, 0xe8a0a0, [-0.035, 0.004, 0.025], [0, 0, 0], [0.025, 0.006, 0.035]],
+    [LOW, 0xe8a0a0, [0.035, 0.004, 0.025], [0, 0, 0], [0.025, 0.006, 0.035]], [LOW, 0xe8a0a0, [-0.035, 0.004, 0.025], [0, 0, 0], [0.025, 0.006, 0.035]],
   ]));
 }
 
@@ -129,10 +133,10 @@ export const chipsGeometry = () => once('chips', () => {
 export function crabBodyGeometry() {
   return once('crab', () => {
     const parts = [
-      { geo: SPHERE, pos: [0, 0.05, 0], scale: [0.085, 0.038, 0.062], colors: (i, v) => (v.y < 0.04 ? 0xf0a070 : 0xd9603b) },
+      { geo: MID, pos: [0, 0.05, 0], scale: [0.085, 0.038, 0.062], colors: (i, v) => (v.y < 0.04 ? 0xf0a070 : 0xd9603b) },
       [new THREE.CylinderGeometry(0.006, 0.006, 0.04, 5), 0xd9603b, [0.022, 0.09, 0.04]], [new THREE.CylinderGeometry(0.006, 0.006, 0.04, 5), 0xd9603b, [-0.022, 0.09, 0.04]],
-      [SPHERE, 0x1d1614, [0.022, 0.112, 0.042], [0, 0, 0], [0.011, 0.011, 0.011]], [SPHERE, 0x1d1614, [-0.022, 0.112, 0.042], [0, 0, 0], [0.011, 0.011, 0.011]],
-      [SPHERE, 0xffffff, [0.025, 0.116, 0.049], [0, 0, 0], [0.003, 0.003, 0.003]], [SPHERE, 0xffffff, [-0.019, 0.116, 0.049], [0, 0, 0], [0.003, 0.003, 0.003]],
+      [DOT, 0x1d1614, [0.022, 0.112, 0.042], [0, 0, 0], [0.011, 0.011, 0.011]], [DOT, 0x1d1614, [-0.022, 0.112, 0.042], [0, 0, 0], [0.011, 0.011, 0.011]],
+      [DOT, 0xffffff, [0.025, 0.116, 0.049], [0, 0, 0], [0.003, 0.003, 0.003]], [DOT, 0xffffff, [-0.019, 0.116, 0.049], [0, 0, 0], [0.003, 0.003, 0.003]],
     ];
     for (const s of [-1, 1]) for (let k = 0; k < 4; k++) { // four legs a side, bent down to the sand
       const z = -0.035 + k * 0.022;
@@ -147,8 +151,8 @@ export function crabClawGeometry(side = 1) {
   const s = side;
   return once(`claw${s}`, () => bake([
     [profileTube([[0, 0, 0], [0.03 * s, 0.01, 0.03], [0.045 * s, 0.02, 0.06]], () => 0.009, 5, 5), 0xd9603b],
-    [SPHERE, 0xd9603b, [0.05 * s, 0.025, 0.085], [0, 0.3 * s, 0], [0.026, 0.02, 0.032]],
-    [SPHERE, 0xe8754a, [0.042 * s, 0.03, 0.115], [0.4, 0.3 * s, 0], [0.01, 0.008, 0.028]],
-    [SPHERE, 0xe8754a, [0.058 * s, 0.02, 0.113], [-0.3, 0.3 * s, 0], [0.009, 0.007, 0.024]],
+    [MID, 0xd9603b, [0.05 * s, 0.025, 0.085], [0, 0.3 * s, 0], [0.026, 0.02, 0.032]],
+    [LOW, 0xe8754a, [0.042 * s, 0.03, 0.115], [0.4, 0.3 * s, 0], [0.01, 0.008, 0.028]],
+    [LOW, 0xe8754a, [0.058 * s, 0.02, 0.113], [-0.3, 0.3 * s, 0], [0.009, 0.007, 0.024]],
   ]));
 }

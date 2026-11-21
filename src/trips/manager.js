@@ -52,6 +52,7 @@ export class Trips {
       this.fade.className = 'travel-fade';
       this.hud.root.prepend(this.fade); // (under the HUD's buttons, over the picture)
     }
+    this.fade.style.display = '';
     return this.fade;
   }
   fadeTo(to, secs) {
@@ -79,6 +80,8 @@ export class Trips {
     const P = this.player;
     P.dog.body.rotation.x = 0;
     P.pos.y = y; P.vy = 0; P.grounded = true; P.lockY = false; P.frozen = false;
+    // (The paper's cleared: out of the way altogether, not a see-through sheet over every frame on a phone.)
+    if (this.fade && !(Number(this.fade.style.opacity || 0) > 0)) this.fade.style.display = 'none';
   }
 
   /**

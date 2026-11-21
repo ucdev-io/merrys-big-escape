@@ -75,7 +75,7 @@ class LeafPiles {
     } else spots.push(V(-5.2, 0, 1.4), V(5.6, 0, 5.9)); // (the back garden: under its tree, and by the shed)
     const geo = leafPileGeometry(3);
     this.list = spots.map((p, i) => ({ id: `lp${i}`, x: p.x, z: p.z, y: groundY(world, p.x, p.z) - 0.04, ry: i * 2.4, full: 1, cd: 0 }));
-    this.mesh = A.add(instanced(geo, this.list.length, { shadow: true }));
+    this.mesh = A.add(instanced(geo, this.list.length, { shadow: false })); // (a 13 cm heap: no shadow to speak of, and every pile in town would be drawn again for it)
     for (const p of this.list) this.draw(p);
     this.near = null;
   }

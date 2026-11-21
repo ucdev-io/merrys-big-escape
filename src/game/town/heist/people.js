@@ -1,8 +1,6 @@
 import * as THREE from 'three';
 import { Person } from '../../../entities/person.js';
 import { mesh } from '../../../world/props.js';
-import { paint } from '../../../render/watercolorMaterial.js';
-import { bakeParts } from '../../../entities/treats.js';
 
 // The grown-ups guarding the goodies, dressed for the job. Each is a Person (entities/person.js) with
 // a hat and an apron, then baked down to a handful of meshes (one per moving part) for phones.
@@ -19,20 +17,11 @@ function apron(p, color, stripes = []) {
 }
 
 /**
- * Merge each moving part's meshes (legs, arms, head, body) into one vertex-coloured mesh: a person
- * becomes ~6 draw calls instead of ~20, and still walks, waves and turns their head.
+ * Bake the hat, apron and things added since the Person was made in with the rest (Person.bake): a person
+ * is ~6 draw calls instead of ~20, and still walks, waves and turns their head.
  */
 export function bakePerson(p) {
-  for (const g of [...p.legs, ...p.arms, p.head, p.body]) {
-    const parts = g.children.filter((o) => o.isMesh);
-    if (parts.length < 2) continue;
-    const geo = bakeParts(parts.map((m) => [m.geometry, m.material.color.getHex(), m.position.toArray(), [m.rotation.x, m.rotation.y, m.rotation.z], m.scale.toArray()]));
-    for (const m of parts) g.remove(m);
-    const merged = new THREE.Mesh(geo, paint(0xffffff, { vertexColors: true }));
-    merged.castShadow = true;
-    g.add(merged);
-  }
-  return p;
+  return p.bake();
 }
 
 /** The baker: whites, a pink apron and a tall puffy chef's hat. */

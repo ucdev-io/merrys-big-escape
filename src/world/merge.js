@@ -252,10 +252,44 @@ export function mergeStatic(root, { chunk = 50, maxInstances = 400 } = {}) {
     }));
     m.castShadow = cast;
     m.receiveShadow = true;
+    m.renderOrder = cast || mat.transparent ? 0 : 1; // (solid ground and flat things after what stands on them: fewer hidden pixels painted)
+    m.matrixAutoUpdate = false; // (never moves on its own: no working out its matrix again every frame)
     out.add(m);
   }
   for (const [o, tag] of keep) { dressSeason(o, null, tag); out.attach(o); }
   return out;
+}
+
+/**
+ * mergeStatic for something that moves as one (a ride's turning top, a gondola, a person's arm): the meshes
+ * under `group` baked into a few (one per kind of paint, whether it casts a shadow…), in the group's own
+ * coordinates, so the group can go on moving. A model of 20 little meshes costs 1–2 draws instead of 20
+ * (and as many again for its shadow).
+ *   - Parts that move on their own (a horse going up and down, a leg) must be marked userData.noMerge
+ *     first (or merged on their own before, then marked): they're kept whole, as they are.
+ *   - Anything that can't be baked is kept too: lines, sprites, lights, hidden things, empty anchors,
+ *     other materials, a shape already sent to the graphics chip.
+ * Call it more than once (a hat added later) and the new parts join the baked ones, until the first
+ * picture's been drawn (after that the baked shape's copy is gone, and new parts just stay as they are).
+ * season: what it is for the seasons (default 'none': no snow on a horse's back or a person's shoulders).
+ */
+export function mergeRigid(group, { season = 'none' } = {}) {
+  const parent = group.parent, pos = group.position.clone(), quat = group.quaternion.clone(), scl = group.scale.clone();
+  parent?.remove(group);
+  group.position.set(0, 0, 0); group.quaternion.identity(); group.scale.set(1, 1, 1);
+  group.userData.season ??= season;
+  group.traverse((o) => {
+    if (o === group || o.userData.noMerge) return;
+    const bakeable = o.isMesh && !o.isSkinnedMesh && o.visible && !Array.isArray(o.material) && o.material?.isMeshLambertMaterial && !!o.geometry?.attributes.position?.array;
+    const container = !o.isMesh && (o.type === 'Group' || o.type === 'Object3D') && o.visible && o.children.length > 0;
+    if (!bakeable && !container) o.userData.noMerge = true;
+  });
+  const out = mergeStatic(group, { chunk: Infinity }); // (one chunk: any finite size still splits it four ways, either side of x = 0 and z = 0)
+  group.clear();
+  for (const c of [...out.children]) group.add(c);
+  group.position.copy(pos); group.quaternion.copy(quat); group.scale.copy(scl);
+  parent?.add(group);
+  return group;
 }
 
 /** Camera occluders from tagged objects: buildings & trunks → boxes, tree canopies → spheres. */

@@ -315,8 +315,8 @@ export function buildBeach(g, d, { C, extra, flats }) {
 
   // ---- the meadow: sea pinks by the lane, the lane, signposts, a bench looking out over the dunes ----
   {
-    const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.01, 0.013, 1, 3), paint(PALETTE.leafDark), d.thrift.length);
-    const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), paint(0xffffff), d.thrift.length);
+    const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.01, 0.013, 1, 3), paint(PALETTE.leafDark, { kind: 'inst' }), d.thrift.length);
+    const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), paint(0xffffff, { kind: 'inst' }), d.thrift.length);
     const m = new THREE.Matrix4(), c = new THREE.Color(), pinks = [0xf2a0c4, 0xf5b8d0, 0xe98ab6, 0xfbe6ee];
     d.thrift.forEach((f, i) => {
       const h = 0.18 * f.s + 0.08;
@@ -367,7 +367,7 @@ export function buildBeach(g, d, { C, extra, flats }) {
 
   // ---- marram grass on the dunes ----
   {
-    const tufts = new THREE.InstancedMesh(marramClump(), paint(0xffffff), d.tufts.length);
+    const tufts = new THREE.InstancedMesh(marramClump(), paint(0xffffff, { kind: 'inst' }), d.tufts.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color(), greens = [0x8fa868, 0x9db574, 0x7f9a5e, 0xa8b97d];
     d.tufts.forEach((t, i) => {
       q.setFromEuler(e.set(0, t.rot, 0));

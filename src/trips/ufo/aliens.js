@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { paint } from '../../render/watercolorMaterial.js';
+import { mergeRigid } from '../../world/merge.js';
 
 /*
  * 👽 The Blips of Planet Boing: round and squashy, with one big eye (or two), wobbly antennae with glowing tips,
@@ -79,6 +80,13 @@ export class Alien {
       part(c, 0xf6d06a, [0, 0.05, 0.16], [0.035, 0.035, 0.012]);
       for (const a of this.ants) a.position.y = 0.62; // (poking out from under it)
     }
+    // ~20 little spheres baked into a few meshes (world/merge.js): the body (and cap), the feet, the blinking
+    // eyes, each wobbly antenna. The arms stay as they are: they wave.
+    for (const a of this.arms) a.userData.noMerge = true;
+    for (const g of [this.eyes, ...this.ants]) { mergeRigid(g); g.userData.noMerge = true; }
+    mergeRigid(this.body);
+    this.body.userData.noMerge = true;
+    mergeRigid(this.root);
     this.t = Math.random() * 10;
     this.blinkT = 1 + Math.random() * 3;
     this.hop = null;    // { from, to, t, dur, h }: in the middle of a hop

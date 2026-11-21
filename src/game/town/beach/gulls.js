@@ -31,7 +31,7 @@ export class Gulls {
     this.B = B;
     const area = B.area, scene = B.scene;
     const mk = (geo, count) => {
-      const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true }), count);
+      const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true, kind: 'inst' }), count);
       m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
       scene.add(m);
       return m;

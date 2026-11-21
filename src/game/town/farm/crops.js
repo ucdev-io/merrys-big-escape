@@ -68,7 +68,7 @@ export class Crops {
     while (((u1 - u0) / du) * ((v1 - v0) / dv) > max) { du += 0.34; dv *= 1.06; }
     const spots = [];
     for (let u = u0; u <= u1; u += du) for (let v = v0 + rng.float(0, dv); v <= v1; v += dv) if (!skip?.(u, v) && !this.inCircle(u, v)) spots.push([u, v]);
-    const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true }), Math.max(1, spots.length));
+    const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true, kind: 'inst' }), Math.max(1, spots.length));
     spots.forEach(([u, v], i) => {
       const [x, z] = W(u + rng.float(-0.08, 0.08), v + rng.float(-0.15, 0.15)), k = h * rng.float(0.85, 1.12);
       _q.setFromEuler(_e.set(rng.float(-lean, lean), rng.float(0, 6.28), rng.float(-lean, lean)));
@@ -92,7 +92,7 @@ export class Crops {
       this.rows(clumpGeometry(0xc9a95a, 0xf2d488, 6), 0.95, { step: 0.6, max: 1100, rng, fat: 1.5 });
       this.wheat = true;
       // Poppies here and there among the wheat.
-      const n = 70, stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.01, 1, 3), paint(0x6f9a52), n), heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xd9433a), n);
+      const n = 70, stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.008, 0.01, 1, 3), paint(0x6f9a52, { kind: 'inst' }), n), heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xd9433a, { kind: 'inst' }), n);
       const F = this.field;
       for (let i = 0; i < n; i++) {
         const pu = rng.float(F.u0 + 1, F.u1 - 1), pv = rng.float(F.v0 + 1, F.v1 - 1), [x, z] = A.W(pu, pv), h = rng.float(0.85, 1.1), k = this.inCircle(pu, pv) ? 0 : 1; // (none in the crop circle)
@@ -110,8 +110,8 @@ export class Crops {
         if (pts.some(([a, b]) => Math.hypot(a - u, b - v) < 1.6)) continue;
         pts.push([u, v]);
       }
-      const pumpkins = new THREE.InstancedMesh(pumpkinGeometry(), paint(0xffffff, { vertexColors: true }), Math.max(1, pts.length));
-      const leaves = new THREE.InstancedMesh(bake([[new THREE.IcosahedronGeometry(1, 1), 0x5d8c55]]), paint(0xffffff, { vertexColors: true }), Math.max(1, pts.length * 2));
+      const pumpkins = new THREE.InstancedMesh(pumpkinGeometry(), paint(0xffffff, { vertexColors: true, kind: 'inst' }), Math.max(1, pts.length));
+      const leaves = new THREE.InstancedMesh(bake([[new THREE.IcosahedronGeometry(1, 1), 0x5d8c55]]), paint(0xffffff, { vertexColors: true, kind: 'inst' }), Math.max(1, pts.length * 2));
       pts.forEach(([u, v], i) => {
         const [x, z] = A.W(u, v), s = rng.float(0.8, 1.35);
         _q.setFromEuler(_e.set(0, rng.float(0, 6.28), rng.float(-0.12, 0.12)));
@@ -127,7 +127,7 @@ export class Crops {
       this.add(pumpkins); this.add(leaves);
       this.pumpkinSpots = pts.map(([u, v]) => A.W(u, v));
       // Apples on the orchard trees.
-      const apples = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), paint(0xffffff), Math.max(1, A.orchard.length * 9));
+      const apples = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), paint(0xffffff, { kind: 'inst' }), Math.max(1, A.orchard.length * 9));
       let n = 0;
       for (const t of A.orchard) for (let k = 0; k < 9; k++) {
         const a = rng.float(0, 6.28), rr = rng.float(0.55, 1.05) * t.s, y = rng.float(2.0, 2.9) * t.s;

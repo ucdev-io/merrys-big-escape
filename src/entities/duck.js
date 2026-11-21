@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mesh } from '../world/props.js';
+import { mergeRigid } from '../world/merge.js';
 
 const SPHERE = new THREE.SphereGeometry(1, 20, 14);
 const group = (parent, pos = [0, 0, 0]) => { const g = new THREE.Group(); g.position.set(...pos); parent.add(g); return g; };
@@ -46,6 +47,12 @@ export class Duck {
       }
     }
     this.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    // A dozen or two little meshes baked into a few (world/merge.js): each wing (they flap), the head (it
+    // looks about), the body, the feet. Duchess and her ducklings were 25 draws, twice over with shadows.
+    for (const g of [...this.wings, this.head]) { mergeRigid(g); g.userData.noMerge = true; }
+    mergeRigid(this.body);
+    this.body.userData.noMerge = true;
+    mergeRigid(this.root);
     this.t = Math.random() * 10;
     this.flapT = 0;
   }

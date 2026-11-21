@@ -22,8 +22,8 @@ export class SausageString {
     this.segs = Array.from({ length: N - 1 }, (_, i) => ({ a: i, b: i + 1, rest: i === JOIN ? 0 : REST }));
     this.cut = false;
     this.banked = [false, false];
-    this.sausages = new THREE.InstancedMesh(new THREE.CapsuleGeometry(R, REST - 2 * R, 6, 12), paint(SAUSAGE), LINKS.n);
-    this.knots = new THREE.InstancedMesh(new THREE.SphereGeometry(R * 0.62, 10, 8), paint(SAUSAGE_TWIST), N - 3);
+    this.sausages = new THREE.InstancedMesh(new THREE.CapsuleGeometry(R, REST - 2 * R, 6, 12), paint(SAUSAGE, { kind: 'inst' }), LINKS.n);
+    this.knots = new THREE.InstancedMesh(new THREE.SphereGeometry(R * 0.62, 10, 8), paint(SAUSAGE_TWIST, { kind: 'inst' }), N - 3);
     this.bounds = new THREE.Sphere(new THREE.Vector3(), 1); // (moved along with the sausages, so they're culled when out of sight)
     for (const m of [this.sausages, this.knots]) { m.castShadow = true; m.boundingSphere = this.bounds; scene.add(m); }
     this.hang();

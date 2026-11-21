@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AreaCull } from '../../../world/areaCull.js';
 import { LineBag } from '../../dialogue.js';
 import { season } from '../../season.js';
 import { seasonUniforms, paint } from '../../../render/watercolorMaterial.js';
@@ -61,6 +62,8 @@ export class Beach {
     this.sandy = friends.add(new Sandy({ scene, world, area, hud, player, actions, friends, dogName }));
     // 🐾 Paw prints in the sand (in the snow, the seasons' own prints take over).
     this.prints = new PawPrints(scene, { max: 220, life: 32, opacity: 0.4 });
+    // The gulls, crabs and castles: drawn when the beach is in view, their shadows only near it (world/areaCull.js).
+    this.areaCull = new AreaCull([this.gulls.bodyMesh, this.gulls.wingMeshR, this.gulls.wingMeshL, this.gulls.trayMesh, this.gulls.chipsMesh, this.crabs.bodyMesh, this.crabs.clawR, this.crabs.clawL, ...Object.values(this.castles.meshes)], area.strip);
     this.printCol = 0xb89c6a;
     this.sandMound = paint(0xd9c28e); // (things buried in the sand are under sandy heaps, not earth)
     // Up and over the dunes, along the boardwalk.
@@ -167,6 +170,7 @@ export class Beach {
   cull(camera) {
     const fog = this.scene.fog;
     if (!fog || !camera) return;
+    this.areaCull.update(camera);
     const far = fog.far * 1.25 + 2, c = camera.position;
     for (const o of this.far) {
       const s = o.geometry.boundingSphere;

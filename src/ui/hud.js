@@ -27,6 +27,8 @@ const HELD_FRESH_MS = 90000; // (town news held back while she was off on a trip
 export class HUD {
   constructor(camera) {
     this.camera = camera;
+    this.layoutGen = 0; // (bumped when the window changes size: speech bubbles measure themselves again)
+    window.addEventListener('resize', () => this.layoutGen++);
     this.root = document.getElementById('hud');
     this.root.innerHTML = '';
 
@@ -616,10 +618,15 @@ export class HUD {
       // Keep bubbles on screen even when the speaker isn't, so the joke is never missed.
       const s = this.project(b.anchor());
       if (s.behind) { s.x = window.innerWidth - s.x; s.y = window.innerHeight * 0.3; }
-      const w = b.e.offsetWidth / 2 + 8, h = b.e.offsetHeight + 20;
+      // (Its size, measured only when it might have changed: reading it every frame, right after moving it, made the
+      // browser lay the page out again each time. Again after it's clamped to the edge (it gains an emoji) or the
+      // window changes size.)
+      if (b.gen !== this.layoutGen) { b.gen = this.layoutGen; b.w = b.e.offsetWidth / 2 + 8; b.h = b.e.offsetHeight + 20; }
+      const w = b.w, h = b.h;
       const x = Math.min(window.innerWidth - w, Math.max(w, s.x));
       const y = Math.min(window.innerHeight - 10, Math.max(h + 70, s.y));
-      b.e.classList.toggle('offscreen', x !== s.x || y !== s.y);
+      const off = x !== s.x || y !== s.y;
+      if (off !== b.off) { b.off = off; b.e.classList.toggle('offscreen', off); b.gen = -1; }
       b.e.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
       b.e.style.opacity = Math.min(1, b.t * 3);
       return true;

@@ -57,8 +57,8 @@ export class BusStop {
    * @param o.blocked  () → why the bus can't be caught just now (Pepper's on a walk…), or null
    * @param o.friends  () → how many friends are here (in a pack)
    */
-  constructor({ scene, hud, player, follow, actions, stop, seed, name, blocked, friends }) {
-    Object.assign(this, { scene, hud, player, follow, actions, stop, seed, name, blocked, friends });
+  constructor({ scene, hud, player, follow, actions, stop, seed, name, blocked, friends, prefetch }) {
+    Object.assign(this, { scene, hud, player, follow, actions, stop, seed, name, blocked, friends, prefetch });
     this.bus = null;
     this.anim = null;
     this.hint = null;
@@ -139,6 +139,7 @@ export class BusStop {
     P.vel.set(0, 0);
     this.hud.setPrompt('');
     sfx.honk?.(0.7);
+    if (trip) this.prefetch?.(trip); // (a day out: start fetching it now, so it's there by the end of the ride)
     this.anim = { kind: 'go', t: 0, seed, trip, fresh, from: P.pos.clone() };
     this.place(-38);
   }

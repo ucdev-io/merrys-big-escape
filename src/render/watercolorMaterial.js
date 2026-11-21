@@ -193,14 +193,17 @@ const cache = new Map();
  * or 'attr' for merged geometry that says per vertex (attribute wcKind). Leave it out for anything
  * that should never change (dogs, people, effects…).
  */
-export function paint(color, { vertexColors = false, transparent = false, opacity = 1, side = THREE.FrontSide, emissive = 0x000000, season = null, rnd = 0.5 } = {}) {
+export function paint(color, { vertexColors = false, transparent = false, opacity = 1, side = THREE.FrontSide, emissive = 0x000000, season = null, rnd = 0.5, kind = '' } = {}) {
   if (!(season in SEASON_KINDS) && season !== 'attr' || season === 'none') season = null; // ('none': just the plain paint)
   rnd = Math.round(Math.max(0, Math.min(1, rnd)) * 31) / 31; // (a tree's own dice roll: its autumn colour, its blossom)
-  const key = `${color}|${vertexColors}|${transparent}|${opacity}|${side}|${emissive}${season ? `|${season}|${rnd}` : ''}`;
+  // kind: 'inst' or 'skin' for instanced or skinned meshes: the same paint, but a material of their own. three makes a
+  // material's program for one kind of mesh, and one shared by both (a dog's skin, then her collar) was looked up
+  // again at every switch, every frame.
+  const key = `${color}|${vertexColors}|${transparent}|${opacity}|${side}|${emissive}${season ? `|${season}|${rnd}` : ''}${kind ? `|${kind}` : ''}`;
   if (cache.has(key)) return cache.get(key);
   const m = new THREE.MeshLambertMaterial({ color, vertexColors, transparent, opacity, side, emissive });
   m.onBeforeCompile = onBeforeCompile;
-  m.userData.paint = { color, vertexColors, transparent, opacity, side, emissive };
+  m.userData.paint = { color, vertexColors, transparent, opacity, side, emissive, kind };
   if (season) {
     Object.assign(m.userData, { wcSeason: true, wcAttr: season === 'attr', wcKind: SEASON_KINDS[season] ?? 2, wcRnd: rnd, season });
     m.customProgramCacheKey = () => (season === 'attr' ? 'watercolor-v1-sa' : 'watercolor-v1-s');

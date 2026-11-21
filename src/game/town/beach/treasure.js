@@ -23,7 +23,7 @@ export class Treasure {
   constructor(B) {
     this.B = B;
     this.spots = B.area.treasureSpots;
-    this.tips = new THREE.InstancedMesh(shellTipGeometry(), paint(0xffffff, { vertexColors: true }), ACTIVE);
+    this.tips = new THREE.InstancedMesh(shellTipGeometry(), paint(0xffffff, { vertexColors: true, kind: 'inst' }), ACTIVE);
     this.tips.castShadow = false; this.tips.receiveShadow = true; this.tips.frustumCulled = false;
     B.scene.add(this.tips);
     this.active = [];

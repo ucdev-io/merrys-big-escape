@@ -9,7 +9,7 @@ export class ScentTrail {
     this.count = count;
     this.maxLen = maxLen;
     this.time = 0;
-    this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), paint(0xffffff, { emissive: 0x6a4a20 }), count);
+    this.mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), paint(0xffffff, { emissive: 0x6a4a20, kind: 'inst' }), count);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
     const c = new THREE.Color();

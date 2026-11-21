@@ -115,7 +115,7 @@ export class Pigs {
       const r = this.rect; // (the sty's gate is open, but they never wander out on their own… except Percy, on purpose)
       p.x = Math.min(r.x1 - 0.35, Math.max(r.x0 + 0.35, p.x)); p.z = Math.min(r.z1 - 0.35, Math.max(r.z0 + 0.35, p.z));
     }
-    this.draw(dt);
+    if (!this.hidden) this.draw(dt); // (not while the farm's lost in the fog)
   }
 
   move(p, dx, dz, speed, dt, out) {

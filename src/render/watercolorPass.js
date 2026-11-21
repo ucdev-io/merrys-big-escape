@@ -95,11 +95,14 @@ void main() {
   vec3 c = toSRGB(lin);
 
   // Wet edges: pigment pools where a wash meets a different color.
-  vec3 blur = vec3(0.0);
-  for (int i = 0; i < 6; i++) {
-    float a = float(i) * 1.0472;
-    blur += texture2D(tPaint, vUv + vec2(cos(a), sin(a)) * uWetRadius * lpx).rgb;
-  }
+  // (Six taps round a circle, at fixed angles: no sin and cos per tap per pixel.)
+  vec2 wr = uWetRadius * lpx;
+  vec3 blur = texture2D(tPaint, vUv + vec2(1.0, 0.0) * wr).rgb
+    + texture2D(tPaint, vUv + vec2(0.5, 0.8660254) * wr).rgb
+    + texture2D(tPaint, vUv + vec2(-0.5, 0.8660254) * wr).rgb
+    + texture2D(tPaint, vUv + vec2(-1.0, 0.0) * wr).rgb
+    + texture2D(tPaint, vUv + vec2(-0.5, -0.8660254) * wr).rgb
+    + texture2D(tPaint, vUv + vec2(0.5, -0.8660254) * wr).rgb;
   blur = toSRGB(blur / 6.0);
   float edge = clamp(length(c - blur) * 2.5, 0.0, 1.0);
   c = pigment(c, 1.0 + edge * uWetEdge);

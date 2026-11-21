@@ -7,7 +7,7 @@ import { paint } from '../../render/watercolorMaterial.js';
 // set of them (every snowman, every pumpkin…) can be one instanced mesh — one draw call.
 
 // Small things don't need the shared 660-triangle sphere: a leaf is 9 cm across, a conker 4 cm.
-const LEAF = new THREE.SphereGeometry(1, 8, 5);   // 64 triangles
+const LEAF = new THREE.SphereGeometry(1, 7, 3);   // 28 triangles (a flat leaf: a dozen sides is plenty)
 const HEAP = new THREE.SphereGeometry(1, 18, 9);  // 288
 const SMALL = new THREE.SphereGeometry(1, 12, 8); // 168
 const CYL = (r0, r1, h, n = 12) => new THREE.CylinderGeometry(r0, r1, h, n);
@@ -17,7 +17,7 @@ const TUBE = (pts, r, n = 16) => new THREE.TubeGeometry(new THREE.CatmullRomCurv
 export const SNOW = 0xf6f8fc;
 
 /** One instanced mesh of a baked geometry (vertex colours), n of them, all hidden to start. */
-export function instanced(geo, n, { mat = paint(0xffffff, { vertexColors: true }), shadow = true } = {}) {
+export function instanced(geo, n, { mat = paint(0xffffff, { vertexColors: true, kind: 'inst' }), shadow = true } = {}) {
   const m = new THREE.InstancedMesh(geo, mat, Math.max(1, n));
   m.count = n;
   m.castShadow = shadow;
@@ -180,7 +180,7 @@ export function leafPileGeometry(seed = 1) {
     parts.push([LEAF, AUTUMN[i % AUTUMN.length], [Math.cos(a) * d, h * (0.6 + r() * 0.5) + 0.02, Math.sin(a) * d], [r() * 1.2 - 0.6, r() * 6, r() * 1.2 - 0.6], [0.09, 0.016, 0.055]]);
   }
   parts.push([HEAP, 0xb8743a, [0, 0.06, 0], [0, 0, 0], [0.42, 0.13, 0.38]]); // (the heap under them)
-  return bake(parts); // (3,200 triangles: it was 31,000, and every pile in town is drawn every frame)
+  return bake(parts); // (1,600 triangles: it was 31,000, and every pile in town is drawn every frame)
 }
 
 /** A shiny conker (with its pale spot). */

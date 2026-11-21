@@ -324,7 +324,7 @@ export class Flock {
         let dh = s.to.h - s.h; dh = Math.atan2(Math.sin(dh), Math.cos(dh)); s.h += dh * k;
       }
     }
-    this.animate(dt);
+    if (!this.hidden) this.animate(dt); // (the whole farm lost in the fog: they still wander, but nobody poses them)
   }
 
   /** Where everyone's legs and heads are (and the pen gate). */

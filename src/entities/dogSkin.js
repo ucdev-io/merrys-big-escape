@@ -437,9 +437,13 @@ function skinGeometry(dog, br) {
 /** A dog's skin, bound to its bones (call with the dog in its rest pose, root at the origin, unscaled). */
 export function buildSkin(dog, br) {
   const geo = skinGeometry(dog, br);
-  const skin = new THREE.SkinnedMesh(geo, paint(0xffffff, { vertexColors: true }));
+  const skin = new THREE.SkinnedMesh(geo, paint(0xffffff, { vertexColors: true, kind: 'skin' }));
   skin.castShadow = skin.receiveShadow = true;
-  skin.frustumCulled = false; // bones move it about; it's only one mesh per dog
+  // Culled like anything else (a dog off-screen, or far down the road, isn't drawn: nor is her shadow), by a
+  // sphere round her rest pose with room to spare for the bones moving her about (a stretch, a roll, a jump
+  // is the whole dog moving: that's the root). Given here, so three doesn't work one out from every bent vertex.
+  skin.boundingSphere = geo.boundingSphere.clone();
+  skin.boundingSphere.radius *= 1.5;
   dog.root.add(skin);
   skin.bind(new THREE.Skeleton(dog.skinBones));
   return skin;

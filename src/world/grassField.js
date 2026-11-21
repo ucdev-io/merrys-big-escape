@@ -14,9 +14,11 @@ export class GrassField {
     blade.translate(0, 0.065, 0);
     const parts = [0, 1, 2].map((i) => { const b = blade.clone(); b.rotateZ((i - 1) * 0.35); b.rotateY(i * 2.1); return b; });
     const geo = mergeGeometries(parts.map((p) => p.toNonIndexed()));
-    this.mesh = new THREE.InstancedMesh(geo, paint(0xffffff), count);
+    this.mesh = new THREE.InstancedMesh(geo, paint(0xffffff, { kind: 'inst' }), count);
     this.mesh.frustumCulled = false;
     this.mesh.receiveShadow = true;
+    this.mesh.count = 0; // (none till the first update puts them)
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.userData.noMerge = true;
     scene.add(this.mesh);
     this.lawnAt = isLawn;
@@ -36,9 +38,11 @@ export class GrassField {
       const it = { ox: r() * tile, oz: r() * tile, rot: r() * 6.28, s: 0.6 + r() * 0.7, sy: 0.7 + r() * 0.6, tx: (r() - 0.5) * 0.3, tz: (r() - 0.5) * 0.3 };
       it.q = new THREE.Quaternion().setFromEuler(e.set(it.tx, it.rot, it.tz)); // (its lean never changes)
       it.kx = it.kz = NaN; it.lawn = false; it.sc = -1; // (where it was last put, and how big)
+      it.m = new Float32Array(16); it.c = cols[i % 3]; // (its matrix as last put, and its colour)
       this.items.push(it);
-      this.mesh.setColorAt(i, cols[i % 3]);
+      this.mesh.setColorAt(i, it.c);
     }
+    this.mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     this._m = new THREE.Matrix4(); this._p = new THREE.Vector3(); this._s = new THREE.Vector3();
   }
 
@@ -74,10 +78,22 @@ export class GrassField {
       const sc = it.lawn ? it.s * Math.min(1, Math.max(0, (half - Math.hypot(x - px, z - pz)) / 4)) : 0;
       if (sc === it.sc && !moved) continue;
       it.sc = sc;
-      this._m.compose(this._p.set(x, this.y, z), it.q, this._s.set(sc, sc * it.sy, sc));
-      this.mesh.setMatrixAt(i, this._m);
+      if (sc > 0) this._m.compose(this._p.set(x, this.y, z), it.q, this._s.set(sc, sc * it.sy, sc)).toArray(it.m);
       changed = true;
     }
-    if (changed) this.mesh.instanceMatrix.needsUpdate = true;
+    if (!changed) return;
+    // Only the tufts that show (about a third: the rest are off the lawn), packed at the front of the list and
+    // the rest left off: hidden ones were still drawn, shrunk to nothing, and the whole list sent every time.
+    const M = this.mesh.instanceMatrix, C = this.mesh.instanceColor, ma = M.array, ca = C.array;
+    let n = 0;
+    for (const it of this.items) {
+      if (!(it.sc > 0)) continue;
+      ma.set(it.m, n * 16);
+      ca[n * 3] = it.c.r; ca[n * 3 + 1] = it.c.g; ca[n * 3 + 2] = it.c.b;
+      n++;
+    }
+    this.mesh.count = n;
+    M.clearUpdateRanges(); M.addUpdateRange(0, n * 16); M.needsUpdate = true;
+    C.clearUpdateRanges(); C.addUpdateRange(0, n * 3); C.needsUpdate = true;
   }
 }

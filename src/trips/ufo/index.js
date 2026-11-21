@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeRigid } from '../../world/merge.js';
 import { paint } from '../../render/watercolorMaterial.js';
 import { blobGeometry } from '../../world/props.js';
 import { sfx } from '../../core/audio.js';
@@ -156,6 +157,7 @@ class UfoChapter extends TripChapter {
         s.rotateX(Math.PI / 2);
         cap.add(s);
       }
+      mergeRigid(cap); // (the cap and its spots: one mesh or two, not nine)
       this.world.C.circle(m.x, m.z, m.r, base + m.y + m.r * 0.5);
       return { ...m, top: base + m.y + m.r * 0.5, cap, pos: p, squash: 0 };
     });

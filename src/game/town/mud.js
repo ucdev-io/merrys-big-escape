@@ -106,7 +106,7 @@ class Prints {
     const parts = [pad.clone().scale(0.05, 1, 0.045).translate(0, 0, -0.01)];
     for (const [x, z] of [[-0.045, 0.035], [-0.016, 0.055], [0.016, 0.055], [0.045, 0.035]]) parts.push(pad.clone().scale(0.017, 1, 0.02).translate(x, 0, z));
     const geo = bake(parts.map((p) => [p, 0xffffff]));
-    this.mesh = new THREE.InstancedMesh(geo, paint(0x5f402c), PRINTS);
+    this.mesh = new THREE.InstancedMesh(geo, paint(0x5f402c, { kind: 'inst' }), PRINTS);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.castShadow = false;

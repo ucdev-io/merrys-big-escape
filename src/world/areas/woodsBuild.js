@@ -150,8 +150,8 @@ export function buildWoods(g, d, { C, extra, flats }) {
 
   // ---- the meadow: flowers by the lane, a few big old trees ----
   {
-    const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.012, 0.015, 1, 3), paint(PALETTE.leafDark), d.flowers.length);
-    const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xffffff), d.flowers.length);
+    const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.012, 0.015, 1, 3), paint(PALETTE.leafDark, { kind: 'inst' }), d.flowers.length);
+    const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xffffff, { kind: 'inst' }), d.flowers.length);
     const m = new THREE.Matrix4(), c = new THREE.Color();
     d.flowers.forEach((f, i) => {
       const h = 0.25 * f.s + 0.12;
@@ -312,7 +312,7 @@ export function buildWoods(g, d, { C, extra, flats }) {
   }
   for (const t of d.toadstools) toadstool(g, t.u, t.v, t.s, rng);
   {
-    const ferns = new THREE.InstancedMesh(fernClump(), paint(0xffffff), d.ferns.length);
+    const ferns = new THREE.InstancedMesh(fernClump(), paint(0xffffff, { kind: 'inst' }), d.ferns.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color();
     const greens = [PALETTE.leaf, PALETTE.leafDark, 0x6f9a52, PALETTE.grassDark];
     d.ferns.forEach((f, i) => {

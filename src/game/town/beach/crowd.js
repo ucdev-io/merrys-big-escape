@@ -59,6 +59,7 @@ export class Crowd {
       paper.position.set(0, 1.12, 0.42); paper.rotation.x = -0.3;
       p.body.add(paper);
     }
+    for (const g of [...p.legs, ...p.arms, p.head]) g.userData.noMerge = false; // (they sit still: limbs and all bake in with the rest of the crowd)
     return r;
   }
 

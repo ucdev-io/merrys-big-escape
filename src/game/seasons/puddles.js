@@ -30,7 +30,7 @@ export class Puddles {
     } else {
       for (const [x, z, s] of [[-4.6, 1.2, 1], [6.2, -2.4, 0.8], [-1.5, 4.6, 0.9], [2.6, -6.1, 0.7]]) this.spots.push({ x, z, s, r: x, y: 0.02, cd: 0 });
     }
-    this.mesh = new THREE.InstancedMesh(blobGeometry(7, 0.2, 2), paint(0x9fc3d6), Math.max(1, this.spots.length));
+    this.mesh = new THREE.InstancedMesh(blobGeometry(7, 0.2, 2), paint(0x9fc3d6, { kind: 'inst' }), Math.max(1, this.spots.length));
     this.mesh.count = 0;
     this.mesh.castShadow = false;
     this.mesh.receiveShadow = true;

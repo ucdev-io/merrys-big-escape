@@ -52,7 +52,7 @@ export class RemoteDogs {
     const r = this.dogs.get(id);
     if (!r) return;
     this.rides?.drop(id);
-    this.scene.remove(r.dog.root);
+    r.dog.root.removeFromParent(); // (from wherever she is: the town, or a trip's own scene)
     r.tag.remove();
     this.dogs.delete(id);
   }

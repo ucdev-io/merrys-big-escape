@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { paint } from '../../render/watercolorMaterial.js';
+import { mergeRigid } from '../../world/merge.js';
 
 /*
  * 🎠🎡🌀🎢🚗 The rides at Wagtail Wonderland. Each one goes round (or up and down) whether anybody's on it or not,
@@ -29,6 +30,9 @@ function mesh(geo, color, parent, pos = [0, 0, 0], rot = [0, 0, 0], opts, scale)
   parent.add(m);
   return m;
 }
+
+/** Bake a part that moves as one into a few meshes (world/merge.js), and keep it whole when what it hangs off is baked. */
+const rigid = (g) => { mergeRigid(g); g.userData.noMerge = true; return g; };
 
 /** Stripes round a cylinder-ish shape (vertex colours, by angle). */
 function stripes(geo, a, b, n = 12, twist = 0) {
@@ -103,6 +107,10 @@ export class Carousel {
       this.top.add(h);
       this.horses.push({ g: h, a });
     }
+    // Hundreds of little meshes baked into a few: each horse (they go up and down), the turning top, the base.
+    for (const h of this.horses) rigid(h.g);
+    rigid(this.top);
+    mergeRigid(g);
     this.speed = 0.6; // (steady, and by the clock: friends riding it are on the same horses as here)
     this.spin = clockAngle(this.speed);
     this.t = 0;
@@ -117,7 +125,7 @@ export class Carousel {
     this.spin = clockAngle(this.speed);
     this.top.rotation.y = this.spin;
     for (const h of this.horses) h.g.position.y = 1.0 + Math.sin(this.spin * 3 + h.a * 2) * 0.22;
-    this.top.updateMatrixWorld(true); // (so she sits where the horse is this frame, not last)
+    if (this.riding) this.top.updateMatrixWorld(true); // (so she sits where the horse is this frame, not last)
   }
 
   board(P) {
@@ -186,6 +194,9 @@ export class BigWheel {
       mesh(new THREE.SphereGeometry(0.8, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), c, gd, [0, -0.05, 0], [0, 0, 0], undefined, [1, 0.32, 0.8]); // (a little domed roof)
       this.gondolas.push({ g: gd, k });
     }
+    for (const G of this.gondolas) rigid(G.g);
+    rigid(this.wheel);
+    mergeRigid(g);
     this.speed = 0.3; // (steady, by the clock, like the carousel)
     this.angle = clockAngle(this.speed);
   }
@@ -200,7 +211,7 @@ export class BigWheel {
     for (const G of this.gondolas) {
       const a = this.angle + (G.k / 8) * Math.PI * 2;
       G.g.position.set(-Math.sin(a) * this.w.R, this.w.hub - Math.cos(a) * this.w.R, 0);
-      G.g.updateMatrixWorld(true);
+      if (this.riding?.G === G) G.g.updateMatrixWorld(true); // (so she sits where her gondola is this frame)
     }
   }
 
@@ -268,6 +279,7 @@ export class Helter {
     const end = this.at(1);
     this.end = end;
     mesh(RB(1.2, 0.12, 1.6, 0.05), 0xf2a0c8, g, [end.p.x - h.x + end.tan.x * 1.2, 0.06, end.p.z - h.z + end.tan.z * 1.2], [0, Math.atan2(end.tan.x, end.tan.z), 0]);
+    mergeRigid(g);
   }
 
   /** On the slide at t (0 top … 1 bottom), park coordinates: the middle of the trough, which way's along and across. */
@@ -328,7 +340,7 @@ export class Coaster {
     const g = new THREE.Group();
     parent.add(g);
     for (const pts of [left, right]) mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), N * 2, 0.055, 6, true), 0xd9534f, g).castShadow = false;
-    const sl = new THREE.InstancedMesh(new THREE.BoxGeometry(0.85, 0.07, 0.14), paint(0xf7f3ea), sleepers.length);
+    const sl = new THREE.InstancedMesh(new THREE.BoxGeometry(0.85, 0.07, 0.14), paint(0xf7f3ea, { kind: 'inst' }), sleepers.length);
     sleepers.forEach(({ p, t, side }, i) => {
       const up = t.clone().cross(side).normalize().negate();
       _m.makeBasis(side, up, t).setPosition(p.x, p.y - 0.06, p.z);
@@ -348,6 +360,7 @@ export class Coaster {
     for (const sx of [-st.len / 2 + 0.3, st.len / 2 - 0.3]) for (const sz of [st.z - 0.9, st.z + 2.5]) mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.3, 8), 0xf7f3ea, g, [st.x + sx, 1.65, sz]);
     for (let k = 0; k < 11; k++) mesh(new THREE.BoxGeometry(st.len / 11, 0.06, 3.8), k % 2 ? 0xfffaf0 : 0x5b86c4, g, [st.x - st.len / 2 + (k + 0.5) * (st.len / 11), 3.35, st.z + 0.8], [0, 0, 0]);
     mesh(RB(3.2, 0.6, 0.1, 0.05), 0xf2c94c, g, [st.x, 3.85, st.z + 2.7]);
+    mergeRigid(g);
     // The train: three little cars, red, yellow and blue, with a safety bar.
     this.cars = [0xd9534f, 0xf2c94c, 0x5b86c4].map((c) => { const car = coasterCar(c); parent.add(car); return car; });
     // Where the station is along the track, and the top of the lift hill.
@@ -358,10 +371,11 @@ export class Coaster {
     }
     for (let s = 0; s < L * 0.4; s += 0.25) { const y = this.curve.getPointAt(((s0 + s) % L) / L).y; if (y > yTop) { yTop = y; sTop = s; } }
     Object.assign(this, { s0, sTop, yTop, s: 0 });
+    const p0 = this.curve.getPointAt(this.s0 / this.L);
+    this.door = V(p0.x, 0, p0.z + 1.7); // (where to hop on: worked out once, not every frame)
     this.place(this.s0);
   }
 
-  get door() { return V(this.curve.getPointAt(this.s0 / this.L).x, 0, this.curve.getPointAt(this.s0 / this.L).z + 1.7); }
   near(l) { return Math.abs(l.x - this.door.x) < 2.2 && Math.abs(l.z - this.door.z) < 1.6; }
 
   /** The train with its front car at s (metres along the track). */
@@ -411,7 +425,7 @@ export function coasterCar(c) {
   mesh(RB(0.85, 0.36, 0.14, 0.06), c, car, [0, 0.6, -0.5]);
   mesh(new THREE.TorusGeometry(0.3, 0.025, 6, 16, Math.PI), 0xe0b04a, car, [0, 0.42, 0.58], [-0.35, 0, 0]).castShadow = false; // (the safety bar, at the front)
   for (const sx of [-0.4, 0.4]) for (const sz of [-0.42, 0.42]) mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.08, 10), 0x3a3a3a, car, [sx, 0.06, sz], [0, 0, Math.PI / 2]);
-  return car;
+  return mergeRigid(car);
 }
 
 // ======================================================================= 🚗 the dodgems
@@ -424,5 +438,5 @@ export function dodgemModel(color) {
   mesh(RB(0.8, 0.3, 0.16, 0.07), color, g, [0, 0.66, -0.52]);
   mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.6, 6), 0xb9bccf, g, [0, 1.2, -0.62]).castShadow = false;
   mesh(new THREE.SphereGeometry(0.06, 8, 6), 0xfff1a0, g, [0, 2.0, -0.62], [0, 0, 0], { emissive: 0xfff1a0 }).castShadow = false;
-  return g;
+  return mergeRigid(g);
 }

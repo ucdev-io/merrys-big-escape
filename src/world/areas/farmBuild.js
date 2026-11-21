@@ -119,8 +119,8 @@ export function buildFarm(g, d, { C, extra, flats }) {
   // ---- the buttercup meadow out front ----
   {
     const n = d.flowers.length, m = new THREE.Matrix4(), c = new THREE.Color();
-    const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.012, 0.015, 1, 3), paint(PALETTE.leafDark), n);
-    const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xffffff), n);
+    const stems = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.012, 0.015, 1, 3), paint(PALETTE.leafDark, { kind: 'inst' }), n);
+    const heads = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), paint(0xffffff, { kind: 'inst' }), n);
     const HEADS = [0xf6d04a, 0xfbf6ec, 0xe8a0c0];
     d.flowers.forEach((f, i) => {
       const h = (f.kind === 2 ? 0.12 : 0.24) * f.s + 0.1;
@@ -232,7 +232,7 @@ export function buildFarm(g, d, { C, extra, flats }) {
 
   // ---- long grass along the fences and hedges ----
   {
-    const tufts = new THREE.InstancedMesh(tuftGeometry(), paint(0xffffff), d.tufts.length);
+    const tufts = new THREE.InstancedMesh(tuftGeometry(), paint(0xffffff, { kind: 'inst' }), d.tufts.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), c = new THREE.Color(), greens = [0x7fa45a, 0x8fb565, 0x6f9a52, 0x9cbf6a];
     d.tufts.forEach((t, i) => {
       q.setFromEuler(e.set(0, t.rot, 0));

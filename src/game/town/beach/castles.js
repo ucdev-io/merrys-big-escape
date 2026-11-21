@@ -71,7 +71,7 @@ export class Castles {
     this.B = B;
     const P = parts(), n = B.area.castles.length;
     const make = (geo, count) => {
-      const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true, season: 'world' }), count); // (snow on them in winter)
+      const m = new THREE.InstancedMesh(geo, paint(0xffffff, { vertexColors: true, season: 'world', kind: 'inst' }), count); // (snow on them in winter)
       m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false;
       for (let i = 0; i < count; i++) m.setMatrixAt(i, ZERO);
       B.scene.add(m);

@@ -15,6 +15,7 @@ export function disposeTree(root, keep = null) {
     if (o.geometry && !o.geometry.userData?.shared && !inUse.has(o.geometry)) geos.add(o.geometry);
     for (const m of [o.material].flat()) if (m && !m.userData?.paint && !m.userData?.shared && !inUse.has(m)) mats.add(m);
     if (o.isSkinnedMesh) o.skeleton?.dispose(); // (a skinned dog's bone texture)
+    if (o.isInstancedMesh) o.dispose(); // (its own per-copy buffers on the graphics chip: the dirt, sparkles, splashes…)
   });
   for (const g of geos) g.dispose();
   for (const m of mats) {
