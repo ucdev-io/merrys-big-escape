@@ -11,6 +11,15 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.7.0', date: '2026-11-21', title: 'Better together',
+    notes: [
+      '👥 Go on trips with friends on the same Wi-Fi: see each other down the drain, on Planet Boing, at Wagtail Wonderland and on the Sunny Dolphin. Tap 👥 to follow a friend who’s off on a trip.',
+      '✨ Find things together: star-sparks, the Blip kids, Nibbles’ lost things, Captain Poppy’s hat and the ship’s cat count for everyone on the trip.',
+      '🎢 Ride with friends: they sit in their own car on the rollercoaster and the dodgems (bump them!), and the carousel and big wheel line up for everyone.',
+      '🧹 Little fixes: a clearer arrival in the sewers, the 🐾 button doesn’t say Dig on rides, and coming back from the ship lands you on the jetty, not in the sea.',
+    ],
+  },
+  {
     version: '0.6.0', date: '2026-11-21', title: 'Days out',
     notes: [
       '🎡 Catch the bus to Wagtail Wonderland, the theme park! Ride the Wiggly Woof rollercoaster, the carousel, the big wheel and the helter-skelter, and drive the dodgems. Five rides wins the 🎈 funfair balloon.',
