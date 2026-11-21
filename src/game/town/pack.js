@@ -76,6 +76,7 @@ export class Pack {
     net.on('act', (m) => (WORLD_ACTS.includes(m.a) ? this.onMischief(m) : this.remotes.onAct(m.id, m.a, m)));
     net.on('look', (m) => this.remotes.setLook(m.id, m.look, m.level));
     net.on('carry', (m) => this.remotes.setCarry(m.id, m.item));
+    net.on('trip', (m) => this.tripShare?.receive(m)); // (the trip she's on with friends: see trips/share.js)
     net.on('game', (m) => this.onGame?.(m));
     net.on('heist', (m) => this.onHeist?.(m));
     net.on('season', (m) => this.onSeason?.(m));

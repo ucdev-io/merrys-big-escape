@@ -14,6 +14,7 @@ import { seasonOpen, seasonWelcome, seasonMessage, seasonLeave, seasonTick } fro
 import { cleanDen, DEN_MAX, STICK_GAP_MS } from '../src/game/denRules.js';
 import { beachWelcome, beachMessage } from './beach.js';
 import { farmMessage, farmLeave } from './farm.js';
+import { tripMessage, tripLeave } from './trips.js';
 
 const WORDS = ['BONE', 'PAWS', 'WOOF', 'WAGS', 'YAPS', 'SNIF', 'TAIL', 'FUZZ', 'PUPS', 'BARK'];
 const MAX_PLAYERS = 8, MAX_ROOMS = 50, TICK_MS = 80, HOUSES = 8, MAX_FINDS = 60;
@@ -96,6 +97,7 @@ function leave(p) {
   heistLeave(room, p, send, broadcast);
   seasonLeave(room, p, send, broadcast);
   farmLeave(room, p, send, broadcast);
+  tripLeave(room, p, send, broadcast);
   gameLeave(room, p, send, broadcast);
   touchWorld(room.world);
   if (room.players.size === 0) rooms.delete(room.code);
@@ -173,6 +175,9 @@ function onMessage(p, msg) {
       return;
     case 'farm': // 🚜 the sheep (run by one dog's game for everyone) and round-ups, kept with the town (see farm.js)
       if (room) farmMessage(room, p, msg, send, broadcast);
+      return;
+    case 'trip': // 🧳 a trip with friends: the same layout, and things found and carried for everyone (see trips.js)
+      if (room) tripMessage(room, p, msg, send, broadcast);
       return;
     case 'carry': // what's in my mouth (a lost teddy, Gus's slipper…), or nothing
       if (!room) return;

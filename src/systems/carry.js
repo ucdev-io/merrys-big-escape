@@ -19,6 +19,8 @@ export class Carry {
     this.moundMat = paint(0x7a5a3e);
     this.twinkle = 0;
     this.onChange = null; // (kind | null) → tell friends what's in my mouth
+    this.onGrab = null;   // (item) picked up / put down: a trip shares some things with friends (trips/kit.js)
+    this.onDrop = null;
   }
 
   /** Put something in the world. buried: how many digs before it pops up. job: what it's for. */
@@ -86,6 +88,7 @@ export class Carry {
     this.player.dog.hold(it.obj, it.def.hold);
     sfx.pop?.();
     this.onChange?.(it.kind);
+    this.onGrab?.(it);
   }
 
   drop(nose = this.player.pos) {
@@ -100,6 +103,7 @@ export class Carry {
     this.items.push(it);
     sfx.boink?.();
     this.onChange?.(null);
+    this.onDrop?.(it);
   }
 
   /** Handed over (to Gus, a neighbour…): it's gone from the mouth and the world. */

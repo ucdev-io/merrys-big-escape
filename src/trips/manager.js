@@ -132,19 +132,21 @@ export class Trips {
       }));
     }
     const slow = setTimeout(() => this.note('🐾 Sniffing out the way…'), 300);
-    let built;
+    let built, share = null;
     try {
       const m = await mod;
+      share = await (town.tripShare?.(id) ?? null); // (with friends: the same layout, and things found for everyone)
       town.pause({ id, n: T.n, from });
       const tb = performance.now();
       built = m.build({
         id, from: from.id, origin: tripOrigin(T.n),
         hud: this.hud.forTrip?.() ?? this.hud, input: this.input, player: P, pipeline: this.pipeline, follow: this.follow, camera: this.camera,
-        town: town.tripInfo(id), leave: (exit, style) => this.leave(exit, style),
+        town: town.tripInfo(id), leave: (exit, style) => this.leave(exit, style), share,
       });
       built.ms = performance.now() - tb;
     } catch (e) {
       console.warn('Trip failed:', e);
+      share?.leave();
       clearTimeout(slow); this.clearNote();
       P.gravity = 1;
       if (town.away) town.resume(from.id);
@@ -168,7 +170,7 @@ export class Trips {
     this.follow.snap(P.pos);
     this.follow.yaw = s.face + Math.PI;
     this.follow.manualHold = 0;
-    this.cur = { id, n: T.n, from, scene, world, chapter, look, geo0 };
+    this.cur = { id, n: T.n, from, scene, world, chapter, look, geo0, share };
     this.setActive({ scene, world, chapter, sky: built.sky ?? null }); // (an outdoor trip brings its own sky)
     // Every shader it needs, made now (behind the paper) rather than in a stutter on the way round.
     const ms = await this.compile(scene);
@@ -206,6 +208,7 @@ export class Trips {
     this.setActive(null);
     this.follow.setOccluders(town.world.occluders ?? {});
     this.follow.setLimits(null);
+    x.share?.leave();
     town.bringBack?.(); // (friends' dogs out of the trip's scene first: it's about to be thrown away)
     x.chapter.dispose?.();
     x.world.dispose?.();

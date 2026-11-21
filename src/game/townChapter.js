@@ -34,6 +34,7 @@ import { travelBlock, landingFor, digTravel } from './town/travel.js';
 import { Portals } from './town/portals.js';
 import { Catcher } from './town/catcher.js';
 import { tripByN, TRIPS } from '../trips/registry.js';
+import { TripShare } from '../trips/share.js';
 import { TownPuzzles } from './town/puzzles.js';
 import { RideCars } from '../net/rideCars.js';
 
@@ -409,7 +410,7 @@ export class TownChapter {
   /** What a trip needs from the town: its name, the dog's, and what's been done on that trip here (saved with the town). */
   tripInfo(id) {
     return {
-      seed: this.layout.seed, name: this.layout.name, dogName: () => this.profile().name,
+      seed: this.layout.seed, name: this.layout.name, dogName: () => this.profile().name, friendName: (fid) => this.remotes.get(fid)?.name ?? 'A friend',
       state: { ...(this.state.trips[id] ?? {}) },
       save: (patch) => { this.state.trips = { ...this.state.trips, [id]: { ...(this.state.trips[id] ?? {}), ...patch } }; this.saveTown(); },
     };
@@ -445,6 +446,9 @@ export class TownChapter {
     this.pack.sendState(dt, P, !P.frozen && this.input.sniff, n); // (her real place on the trip: friends on it too see her there)
     this.remotes.update(dt, { trip: n, scene, chapter }); // (and friends on the same trip, there with her)
   }
+
+  /** Into a trip with the pack (null on your own): see trips/share.js. */
+  tripShare(id) { return this.pack.net ? TripShare.enter(this.pack, id) : null; }
 
   /** Friends' dogs back into the town's scene (a trip's about to be thrown away). */
   bringBack() { this.remotes.home(); }
