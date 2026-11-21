@@ -7,6 +7,7 @@ import { HOME } from '../../net/links.js';
 import { sfx } from '../../core/audio.js';
 import { buzz } from '../../core/haptics.js';
 import { progress } from '../progress.js';
+import { TRIPS } from '../../trips/registry.js';
 
 /*
  * 🚌 The bus stop, on the one edge of town with nothing out past it (world.busStop: see
@@ -18,8 +19,9 @@ import { progress } from '../progress.js';
  *
  * In a pack, the bus takes just you (your friends stay in this town): it asks first.
  *
- * Days out: the bus also goes to Wagtail Wonderland, the theme park (a trip: trips/fair/). That ride doesn't load
- * another town: onTrip(id, paper) takes over at the end of it, and dropOff() brings her back to the stop.
+ * Days out: the bus also goes to Wagtail Wonderland, the theme park (a trip: trips/fair/), and the Big Dog Show
+ * (trips/show/). Those rides don't load another town: onTrip(id, paper) takes over at the end of one, and
+ * dropOff() brings her back to the stop.
  */
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -27,6 +29,7 @@ const RIDE = 'merry.bus';        // (sessionStorage: on the bus to { seed, name,
 const TIP = 'merry.tips.bus';    // (the bus stop's been pointed out on this device)
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const ease = (k) => k * k * (3 - 2 * k);
+const DAYS_OUT = [['fair', '🎢 Rides!'], ['show', '🏵️ Rosettes!']]; // (trips the bus goes to: their emoji and name come from the registry)
 
 /** A red single-decker bus, facing +z, its door on the left (+x) at the front. */
 function busModel() {
@@ -97,7 +100,7 @@ export class BusStop {
     const line = (t) => `<div class="bus-row"><span class="bus-name">${t.tag === 'first' ? '🏡' : t.tag === 'back' ? '↩️' : '🏘️'} ${esc(t.name)}</span>
       <span class="bus-meta">${t.been ? `🗺️ ${t.found}/${total}` : '✨ New!'}</span><button class="pill bus-go" data-town="${esc(t.seed)}">🚌 Go</button></div>`;
     const section = (title, list) => (list.length ? `<h3>${title}</h3>${list.map(line).join('')}` : '');
-    const days = this.onTrip ? `<h3>Days out</h3><div class="bus-row"><span class="bus-name">🎡 Wagtail Wonderland</span><span class="bus-meta">🎢 Rides!</span><button class="pill bus-go" data-trip="fair">🚌 Go</button></div>` : '';
+    const days = this.onTrip ? `<h3>Days out</h3>${DAYS_OUT.map(([id, meta]) => `<div class="bus-row"><span class="bus-name">${TRIPS[id].emoji} ${TRIPS[id].name}</span><span class="bus-meta">${meta}</span><button class="pill bus-go" data-trip="${id}">🚌 Go</button></div>`).join('')}` : '';
     this.hud.showCard(`<h1>🚌 All aboard!</h1><p class="bus-sub">Buses from <b>${esc(this.name)}</b>. Every town keeps its own finds.</p>
       <div class="bus-list">${days}${section('Next stops', next)}${section('Back to', [back, first].filter(Boolean))}${section('Towns you’ve been to', others)}</div>`,
     [['Not today', () => this.hud.hideCard()]]);
@@ -115,11 +118,11 @@ export class BusStop {
     ]);
   }
 
-  /** A day out picked (the theme park): in a pack, check first, as for a town. */
+  /** A day out picked (the theme park, the dog show): in a pack, check first, as for a town. */
   chooseTrip(id) {
     const n = this.friends?.() ?? 0;
     if (!n) { this.hud.hideCard(); this.ride(null, id); return; }
-    this.hud.showCard(`<h1>🚌 Off to Wagtail Wonderland?</h1><p class="bus-sub">Your pack stays here in <b>${esc(this.name)}</b>. (The bus brings you back to this stop.)</p>`, [
+    this.hud.showCard(`<h1>🚌 Off to ${TRIPS[id]?.name ?? 'a day out'}?</h1><p class="bus-sub">Your pack stays here in <b>${esc(this.name)}</b>. (The bus brings you back to this stop.)</p>`, [
       ['🚌 Hop on', () => { this.hud.hideCard(); this.ride(null, id); }],
       ['Stay with my pack', () => this.hud.hideCard()],
     ]);

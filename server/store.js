@@ -21,8 +21,8 @@ function files() {
   return FILES;
 }
 const MAX_PROFILES = 200, MAX_WORLDS = 100;
-// How many kinds of stat a dog can keep (each new place, friend and prize adds one or two: 29 in use by the farm).
-const MAX_STATS = 64;
+// How many kinds of stat a dog can keep (each new place, friend and prize adds one or two: 56 in use by 0.8.0).
+const MAX_STATS = 96;
 const db = { profiles: {}, worlds: {}, records: {} };
 let loaded = false;
 

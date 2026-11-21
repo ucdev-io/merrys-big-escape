@@ -146,6 +146,11 @@ export const sfx = {
   spark() { [880, 1109, 1319, 1760].forEach((f, i) => tone('triangle', f, f, 0.14, 0.09, i * 0.05)); },
   // 👽 An alien's voice: a wobbly little warble (pitch: higher for the little ones).
   blip(pitch = 1) { const f = 520 * pitch; tone('sine', f, f * 1.6, 0.09, 0.08); tone('sine', f * 1.5, f * 0.9, 0.12, 0.07, 0.09); },
+  // 🏆 At the dog show: the judge's whistle (a trill), a frisbee whooshing off, and how warm the hidden toy is when
+  // sniffing for it (k 0..1: higher and brighter the closer she gets).
+  whistle() { for (let i = 0; i < 2; i++) tone('sine', 2500, 2650, 0.16, 0.05, i * 0.2, { type: 'bandpass', freq: 2600, q: 4 }); noise(0.4, 0.05, 'bandpass', 2600, 6); },
+  whoosh() { noise(0.45, 0.14, 'bandpass', 600, 1.4, 0, 2400); },
+  warm(k = 0) { const f = 330 + 660 * k; tone('sine', f, f * 1.12, 0.16, 0.05 + 0.05 * k); if (k > 0.75) tone('triangle', f * 2, f * 2.2, 0.1, 0.03, 0.08); },
   hooray() {
     const notes = [523, 587, 659, 784, 659, 784, 1047];
     notes.forEach((f, i) => tone('triangle', f, f, 0.2, 0.18, i * 0.13));

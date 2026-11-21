@@ -53,6 +53,9 @@ export const GOALS = [
   { id: 'rubberducks', tier: 2, stat: 'ducks', n: 3, emoji: '🐤', text: 'Pop 3 rubber ducks in the sewer bucket', where: 'Down the drain in the alley.' },
   { id: 'fetch', tier: 2, stat: 'fetch', n: 3, emoji: '🎾', text: 'Play fetch with Grandad Ted 3 times', where: 'On the Sunny Dolphin: the boat leaves from the beach jetty.' },
   { id: 'cannonball', tier: 2, stat: 'cannonballs', n: 2, emoji: '🌊', text: 'Do 2 cannonballs in the ship’s pool', where: 'On the Sunny Dolphin: the boat leaves from the beach jetty.' },
+  { id: 'agility', tier: 2, stat: 'agility', n: 1, emoji: '🏅', text: 'Run the agility course at the Big Dog Show', where: 'Take a bus from the bus stop (Days out).' },
+  { id: 'frisbee', tier: 2, stat: 'catches', n: 5, emoji: '🥏', text: 'Catch 5 of Ruby’s frisbees', where: 'At the Big Dog Show: take a bus from the bus stop (Days out).' },
+  { id: 'seek', tier: 2, stat: 'seek', n: 2, emoji: '👃', text: 'Sniff out 2 toys at Sniff & Seek', where: 'At the Big Dog Show: take a bus from the bus stop (Days out).' },
   { id: 'conkers', tier: 2, stat: 'conkers', n: 4, emoji: '🌰', text: 'Find 4 conkers', where: 'Autumn: under the big trees.', season: 'autumn' },
 
   // 3: big ones
@@ -68,6 +71,8 @@ export const GOALS = [
   { id: 'cat', tier: 3, stat: 'whiskers', n: 1, emoji: '🐱', text: 'Find Admiral Whiskers, the ship’s cat', where: 'Somewhere on the Sunny Dolphin…' },
   { id: 'heists2', tier: 3, stat: 'heists', n: 2, emoji: '🦝', text: 'Pull off 2 heists', where: 'The baker’s stall, the butcher’s sausages, a BBQ…' },
   { id: 'jobs3', tier: 3, stat: 'helped', n: 3, emoji: '📋', text: 'Do 3 jobs from the Lost & Found board', where: 'The board’s by your garden gate.' },
+  { id: 'tricks', tier: 3, stat: 'tricks', n: 1, emoji: '🎀', text: 'Do a round of tricks for the show judge', where: 'In the show ring at the Big Dog Show (by bus).' },
+  { id: 'rosette', tier: 3, stat: 'rosettes', n: 1, emoji: '🏵️', text: 'Win a rosette at the Big Dog Show', where: 'Come 1st, 2nd or 3rd in any ring. By bus from the bus stop.' },
   { id: 'freed', tier: 3, stat: 'freed', n: 2, emoji: '🔑', text: 'Free 2 dogs from Sunny Paws', where: 'Get caught by Doug (if you dare), then find the keys.' },
 ];
 export const GOAL = Object.fromEntries(GOALS.map((g) => [g.id, g]));

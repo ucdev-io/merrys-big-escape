@@ -11,6 +11,15 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.8.0', date: '2026-11-21', title: 'Every day’s a new walk',
+    notes: [
+      '📅 Today’s walk: three new goals every day, from all over town and beyond (☰ → Today’s walk). Finish all three for bonus stars. Full walks win the 🦮 Walkies collar and the 🧭 Explorer’s hat!',
+      '🏆 A new day out by bus: the Big Dog Show! Run the agility course, do tricks for the judge in time with the band, sniff out hidden toys, and catch Ruby’s frisbees. Win rosettes, and five of them win the 🏵️ Best in Show rosette.',
+      '🎒 A treasure shelf by your front door shows everything you’ve dug up, with gaps for what’s still to find. Your 📖 Sniff Book has new pages: 🎒 Treasures (and the notes from time capsules and bottles) and 🐾 Friends.',
+      '🥇 Medals: bronze, silver and gold for good scores in the games and Pickles’ arcade games (🐶 My dog → Medals). Five golds win a 🥇 medal to wear!',
+    ],
+  },
+  {
     version: '0.7.0', date: '2026-11-21', title: 'Better together',
     notes: [
       '👥 Go on trips with friends on the same Wi-Fi: see each other down the drain, on Planet Boing, at Wagtail Wonderland and on the Sunny Dolphin. Tap 👥 to follow a friend who’s off on a trip.',

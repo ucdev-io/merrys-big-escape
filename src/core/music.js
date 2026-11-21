@@ -25,6 +25,8 @@ const THEMES = {
   fair: { bpm: 132, root: 60, prog: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], seed: 'fair', shaker: true, vol: 0.9, lead: 'calliope' },
   // On the cruise ship: a jaunty sea shanty in D (I IV I V on a wheezy accordion, with a rolling 6/8-ish bounce).
   cruise: { bpm: 124, root: 62, prog: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], seed: 'cruise', shaker: true, vol: 0.9, lead: 'accordion' },
+  // At the Big Dog Show: a jolly brass band in Bb (I IV V I, oom-pah underneath, a bright cornet on top).
+  show: { bpm: 112, root: 58, prog: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], seed: 'show', shaker: true, vol: 0.9, lead: 'brass' },
 };
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic: always sounds friendly
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
@@ -63,6 +65,19 @@ class Music {
     if (!this.theme) return;
     const next = THEMES[name] ? name : 'town';
     this.want = next === this.theme ? null : next;
+  }
+
+  /**
+   * When the tune's next beat (a quarter note) falls: { in: seconds from now, beat: seconds per beat }, or null when
+   * no tune's playing (music off, muted, or not started yet). For things that go in time with the music.
+   */
+  nextBeat() {
+    const A = getAudio();
+    if (!this.theme || !this.enabled || !A || A.ctx.state !== 'running' || isMuted() || !this.nextT) return null;
+    const beat = 60 / THEMES[this.theme].bpm, now = A.ctx.currentTime;
+    let t = this.step % 2 ? this.nextT + beat / 2 : this.nextT; // (the next quarter note to be played: eighth notes are steps)
+    while (t - beat > now) t -= beat;
+    return { in: Math.max(0, t - now), beat };
   }
 
   /** How much birdsong (0..1) and how many frogs (0..1, near the pond) there should be. */
@@ -176,6 +191,16 @@ class Music {
     for (const d of [-6, 6]) this.osc(A, 'sawtooth', f * 2 ** (d / 1200), t, dur * 0.85, vol * 0.22, 0.025);
     this.osc(A, 'square', f / 2, t, dur * 0.8, vol * 0.08, 0.03);
     this.osc(A, 'triangle', f, t, dur * 0.9, vol * 0.6, 0.02);
+  }
+  brass(A, f, t, dur, vol) { // (a bright, buzzy cornet that swells a little into each note: a brass band)
+    const o = A.ctx.createOscillator(), lp = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = f;
+    lp.type = 'lowpass'; lp.Q.value = 0.8;
+    lp.frequency.setValueAtTime(f * 1.5, t); lp.frequency.exponentialRampToValueAtTime(f * 4.5, t + 0.07);
+    this.env(g, t, 0.03, vol * 0.42, dur * 0.8);
+    o.connect(lp).connect(g).connect(this.bus);
+    o.start(t); o.stop(t + dur + 0.12);
+    this.osc(A, 'triangle', f, t, dur * 0.85, vol * 0.55, 0.025);
   }
   shaker(A, t, vol) {
     const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();

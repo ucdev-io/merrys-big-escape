@@ -81,5 +81,6 @@ export const FRIENDS = [
   { any: ['blips', 'saucer', 'sparks'], emoji: '👽', name: 'Zib & the Blips', blurb: 'Bouncy aliens on Planet Boing.', hint: 'Look up over the farm one day…', times: 'Blips found:' },
   { any: ['captain', 'luggage', 'whiskers', 'fetch', 'dolphins'], emoji: '⚓', name: 'Captain Poppy’s crew', blurb: 'Everybody on the Sunny Dolphin: the captain, Mrs Pemberton, Grandad Ted, Admiral Whiskers…', hint: 'A big ship sails from the beach jetty…', times: 'Lost things found:', count: 'luggage' },
   { any: ['freed', 'escapes'], emoji: '🏠', name: 'The dogs at Sunny Paws', blurb: 'Dogs waiting in the pound, hoping somebody lets them out.', hint: 'Doug takes naughty dogs somewhere…', times: 'Set free:', count: 'freed' },
+  { any: ['agility', 'tricks', 'seek', 'catches', 'rosettes'], emoji: '🏆', name: 'The Big Dog Show', blurb: 'The judge, Ruby and her frisbees, and dogs from all over town.', hint: 'Something’s on at the showground… (a day out by bus)', times: 'Rosettes:', count: 'rosettes' },
   { any: ['dogsmet'], emoji: '🐕', name: 'Dogs out for a walk', blurb: 'The dogs being walked round the blocks.', hint: 'Dogs walk round the town with their people…', times: 'Said hello' },
 ];

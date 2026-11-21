@@ -492,6 +492,17 @@ export class Dog {
       mesh(SPHERE, 0xffffff, g, [0.022, 0.43, -0.02], [0, 0, 0], [0.012, 0.018, 0.008]); // (a shine)
     }
 
+    if (c('collar')?.style === 'rosette') {
+      // A Best in Show rosette pinned to the front of the collar: a pleated red frill round a gold middle, two tails.
+      const { NL, nr } = this.dims, cy = 0.085 * NL, cr = 0.049 * nr + (F ?? 0) * 1.3, red = c('collar').color;
+      const g = keep(group(this.neck, [0, cy - 0.028, cr + 0.02], [Math.PI / 2 - 0.25, 0, 0]));
+      for (let i = 0; i < 2; i++) mesh(new THREE.BoxGeometry(0.013, 0.004, 0.05), i ? 0xc0433f : red, g, [i ? 0.01 : -0.01, 0.009, 0.032], [-0.45, i ? -0.3 : 0.3, 0]); // the tails (hanging down, out over her chest)
+      mesh(new THREE.CylinderGeometry(0.031, 0.031, 0.004, 20), red, g, [0, 0, 0]);
+      mesh(new THREE.TorusGeometry(0.03, 0.006, 5, 22), 0xe8736f, g, [0, 0.002, 0], [Math.PI / 2, 0, 0]); // (the frill)
+      mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.006, 16), 0xf2f0e6, g, [0, 0.003, 0]);
+      mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.007, 14), 0xe0b04a, g, [0, 0.004, 0]);
+    }
+
     if (c('neck')?.style === 'bowtie') {
       // A dapper bow tie under the chin.
       const g = keep(group(this.neck, [0, 0.04 * this.dims.NL, 0.05 * this.dims.nr + F * 1.3], [0.4, 0, 0]));
