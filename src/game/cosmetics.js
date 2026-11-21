@@ -81,6 +81,12 @@ COSMETICS.push(
 COSMETICS.push(
   { id: 'hat-captain', slot: 'hat', name: 'Captain’s hat', emoji: '⚓', color: 0xfbfaf6, level: 1, friend: 'captain', jobs: 1, hint: 'Find Captain Poppy’s hat (on the cruise ship)', boost: { speed: 2, zoomies: 1 } },
 );
+// 📅 For full walks (all three of a day's goals: see daily.js), and 🥇 for gold medals in games and the arcade (see medals.js).
+COSMETICS.push(
+  { id: 'collar-walkies', slot: 'collar', name: 'Walkies collar', emoji: '🦮', color: 0x3f8f8a, level: 1, friend: 'walks', jobs: 3, hint: 'Finish 3 of Today’s walks (☰ → Today’s walk)', boost: { speed: 2, zoomies: 1 } },
+  { id: 'hat-explorer', slot: 'hat', name: 'Explorer’s hat', emoji: '🧭', color: 0xdcc494, level: 1, friend: 'walks', jobs: 7, hint: 'Finish 7 of Today’s walks (☰ → Today’s walk)', boost: { speed: 1, zoomies: 2 } },
+  { id: 'neck-medal', slot: 'neck', name: 'Gold medal', emoji: '🥇', color: 0xe0b04a, level: 1, friend: 'golds', jobs: 5, style: 'medal', hint: 'Win 5 gold medals (🎮 games and 🕹️ arcade games)', boost: { speed: 2, zoomies: 1 } },
+);
 export const FRIEND_NAMES = { gus: 'Gus', duchess: 'Duchess', helped: 'the neighbours' };
 export const COSMETIC = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const SLOTS = { collar: 'Collar', neck: 'Bandana', hat: 'Hat' };

@@ -525,6 +525,21 @@ export class Dog {
       glass.userData.lanternGlass = true; // (somewhere dark, it's turned up: see brightenLantern)
       for (let i = 0; i < 4; i++) { const a = (i + 0.5) * Math.PI / 2; mesh(new THREE.CylinderGeometry(0.0018, 0.0018, 0.027, 4), brass, l, [Math.cos(a) * 0.0135, 0.002, Math.sin(a) * 0.0135]); } // the frame
       mesh(new THREE.CylinderGeometry(0.0155, 0.017, 0.006, 12), brass, l, [0, -0.0135, 0]);              // the base
+    } else if (c('neck')?.style === 'medal') {
+      // A gold medal (for five golds): on a red-white-and-blue ribbon round the neck, hanging at the front of the chest.
+      const { NL, nr } = this.dims, cy = 0.07 * NL, cr = 0.052 * nr + F * 1.3, ribbon = 0xd9534f;
+      mesh(new THREE.TorusGeometry(cr, 0.0045, 6, 28), ribbon, keep(group(this.neck)), [0, cy, 0.006], [Math.PI / 2 + 0.45, 0, 0], [1, 1, 1.6]);
+      const sp = this.spineF, o = sp === this.body ? [0, 0, 0] : sp.position.toArray();
+      const z = Math.max(0.255 * len + F * 1.4, (this.dims.chestZ ?? -1) + 0.004) + 0.016;
+      const m = keep(group(sp, [-o[0], 0.035 * gy - 0.03 - o[1], z - o[2]], [0.15, 0, 0]));
+      m.scale.setScalar(1.25);
+      for (const s of [-1, 1]) { // the ribbon's two tails, in a V down to the medal
+        mesh(new THREE.BoxGeometry(0.011, 0.04, 0.002), s < 0 ? ribbon : 0x5b86c4, m, [s * 0.007, 0.036, -0.002], [0, 0, s * -0.32]);
+        mesh(new THREE.BoxGeometry(0.0035, 0.04, 0.0024), 0xfbf7ee, m, [s * 0.007, 0.036, -0.0018], [0, 0, s * -0.32]);
+      }
+      mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.004, 22), c('neck').color, m, [0, 0.0, 0], [Math.PI / 2, 0, 0]);
+      mesh(new THREE.TorusGeometry(0.0175, 0.0022, 5, 22), 0xc8962e, m, [0, 0.0, 0.0012]);
+      mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.0015, 5), 0xf6d684, m, [0, 0.0, 0.0028], [Math.PI / 2, 0, 0]); // (a star stamped in it: five-sided, near enough)
     } else if (c('neck')?.style === 'scarf') {
       // A woolly scarf (from the flock's own wool): stripy, wound round the neck, two ends hanging down in front.
       const { NL, nr } = this.dims, cy = 0.085 * NL - 0.006, R = 0.049 * nr + F * 1.3 + 0.012, col = c('neck').color, cream = 0xf4ecdc;
@@ -652,6 +667,14 @@ export class Dog {
         mesh(new THREE.CylinderGeometry(0.044, 0.044, 0.005, 18, 1, false, -Math.PI / 2, Math.PI), 0x232b3d, g, [0, 0.0, 0.024], [0.14, Math.PI, 0], [1, 1, 1.15]);
         mesh(SPHERE, 0xe0b04a, g, [0, 0.019, 0.044], [0, 0, 0], [0.008, 0.008, 0.003]);
         mesh(new THREE.TorusGeometry(0.046, 0.0025, 4, 24), 0xe0b04a, g, [0, 0.031, -0.006], [Math.PI / 2, 0, 0]); // (a gold cord round the top)
+      } else if (hat.id === 'hat-explorer') {
+        // An explorer's sun helmet (for a week of walks): a rounded crown, a wide brim, a brown band with a little compass badge.
+        mesh(new THREE.SphereGeometry(0.046, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), hat.color, g, [0, 0.0, -0.004], [0, 0, 0], [1, 0.95, 1.1]);
+        mesh(new THREE.CylinderGeometry(0.068, 0.072, 0.005, 26), hat.color, g, [0, -0.002, -0.002], [0.05, 0, 0], [1, 1, 1.12]);
+        mesh(new THREE.CylinderGeometry(0.0468, 0.0468, 0.01, 22, 1, true), 0x7a5232, g, [0, 0.005, -0.004], [0, 0, 0], [1, 1, 1.1]);
+        mesh(SPHERE, 0x6a4a2c, g, [0, 0.045, -0.004], [0, 0, 0], [0.006, 0.004, 0.006]);
+        mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.003, 14), 0xe0b04a, g, [0, 0.006, 0.05], [Math.PI / 2, 0, 0]);
+        mesh(new THREE.ConeGeometry(0.0025, 0.009, 4), 0xd9534f, g, [0, 0.008, 0.0518], [0, 0, 0]);
       } else if (hat.id === 'hat-wizard') {
         mesh(new THREE.ConeGeometry(0.038, 0.14, 18), hat.color, g, [0, 0.07, -0.008], [-0.15, 0, 0]);
         mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.005, 24), hat.color, g, [0, 0.002, 0]);

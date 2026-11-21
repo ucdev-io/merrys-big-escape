@@ -7,16 +7,14 @@ import { buzz } from '../../core/haptics.js';
 import { LineBag } from '../dialogue.js';
 import { progress } from '../progress.js';
 import { BURIED, CAPSULES } from '../lines/buried.js';
+import { collection } from '../collection.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
 const DIGS = 3;
 const KEEP = 240;                 // seconds a found spot waits to be dug before the smell's lost
-const FOUND = 'merry.buried.v1';  // (which kinds this device has dug up: for "new find!")
 const DIRT = [0x9a7356, 0x7a5236, 0xb08a68];
 const ALL = new Set(Object.values(BURIED).flat().map((t) => t.id));
-
-const readFound = () => { try { return new Set(JSON.parse(localStorage.getItem(FOUND) ?? '[]')); } catch { return new Set(); } };
 
 /**
  * 🦴 Buried treasure. Lots of the smells on soft ground (gardens, the park, the woods, the farm) are
@@ -32,7 +30,6 @@ export class Buried {
     this.open = [];   // spots found by a nose and waiting to be dug: { spot, digs, mound, at }
     this.pops = [];
     this.bags = {};
-    this.found = readFound();
     this.moundMat = paint(0x7a5a3e);
     this.mat = bakedMat();
     this.glintT = 0;
@@ -100,17 +97,13 @@ export class Buried {
     progress.award(t.xp, t.name);
     const line = (this.bags[t.id] ??= new LineBag(t.lines)).next();
     this.hud.say(`${t.emoji} ${line}`, () => this.actions.anchor().add(V(0, 0.3, 0)), 3.2);
-    const first = !this.found.has(t.id);
-    if (first) {
-      this.found.add(t.id);
-      try { localStorage.setItem(FOUND, JSON.stringify([...this.found])); } catch { /* private mode */ }
-    }
+    const first = collection.add('buried', t.id); // (into the 🎒 treasure box: the Sniff Book, and the shelf at home)
     if (t.capsule) {
-      const note = (this.bags.capsule ??= new LineBag(CAPSULES)).next();
+      const note = collection.note('capsule', CAPSULES, (this.bags.capsule ??= new LineBag(CAPSULES)));
       setTimeout(() => this.hud.showToastRaw('⏳', 'A note in the time capsule!', note, { tip: true }), 900);
     } else if (first) {
-      const n = [...this.found].filter((id) => ALL.has(id)).length;
-      setTimeout(() => this.hud.showToastRaw(t.emoji, `New find: ${t.name}!`, `${n} of ${ALL.size} kinds of buried treasure found. Keep sniffing!`), 700);
+      const n = [...ALL].filter((id) => collection.has('buried', id)).length;
+      setTimeout(() => this.hud.showToastRaw(t.emoji, `New find: ${t.name}!`, `${n} of ${ALL.size} kinds of buried treasure found. They’re in your 📖 Sniff Book, and on the shelf at home!`), 700);
     }
     this.smells.dugUp(s);
     this.onUnearth?.(s.x, s.z);

@@ -1,5 +1,6 @@
 import { sfx } from '../../core/audio.js';
 import { PuzzleSession, solved, prizeLine, howLine, PUZZLES } from './puzzle.js';
+import { awardMedal, medalLine } from '../../game/medals.js';
 
 /*
  * 🕹️ Arcade games in the puzzle card: a little canvas game, drawn at 480 × 360 (and scaled to fit, sharp on
@@ -83,8 +84,8 @@ function outline(c, text, x, y) {
 function finish(S, id, game, score) {
   if (S.over) return;
   const r = solved(id, id, score);
-  const P = PUZZLES[id];
+  const P = PUZZLES[id], medal = medalLine(`arcade:${id}`, awardMedal(`arcade:${id}`, { score }));
   S.show(`<h1>${P.emoji} ${score} point${score === 1 ? '' : 's'}!</h1>
-    <p>${howLine(r, (n) => `${n} point${n === 1 ? '' : 's'}`)}</p>${prizeLine(r.prize, r.unlocked)}`,
+    <p>${howLine(r, (n) => `${n} point${n === 1 ? '' : 's'}`)}</p>${medal}${prizeLine(r.prize, r.unlocked)}`,
   [['🔁 Again!', () => run(S, id, game)], ['Close', () => S.close()]]);
 }

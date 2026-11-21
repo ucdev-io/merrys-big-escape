@@ -31,6 +31,7 @@ class Progress {
     this.pending = d.pending ?? emptyBatch(); // earned since the last sync
     this.inflight = d.inflight ?? null;       // a batch on its way to the server
     this.listeners = new Set();
+    this.statListeners = new Set(); // (key, n): something was just done here (not totals from the server)
     this.retry = 2000;
     // Leaving or hiding the page: send what's waiting straight away.
     addEventListener('pagehide', () => this.flush());
@@ -72,7 +73,18 @@ class Progress {
     this.stats[key] = (this.stats[key] ?? 0) + n;
     this.pending.stats[key] = (this.pending.stats[key] ?? 0) + n;
     this.changed();
+    for (const fn of this.statListeners) fn(key, n);
   }
+
+  /** stat(), and which things to wear that just won (cosmetics unlocked by this stat): [cosmetic]. */
+  statWon(key, n = 1) {
+    const prizes = COSMETICS.filter((c) => c.friend === key), had = prizes.filter((c) => this.isUnlocked(c.id));
+    this.stat(key, n);
+    return prizes.filter((c) => !had.includes(c) && this.isUnlocked(c.id));
+  }
+
+  /** Hear about each stat as it's earned on this device: fn(key, n). Returns "stop listening". */
+  onStat(fn) { this.statListeners.add(fn); return () => this.statListeners.delete(fn); }
 
   equip(slot, id) {
     if (id && !this.isUnlocked(id)) return;

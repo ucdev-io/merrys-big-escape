@@ -14,6 +14,7 @@ import { Pack } from './town/pack.js';
 import { progress } from './progress.js';
 import { Smells } from './town/smells.js';
 import { Buried } from './town/buried.js';
+import { TreasureShelf } from './town/shelf.js';
 import { BusStop } from './town/busStop.js';
 import { Traffic } from '../systems/traffic.js';
 import { Friends } from './town/friends.js';
@@ -93,6 +94,8 @@ export class TownChapter {
     });
     this.friends.onChange = () => this.refreshObjective();
     this.buried.onUnearth = (x, z) => this.actions.mischief.dugUp(x, z); // (out of somebody's lawn? Naughty!)
+    // 🎒 Everything dug up, on show on a shelf in your own garden.
+    this.shelf = new TreasureShelf({ scene, world, hud, player, busy: () => !!this.games?.active || !!this.actions.carry.held || this.player.frozen });
     this.actions.onMischief = () => { this.friends.onMischief(); this.catcher?.onMischief(); };
     // More friends in the park: Nut & Meg, squirrel twins who love hide-and-seek, and Pepper the
     // hedgehog, who'd love a walk to the flowerbeds if it weren't for the robot lawnmower.
@@ -263,6 +266,7 @@ export class TownChapter {
     // 🎮 ☰ → Games (the challenges, on your own or with the pack) and 🧩 ☰ → Puzzles: Pickles' Paw Match
     // on your garden fence, and the 📮 postcard jigsaw.
     hud.onGames = () => this.games.showCard();
+    hud.dashLength = () => this.games.dashLength(); // (🥇 the Dash's medal times go by this town's course)
     const inPlace = (q, pos) => (q.rect ? pos.x > q.rect.x0 && pos.x < q.rect.x1 && pos.z > q.rect.z0 && pos.z < q.rect.z1 : Math.abs(pos.x - q.x) < TOWN.BLOCK / 2 && Math.abs(pos.z - q.z) < TOWN.BLOCK / 2);
     this.puzzles = new TownPuzzles({
       scene, world, hud, player, pipeline,
@@ -618,7 +622,7 @@ export class TownChapter {
     const door = canAct && !paw ? this.portals.hint(pos, this.actions.nose()) ?? this.busStop.prompt(pos) : null; // (a way into a trip: the alley's drain… or the bus stop)
     this.portals.update(pos, dt);
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
-    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
+    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.shelf.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
     // Discover places by walking into them (an area's place: by going in past its gate).
@@ -635,6 +639,7 @@ export class TownChapter {
     if (found?.buried) this.buried.reveal(found.buried);
     else if (found) this.onSmell(found);
     this.buried.update(dt, canAct ? this.actions.nose() : null);
+    this.shelf.update(dt);
     // (A job's target counts too — Gus's slipper, a lost duckling… — and wins when it's near.)
     const smell = this.smells.nearest(pos, 30), job = this.friends.target();
     const ds = smell ? Math.hypot(smell.x - pos.x, smell.z - pos.z) : Infinity;

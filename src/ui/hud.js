@@ -14,6 +14,10 @@ import { DEMO } from '../core/demo.js';
 import { HOME } from '../net/links.js';
 import { buzz } from '../core/haptics.js';
 import { whatsNewHtml, markNewsSeen } from '../core/releases.js';
+import { walk } from '../game/daily.js';
+import { walkHtml } from './walkCard.js';
+import { medalsHtml } from '../game/medals.js';
+import { collection, BURIED_PLACES, BEACH_KINDS, NOTES, FRIENDS } from '../game/collection.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -61,6 +65,11 @@ export class HUD {
     this.menuBtn = el('button', 'pill menu-btn', '☰');
     this.menuBtn.title = 'Menu';
     this.menuBtn.onclick = () => this.openMenu();
+    // 📅 Today's walk: a note when a goal's done (even off on a trip), and a dot on ☰ till a new day's goals are seen.
+    walk.onNews = (emoji, head, blurb) => this.showToastRaw(emoji, head, blurb, { always: true });
+    const dot = () => this.menuBtn.classList.toggle('dot', walk.unseen);
+    walk.on(dot);
+    dot();
     if (getSettings().muted) setMuted(true);
     // Level & stars: tap for "My dog" (stats, dress up).
     this.xpPill = el('button', 'pill xp-pill', '<span class="lv"></span><span class="bar"><i></i></span>');
@@ -97,8 +106,12 @@ export class HUD {
         else this.onTravel?.(go.dataset.go);
         return;
       }
+      const tab = e.target.closest('[data-tab]');
+      if (tab) { this.bookTab = tab.dataset.tab; this.renderBook(); this.book.querySelector('.page').scrollTop = 0; return; }
       if (e.target === this.book || e.target.closest('.close')) this.toggleBook(false);
     };
+    this.bookTab = 'places';
+    collection.on(() => { if (!this.book.classList.contains('hidden')) this.renderBook(); });
 
     this.card = el('div', 'big-card hidden');
     this.root.appendChild(this.card);
@@ -173,8 +186,9 @@ export class HUD {
         ${stat('🍕', 'bin snacks', 'snacks')}${stat('👃', 'smells sniffed', 'smells')}${stat('🎮', 'games played', 'games')}
         ${stat('🏅', 'games won', 'wins')}${stat('🏆', 'pack records', 'records')}${stat('🥐', 'cheeky heists', 'heists')}
         ${stat('⛄', 'snowmen built', 'snowmen')}${stat('🍂', 'leaf piles', 'leaves')}${stat('🌰', 'conkers', 'conkers')}${stat('🥚', 'eggs found', 'eggs')}
-        ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}${stat('🧩', 'puzzles solved', 'puzzles')}${stat('✨', 'star-sparks', 'sparks')}</div>`,
-      [['👕 Dress up', () => this.showWardrobe()], ['Close', () => this.hideCard()]]);
+        ${stat('🪵', 'sticks for the den', 'den')}${stat('🏰', 'sandcastles built', 'castles')}${stat('🧩', 'puzzles solved', 'puzzles')}${stat('✨', 'star-sparks', 'sparks')}
+        ${stat('📅', 'full walks', 'walks')}${stat('🥇', 'gold medals', 'golds')}</div>`,
+      [['👕 Dress up', () => this.showWardrobe()], ['🥇 Medals', () => this.showMedals()], ['Close', () => this.hideCard()]]);
     this.card.querySelector('.dogname').textContent = `🐶 ${name}`;
   }
 
@@ -210,6 +224,8 @@ export class HUD {
     const list = this.card.querySelector('.menu-list');
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
     item('🐶 My dog', () => this.showMyDog());
+    const w = item(`📅 Today’s walk · ${walk.doneCount}/3`, () => this.showWalk());
+    if (walk.unseen) w.classList.add('dot');
     item('❓ How to play', () => this.showHelp());
     item('✨ What’s new', () => { markNewsSeen(); this.showCard(whatsNewHtml(), [['Back', () => this.openMenu()], ['Close', () => this.hideCard()]]); });
     if (this.onGames) item('🎮 Games', () => this.onGames());
@@ -249,6 +265,17 @@ export class HUD {
     item('🏠 Back to the title', () => { location.href = HOME; });
   }
 
+  /** 📅 Today's walk: the day's three goals. */
+  showWalk({ back = () => this.openMenu() } = {}) {
+    walk.markSeen();
+    this.showCard(walkHtml(), [['Back', back], ['Close', () => this.hideCard()]]);
+  }
+
+  /** 🥇 Medals: every game's best medal and targets (the Zoomies Dash's times are this town's: dashLength()). */
+  showMedals({ back = () => this.showMyDog() } = {}) {
+    this.showCard(medalsHtml(this.dashLength?.() ?? null), [['Back', back], ['Close', () => this.hideCard()]]);
+  }
+
   showHelp() {
     const keys = `<h3>⌨️ Keyboard</h3><p class="help-keys"><b>WASD</b> or arrows: walk · <b>Shift</b>: zoomies · <b>Space</b>: jump<br>
       hold <b>F</b>: sniff · <b>E</b>: dig / grab / drop · <b>Q</b>: woof · <b>1–6</b>: emotes · drag the mouse to look · scroll to zoom</p>`;
@@ -263,6 +290,9 @@ export class HUD {
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
         <li><b>😀 Emotes</b>: play bow, chase your tail, sit, roll over, howl, happy dance. Friends see them!</li>
         <li><b>🎮 Games &amp; challenges</b> (☰ → Games${DEMO ? '' : ', or tap 👥 at the top'}): races, the ⚡ Zoomies Dash, 🦴 Bone Rush, 🐦 Pigeon Panic, a 🦆 Duck Round-Up${DEMO ? '' : ' to do together, and tag'}. ${DEMO ? 'Beat your best: your 🏆 records are kept on this device.' : 'They all work on your own too (except tag), and the best go on the 🏆 pack records.'}</li>
+        <li><b>📅 Today’s walk</b> (☰ → Today’s walk): three new goals every day, from all over town and beyond. Finish all three for bonus stars, and full walks win prizes!</li>
+        <li><b>🥇 Medals</b>: games and Pickles’ arcade games give bronze, silver and gold medals for good scores (🐶 My dog → Medals). Five golds win a medal to wear!</li>
+        <li><b>🎒 Treasures</b>: everything you dig up goes in your 📖 Sniff Book, and on the treasure shelf by your front door. Can you fill it?</li>
         <li><b>🧩 Puzzles</b> (☰ → Puzzles): Pickles sits on your garden fence and dares you to a <b>Paw Match</b>, and a <b>📮 postcard jigsaw</b> turns the view into a puzzle. No running about needed!</li>
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
         <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
@@ -462,9 +492,13 @@ export class HUD {
       const go = (id) => (travel ? `<button class="pill go" data-go="${id}">🐾 Go</button>` : '');
       const home = travel ? `<div class="slot got home"><div class="emoji">🏡</div><div class="name">Home</div><div class="blurb">Back to my own garden gate.</div>${go('home')}</div>` : '';
       const bus = travel && this.busStop ? `<div class="slot got home"><div class="emoji">🚌</div><div class="name">Bus stop</div><div class="blurb">Buses to other towns!</div>${go('bus')}</div>` : '';
-      this.book.innerHTML = `<div class="page"><button class="close pill">✕</button><h2>Merry's Sniff Book</h2>
-        <p class="intro">Places my amazing nose has discovered.${travel ? ' Tap 🐾 Go to dig a tunnel there!' : ''}</p>
-        <div class="slots">${home}${bus}${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div>${p.found ? go(p.id) : ''}</div>`).join('')}</div></div>`;
+      const t = collection.totals(), met = FRIENDS.filter((f) => f.any.some((k) => (progress.stats[k] ?? 0) > 0)).length;
+      const tabs = `<div class="book-tabs">${[['places', '🗺️ Places'], ['treasures', `🎒 Treasures <b>${t.got}/${t.all}</b>`], ['friends', `🐾 Friends <b>${met}/${FRIENDS.length}</b>`]]
+        .map(([k, label]) => `<button class="pill ${this.bookTab === k ? 'on' : ''}" data-tab="${k}">${label}</button>`).join('')}</div>`;
+      const body = this.bookTab === 'treasures' ? this.treasuresPage() : this.bookTab === 'friends' ? this.friendsPage()
+        : `<p class="intro">Places my amazing nose has discovered.${travel ? ' Tap 🐾 Go to dig a tunnel there!' : ''}</p>
+        <div class="slots">${home}${bus}${this.places.map((p) => `<div class="slot ${p.found ? 'got' : ''}"><div class="emoji">${p.found ? p.emoji : '❔'}</div><div class="name">${p.found ? p.name : '???'}</div><div class="blurb">${p.found ? p.blurb : 'Somewhere out there… sniff for it!'}</div>${p.found ? go(p.id) : ''}</div>`).join('')}</div>`;
+      this.book.innerHTML = `<div class="page"><button class="close pill">✕</button><h2>Merry's Sniff Book</h2>${tabs}${body}</div>`;
       return;
     }
     const keys = ['duck', 'sock', 'biscuit', 'tunnel'];
@@ -476,8 +510,36 @@ export class HUD {
       }).join('')}</div></div>`;
   }
 
+  /** 🎒 Treasures: every kind of thing dug up (round town, the woods, the farm, the beach), and the notes read. */
+  treasuresPage() {
+    const tile = (got, t) => `<div class="slot mini ${got ? 'got' : ''}"><div class="emoji">${got ? t.emoji : '❔'}</div><div class="name">${got ? t.name : '???'}</div></div>`;
+    const PLACE = { town: '🏘️ Round town', woods: '🌲 In the woods', farm: '🚜 On the farm' };
+    const groups = BURIED_PLACES.map(({ place, kinds }) => {
+      const n = kinds.filter((k) => collection.has('buried', k.id)).length;
+      return `<h3>${PLACE[place] ?? place} <small>${n}/${kinds.length}</small></h3><div class="slots minis">${kinds.map((k) => tile(collection.has('buried', k.id), k)).join('')}</div>`;
+    }).join('');
+    const nb = BEACH_KINDS.filter((k) => collection.has('beach', k.id)).length;
+    const beach = `<h3>🏖️ At the beach <small>${nb}/${BEACH_KINDS.length}</small></h3><div class="slots minis">${BEACH_KINDS.map((k) => tile(collection.has('beach', k.id), k)).join('')}</div>`;
+    const nn = NOTES.filter((q) => collection.has('notes', q.id)).length;
+    const left = NOTES.length - nn;
+    const notes = `<h3>📜 Notes <small>${nn}/${NOTES.length}</small></h3><div class="notes">${NOTES.filter((q) => collection.has('notes', q.id)).map((q) => `<p class="note got"><b>${q.emoji} ${q.from}</b>${q.text}</p>`).join('')}${left ? `<p class="note">${left} more to find, in ⏳ time capsules (buried round town) and 🍾 bottles (on the beach).</p>` : ''}</div>`;
+    return `<p class="intro">Everything my nose has dug up. It’s all on the treasure shelf in my garden, too!</p>${groups}${beach}${notes}`;
+  }
+
+  /** 🐾 Friends: everybody met so far (by what you've done together), and hints for the rest. */
+  friendsPage() {
+    const s = progress.stats;
+    return `<p class="intro">Everybody I’ve met on my adventures.</p><div class="slots">${FRIENDS.map((f) => {
+      const met = f.any.some((k) => (s[k] ?? 0) > 0), n = s[f.count ?? f.any[0]] ?? 0;
+      const times = f.times.endsWith(':') ? `${f.times} ${n}` : `${f.times} ${n} time${n === 1 ? '' : 's'}`;
+      return `<div class="slot ${met ? 'got' : ''}"><div class="emoji">${met ? f.emoji : '❔'}</div><div class="name">${met ? f.name : '???'}</div>
+        <div class="blurb">${met ? f.blurb : f.hint}</div>${met && n ? `<div class="blurb times">${times}</div>` : ''}</div>`;
+    }).join('')}</div>`;
+  }
+
   toggleBook(force) {
     const show = force ?? this.book.classList.contains('hidden');
+    if (show) this.renderBook();
     this.book.classList.toggle('hidden', !show);
   }
 

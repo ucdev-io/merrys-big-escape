@@ -6,6 +6,8 @@ import { autoFullscreen, toggleFullscreen, fullscreenButtonUseful, isTouchDevice
 import { watchPacks, renderPackRows } from '../net/packs.js';
 import { DEMO } from '../core/demo.js';
 import { versionLine, whatsNewHtml, newsUnseen, markNewsSeen } from '../core/releases.js';
+import { walk } from '../game/daily.js';
+import { walkHtml } from './walkCard.js';
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
 
@@ -56,6 +58,7 @@ export function showTitle(save) {
             ? '<button class="pill big" data-c="town">🏘️ Skip to the neighbourhood <small>' + (DEMO ? 'the woods, the farm, the beach…' : 'play with friends') + '</small></button>'
             : '<p class="locked">🏘️ The neighbourhood' + (DEMO ? '' : ' (and playing with friends)') + ' opens once you\u2019ve escaped a garden!</p>'}
         </div>
+        <p class="walk-line"><button class="link walk-btn">📅 Today’s walk: ${walk.doneCount} of 3 done${walk.unseen ? ' <b class="new">New!</b>' : ''}</button></p>
         <div class="extras">
           <button class="link phone-btn">📱 Play on a phone or tablet</button> ·
           ${fullscreenButtonUseful() ? '<button class="link fs-link">⛶ Full screen</button> ·' : ''}
@@ -92,6 +95,13 @@ export function showTitle(save) {
       markNewsSeen();
       e.currentTarget.querySelector('.new')?.remove();
       titleCards.showCard(whatsNewHtml(), [['Lovely!']]);
+    };
+
+    // 📅 Today's walk: the day's three goals.
+    el.querySelector('.walk-btn').onclick = (e) => {
+      walk.markSeen();
+      e.currentTarget.querySelector('.new')?.remove();
+      titleCards.showCard(walkHtml(), [['Let’s go!']]);
     };
 
     const phone = el.querySelector('.phone'), settings = el.querySelector('.settings');

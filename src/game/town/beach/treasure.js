@@ -5,6 +5,7 @@ import { buzz } from '../../../core/haptics.js';
 import { LineBag } from '../../dialogue.js';
 import { progress } from '../../progress.js';
 import { TREASURES, BOTTLES } from '../../lines/beach.js';
+import { collection } from '../../collection.js';
 import { treasureGeometry, shellTipGeometry } from '../../../entities/beachItems.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -99,9 +100,13 @@ export class Treasure {
     progress.award(t.xp, t.name);
     const line = (this.bags[t.id] ??= new LineBag(t.lines)).next();
     B.hud.say(`${t.emoji} ${line}`, () => B.actions.anchor().add(V(0, 0.3, 0)), 3.2);
+    const first = collection.add('beach', t.id); // (into the 🎒 treasure box: the Sniff Book, and the shelf at home)
     if (t.id === 'bottle') { // a message!
-      const msg = (this.bags.bottle ??= new LineBag(BOTTLES)).next();
+      const msg = collection.note('bottle', BOTTLES, (this.bags.bottle ??= new LineBag(BOTTLES)));
       setTimeout(() => B.hud.showToastRaw('🍾', 'A message in a bottle!', msg, { tip: true }), 900);
+    } else if (first) {
+      const n = TREASURES.filter((q) => collection.has('beach', q.id)).length;
+      setTimeout(() => B.hud.showToastRaw(t.emoji, `New find: ${t.name}!`, `${n} of ${TREASURES.length} kinds of beach find. They’re in your 📖 Sniff Book, and on the shelf at home!`), 700);
     }
     this.waiting += 1;
     setTimeout(() => { this.waiting--; this.spawn(); this.draw(); }, 15000 + Math.random() * 15000);

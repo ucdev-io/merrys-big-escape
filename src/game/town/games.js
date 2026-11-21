@@ -8,7 +8,8 @@ import { GameRoom } from '../gameRules.js';
 import { addResults } from '../localRecords.js';
 import { Race } from './modes/race.js';
 import { Tag } from './modes/tag.js';
-import { Dash } from './modes/dash.js';
+import { Dash, dashCourse } from './modes/dash.js';
+import { MEDAL_GAMES, MEDALS, awardMedal, bestMedal, medalLine } from '../medals.js';
 import { Bones } from './modes/bones.js';
 import { PigeonPanic } from './modes/pigeons.js';
 import { DuckRoundUp } from './modes/ducks.js';
@@ -127,6 +128,7 @@ export class TownGames {
     const g = this.game, C = CHALLENGES[game.kind];
     g.over = true;
     const { html, xp = 0, won = false } = this.mode.results(game);
+    const mine = MEDAL_GAMES[game.kind] ? this.mine(game) : null;
     this.cleanup();
     const rec = this.records(game);
     const prizes = COSMETICS.filter((c) => c.friend === 'wins' || c.friend === 'records'), had = prizes.filter((c) => progress.isUnlocked(c.id));
@@ -135,12 +137,32 @@ export class TownGames {
     if (won || (rec.best && this.remotes.dogs.size === 0)) progress.stat('wins'); // (on your own, beating your best counts)
     if (rec.record) { progress.stat('records'); progress.award(25, g.local ? 'New record!' : 'Pack record!'); }
     const newPrizes = prizes.filter((c) => !had.includes(c) && progress.isUnlocked(c.id)).map((c) => `<p class="rec-badge">🎁 You won the ${c.emoji} ${esc(c.name)}! Wear it from the ☰ menu.</p>`).join('');
+    const medal = mine ? medalLine(game.kind, awardMedal(game.kind, mine), mine.length) : '';
     sfx.hooray?.();
-    this.hud.showCard(html + (rec.badge ?? '') + newPrizes + (rec.board ?? ''), [
+    this.hud.showCard(html + medal + (rec.badge ?? '') + newPrizes + (rec.board ?? ''), [
       ['🎮 Again!', () => { this.hud.hideCard(); this.start(game.kind); }],
       ...(C.rank ? [['🏆 Records', () => this.ctx.showRecords?.(game.kind)]] : []),
       ['OK', () => this.hud.hideCard()],
     ]);
+  }
+
+  /** Our own result in a game with 🥇 medals (see ../medals.js): { score } / { ms, length } / { score, ms }. */
+  mine(game) {
+    const me = this.ctx.me();
+    if (game.kind === 'dash') return { ms: game.finishers?.find((f) => f.id === me)?.ms ?? 0, length: this.dashLength() };
+    if (game.kind === 'ducks') return { score: (game.home ?? []).length, ms: game.doneMs };
+    return { score: game.scores?.[me] ?? 0 };
+  }
+
+  /** How far it is round this neighbourhood's Zoomies Dash, start to last hoop (its medal times go by it). */
+  dashLength() {
+    if (this.dashLen === undefined) {
+      const { start, course } = dashCourse(this.world, this.layout);
+      let at = start, L = 0;
+      for (const p of course) { L += Math.hypot(p.x - at.x, p.z - at.z); at = p; }
+      this.dashLen = L;
+    }
+    return this.dashLen;
   }
 
   /** The 🏆 part of the results: the top of the pack board, and whether we're on it. */
@@ -164,16 +186,18 @@ export class TownGames {
   showCard() {
     const dogs = this.remotes.dogs.size + 1;
     this.hud.showCard(`<h1>🎮 Games &amp; challenges</h1><p class="small">${dogs > 1 ? 'Everyone in the pack plays together!' : 'On your own: beat your best!'}</p>
-      <div class="game-btns challenges"></div><p class="rec-link"><button class="pill g-records">🏆 Records</button></p>`, [['Close', () => this.hud.hideCard()]]);
+      <div class="game-btns challenges"></div><p class="rec-link"><button class="pill g-records">🏆 Records</button> <button class="pill g-medals">🥇 Medals</button></p>`, [['Close', () => this.hud.hideCard()]]);
     const btns = this.hud.card.querySelector('.challenges');
     for (const [kind, C] of Object.entries(CHALLENGES)) {
       const b = document.createElement('button');
       b.className = 'pill big';
-      b.innerHTML = `${C.emoji} ${C.name}<small>${dogs > 1 ? C.blurb : C.solo}</small>`;
+      const m = MEDAL_GAMES[kind] ? bestMedal(kind) : 0;
+      b.innerHTML = `${C.emoji} ${C.name}${m ? ` <span class="medal-tag">${MEDALS[m]}</span>` : ''}<small>${dogs > 1 ? C.blurb : C.solo}</small>`;
       b.disabled = this.active || dogs < (C.min ?? 1);
       b.onclick = () => { this.hud.hideCard(); this.start(kind); };
       btns.appendChild(b);
     }
     this.hud.card.querySelector('.g-records').onclick = () => this.ctx.showRecords?.();
+    this.hud.card.querySelector('.g-medals').onclick = () => this.hud.showMedals({ back: () => this.showCard() });
   }
 }

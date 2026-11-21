@@ -2,6 +2,7 @@ import { progress } from '../../game/progress.js';
 import { COSMETICS } from '../../game/cosmetics.js';
 import { sfx } from '../../core/audio.js';
 import { buzz } from '../../core/haptics.js';
+import { MEDALS, bestMedal } from '../../game/medals.js';
 
 /*
  * 🧩 Puzzles: games for the brain, not the legs (no running about needed). Each one plays in a card,
@@ -128,11 +129,11 @@ export function howLine(r, unit) {
 export function showPuzzleList(hud, play, { why = null } = {}) {
   const solves = totalSolves();
   const rows = Object.entries(PUZZLES).map(([id, P]) => {
-    const found = puzzleSave.found(id), n = puzzleSave.plays(id);
+    const found = puzzleSave.found(id), n = puzzleSave.plays(id), m = P.arcade ? bestMedal(`arcade:${id}`) : 0;
     const left = P.after ? Math.max(1, P.after - solves) : 0;
     const hint = P.after ? `Pickles will bring this one out after ${left} more finished puzzle${left === 1 ? '' : 's'}.` : P.hint;
     return `<div class="slot puzzle-slot ${found ? 'got' : ''}"><div class="emoji">${found ? P.emoji : '❔'}</div>
-      <div class="name">${found ? P.name : '???'}</div><div class="blurb">${found ? P.blurb : hint}</div>
+      <div class="name">${found ? P.name : '???'}${m ? ` ${MEDALS[m]}` : ''}</div><div class="blurb">${found ? P.blurb : hint}</div>
       ${found ? `<button class="pill big p-play" data-p="${id}">▶ Play</button>${n ? `<div class="blurb">Solved ${n} time${n === 1 ? '' : 's'}</div>` : ''}` : ''}</div>`;
   }).join('');
   hud.showCard(`<h1>🧩 Puzzles</h1><p class="small">Games for your brain: no running about needed.</p><div class="slots puzzles">${rows}</div>`, [['Close', () => hud.hideCard()]]);

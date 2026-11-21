@@ -679,3 +679,61 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
 }
 .big-card:not(.hidden):has(.rd-opts, .sd-pair, .ar-canvas) ~ .bubble { visibility: hidden; }
 /* ===== end of Pickles' games, part 2 ===== */
+
+/* 📅 Today's walk: three goals, each with how far along it is */
+.walk-goals { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; text-align: left; }
+.walk-goal { display: flex; align-items: center; gap: 10px; background: #fbf3e2; border: 2px solid rgba(59, 43, 37, 0.18); border-radius: var(--wobbly); padding: 8px 10px; }
+.walk-goal.done { background: #e9f2dc; border-color: rgba(90, 140, 70, 0.45); }
+.walk-goal .g-emoji { font-size: 30px; flex: none; width: 38px; text-align: center; }
+.walk-goal .g-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.walk-goal .g-text b { font-weight: normal; font-size: 20px; line-height: 1.15; }
+.walk-goal .g-text small { font-size: 14px; opacity: 0.7; line-height: 1.2; }
+.walk-goal .g-bar { display: block; height: 8px; border-radius: 4px; background: rgba(59, 43, 37, 0.12); overflow: hidden; margin-top: 4px; }
+.walk-goal .g-bar i { display: block; height: 100%; background: #e0b04a; }
+.walk-goal.done .g-bar i { background: #7fae64; }
+.walk-goal .g-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; font-size: 16px; line-height: 1.2; }
+.walk-goal .g-side small { font-size: 12px; opacity: 0.6; }
+.walk-goal .g-side b { font-weight: normal; }
+.walk-streak { font-size: 19px; margin: 4px 0; }
+.walk-streak b { font-weight: normal; color: #c0632d; }
+.title-screen .walk-line { margin: 12px 0 0; }
+.title-screen .walk-line .new { background: #d9534f; color: #fff; border-radius: 8px; padding: 0 6px; font-size: 12px; margin-left: 4px; text-decoration: none; display: inline-block; }
+/* A new day's goals not looked at yet: a dot on ☰ (and on the menu's Today's walk) */
+.pill.menu-btn.dot, .menu-item.dot { position: relative; }
+.pill.menu-btn.dot::after, .menu-item.dot::after { content: ""; position: absolute; top: 2px; right: 2px; width: 10px; height: 10px; border-radius: 50%; background: #d9534f; border: 2px solid #fffaf0; }
+/* 🥇 Medals */
+.medal-line { font-size: 22px; margin: 6px 0; }
+.medal-line b { font-weight: normal; color: #9a6a10; }
+.medal-line small { font-size: 16px; opacity: 0.8; }
+.medal-line.small { font-size: 18px; }
+.medal-tag { font-size: 0.9em; }
+.medal-rows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; text-align: left; }
+.medal-row { display: flex; align-items: center; gap: 10px; background: #fbf3e2; border-radius: var(--wobbly); padding: 6px 10px; border: 2px dashed rgba(59, 43, 37, 0.2); }
+.medal-row.got { border-style: solid; }
+.medal-row .m-best { font-size: 30px; flex: none; width: 36px; text-align: center; }
+.medal-row .m-name { flex: 1; min-width: 0; font-size: 19px; display: flex; flex-direction: column; line-height: 1.15; }
+.medal-row .m-name small { font-size: 13px; opacity: 0.65; }
+.medal-row .m-targets { flex: none; display: flex; flex-direction: column; font-size: 13px; line-height: 1.3; text-align: right; }
+.medal-row .m-targets i { font-style: normal; opacity: 0.45; }
+.medal-row .m-targets i.on { opacity: 1; }
+@media (max-width: 520px) {
+  .medal-row { flex-wrap: wrap; }
+  .medal-row .m-targets { flex-basis: 100%; flex-direction: row; flex-wrap: wrap; gap: 2px 10px; text-align: left; padding-left: 46px; }
+  .walk-goal .g-emoji { font-size: 24px; width: 30px; }
+}
+/* 🎒 Sniff Book tabs: places, treasures, friends */
+.book-tabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 4px 0 12px; position: sticky; top: -20px; z-index: 2; padding: 6px 0; background: var(--paper); }
+.book-tabs .pill { font-size: 17px; padding: 3px 12px; opacity: 0.75; }
+.book-tabs .pill.on { opacity: 1; background: var(--accent, #f2c94c); border-color: var(--ink); }
+.book-tabs .pill b { font-weight: normal; font-size: 14px; opacity: 0.8; }
+.page h3 { font-weight: normal; font-size: 21px; margin: 14px 0 6px; }
+.page h3 small { font-size: 15px; opacity: 0.6; }
+.slots.minis { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 6px; }
+.slot.mini { padding: 5px 4px; }
+.slot.mini .emoji { font-size: 28px; }
+.slot.mini .name { font-size: 14px; line-height: 1.1; }
+.slot .blurb.times { margin-top: 4px; opacity: 0.9; color: #9a6a10; }
+.notes { text-align: left; }
+.notes .note { font-size: 16px; margin: 6px 0; padding: 6px 10px; border-radius: var(--wobbly); border: 2px dashed rgba(59, 43, 37, 0.25); opacity: 0.75; }
+.notes .note.got { background: #fbf3e2; border-style: solid; opacity: 1; }
+.notes .note b { display: block; font-weight: normal; font-size: 14px; opacity: 0.65; }
