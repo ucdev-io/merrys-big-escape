@@ -11,6 +11,15 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.8.2', date: '2026-11-22', title: 'Woof! Real sounds',
+    notes: [
+      '🔊 Real sounds! Every dog has its own woof (big dogs rumble, little dogs yap), plus digging paws, crunchy snacks, squeaky toys, waves at the beach and the seagulls.',
+      '🐾 Boing! Every jump goes boing, and a huge double jump goes BOING with a twinkle.',
+      '💦 Splish-splash through puddles and the shallows, or take a run and a leap for a big SPLASH.',
+      '🙏 Thank you to everyone who shared their recordings: they’re all on Merry’s page, under Thanks & credits.',
+    ],
+  },
+  {
     version: '0.8.1', date: '2026-11-22', title: 'Quicker on phones',
     notes: [
       '⚡ Everything runs smoother, especially on phones: the town, the beach, the farm and every day out draw far less behind the scenes. The theme park does half the work it did!',
