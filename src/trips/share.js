@@ -51,7 +51,7 @@ export class TripShare {
   set(k, v = 1) { this.v[k] = v; this.send({ a: 'set', k, v }); }
   /** Something to carry: picked up, put down, handed over. (The server decides who really has it.) */
   take(k) { this.send({ a: 'take', k }); }
-  drop(k, x, z) { this.send({ a: 'drop', k, x, z }); }
+  drop(k, x, z, y = 0) { this.send({ a: 'drop', k, x, z, y }); }
   done(k) { this.send({ a: 'done', k }); }
   /** What's in her mouth (friends draw it). */
   carry(kind) { this.pack.sendCarry?.(kind); }

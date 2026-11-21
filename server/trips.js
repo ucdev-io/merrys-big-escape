@@ -4,7 +4,7 @@
 import { TripRoom } from '../src/game/tripRules.js';
 
 const tripsOf = (room) => (room.trips ??= new TripRoom());
-const where = (room) => (pid) => { const s = room.players.get(pid)?.state; return s ? { x: s[1], z: s[2] } : null; };
+const where = (room) => (pid) => { const s = room.players.get(pid)?.state; return s ? { x: s[1], z: s[2], y: s[6] ?? 0 } : null; };
 
 function deliver(room, list, send, broadcast) {
   for (const { to, msg } of list) {
@@ -20,5 +20,5 @@ export function tripMessage(room, p, msg, send, broadcast) {
 
 /** A dog leaves the pack: off any trip she was on (dropping what she held). */
 export function tripLeave(room, p, send, broadcast) {
-  if (room.trips) deliver(room, room.trips.leaveAll(p.id, () => (p.state ? { x: p.state[1], z: p.state[2] } : null)), send, broadcast);
+  if (room.trips) deliver(room, room.trips.leaveAll(p.id, () => (p.state ? { x: p.state[1], z: p.state[2], y: p.state[6] ?? 0 } : null)), send, broadcast);
 }
