@@ -71,6 +71,26 @@ function noise(dur, vol, type, freq, q = 1, delay = 0, freqEnd) {
   s.stop(t + dur + 0.05);
 }
 
+/** A springy boing: a pitch glide with a wobble that dies away (the "-oyoyoing"). */
+function spring(f0, f1, glide, dur, vol, wob, wobHz, delay = 0) {
+  if (!ctx || muted) return;
+  const t = ctx.currentTime + delay, o = ctx.createOscillator(), g = ctx.createGain();
+  const l = ctx.createOscillator(), lg = ctx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(f1, t + glide);
+  l.frequency.value = wobHz;
+  lg.gain.setValueAtTime(wob, t);
+  lg.gain.exponentialRampToValueAtTime(0.5, t + dur);
+  l.connect(lg).connect(o.frequency);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(master);
+  o.start(t); l.start(t);
+  o.stop(t + dur + 0.05); l.stop(t + dur + 0.05);
+}
+
 // Recorded sounds: real woofs, paws digging, splashes and crunches (CC0 recordings from freesound.org, listed in
 // public/sfx/CREDITS.md). They load after the first tap, so the game starts no slower, and until one arrives
 // (or on a connection that can't fetch it) the synthesized sound plays instead.
@@ -234,6 +254,14 @@ export const sfx = {
       return;
     }
     for (let i = 0; i < 3; i++) noise(0.06, 0.22, 'bandpass', 700 + i * 150, 2, i * 0.11); tone('sine', 300, 600, 0.15, 0.15, 0.36); },
+  // Jumping, in the dog's own voice (breed.bark: big dogs boing lower, tiny ones higher): a light spring on every
+  // hop, and a bigger, longer one with a twinkle on top for the huge double jump.
+  hop(voice = 1) { const p = voice ** 0.4 * jitter(0.03); spring(230 * p, 470 * p, 0.12, 0.3, 0.22, 60 * p, 30); },
+  bigHop(voice = 1) {
+    const p = voice ** 0.4;
+    spring(170 * p, 420 * p, 0.2, 0.5, 0.26, 70 * p, 26);
+    [1319, 1760, 2349, 2637].forEach((f, i) => tone('triangle', f * p, f * p * 1.01, 0.14, 0.06, 0.12 + i * 0.06));
+  },
   // A huge jump: a big springy boing.
   boing() { tone('sine', 180, 720, 0.28, 0.28); tone('triangle', 360, 1440, 0.2, 0.08, 0.02); },
   // A car horn: a friendly two-tone beep-beep (quieter when it's further away).

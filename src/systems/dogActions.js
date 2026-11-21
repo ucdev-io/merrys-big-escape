@@ -131,9 +131,10 @@ export class DogActions {
     if (canAct) this.mischief.update(dt, P);
     this.carry.update(dt);
     this.updateSnacks(dt, canAct);
-    // Double-tap jump: a huge jump (or not, if the zoomies bar is too low).
+    // Jumping: boing! Double-tap for a huge jump (or not, if the zoomies bar is too low).
+    if (P.jumped) sfx.hop(P.dog.breed.bark);
     if (P.hugeJumped) {
-      sfx.boing?.();
+      sfx.bigHop(P.dog.breed.bark);
       this.hud.float('BOING!', this.anchor());
       this.dirtBurst(P.pos.clone().setY(Math.max(0.02, P.jumpY ?? 0)), 6, Math.max(0.02, P.jumpY ?? 0));
       this.sparkle(P.pos.clone().add(V(0, 0.2, 0)), 10);
