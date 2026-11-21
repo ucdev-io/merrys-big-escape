@@ -78,11 +78,23 @@ export const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth()
 const dayDate = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d, 12); };
 const shiftDay = (key, by) => { const d = dayDate(key); d.setDate(d.getDate() + by); return dayKey(d); };
 
-/** The three goals for a day (easy, trickier, big): the same for everyone. Not yesterday's again, if it can help it. */
-export function goalsFor(day, avoid = goalsFor.plain(shiftDay(day, -1))) {
-  return pickGoals(day, new Set(avoid));
+/**
+ * The three goals for a day (easy, trickier, big): the same for everyone. None of yesterday's again: each day's
+ * goals follow on from the day before's, all the way from the first day of Today's walk (kept, once worked out).
+ */
+const EPOCH = '2026-11-01', picked = new Map();
+export function goalsFor(day) {
+  if (picked.has(day)) return picked.get(day);
+  if (day <= EPOCH) return pickGoals(day, new Set());
+  let d = EPOCH, prev = pickGoals(d, new Set());
+  for (const [k, v] of picked) if (k < day && k > d) { d = k; prev = v; } // (start from the latest day already worked out)
+  while (d < day) {
+    d = shiftDay(d, 1);
+    prev = picked.get(d) ?? pickGoals(d, new Set(prev));
+    picked.set(d, prev);
+  }
+  return prev;
 }
-goalsFor.plain = (day) => pickGoals(day, new Set());
 
 function pickGoals(day, avoid) {
   const rng = new RNG(`walk:${day}`), season = resolveSeason('auto', dayDate(day)).season;

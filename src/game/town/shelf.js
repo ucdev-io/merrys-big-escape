@@ -9,8 +9,8 @@ import { collection, BURIED_PLACES, BEACH_KINDS } from '../collection.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const BOX = new THREE.BoxGeometry(1, 1, 1);
-const W = 1.7, H = 1.24, D = 0.36;          // the shelf: wide, tall, deep (metres)
-const ROWS = [0.07, 0.36, 0.65, 0.94];       // the tops of the four shelves things stand on
+const W = 1.7, H = 1.1, D = 0.36;           // the shelf: wide, tall (under the lowest window sill), deep (metres)
+const ROWS = [0.06, 0.32, 0.58, 0.84];       // the tops of the four shelves things stand on
 const PER_ROW = 9, SLOT = (W - 0.12) / PER_ROW, FIT = 0.15;
 const WOOD = 0x9a6b45, WOOD_DARK = 0x7a5232, BACK = 0xe8d6b4;
 
@@ -20,15 +20,14 @@ const ORDER = [
   ...BEACH_KINDS.map((t) => ({ kind: 'beach', id: t.id, geo: () => treasureGeometry(t.id) })),
 ];
 
-/** The shelf itself: two sides, a back, the shelves, and a little roof (one baked geometry). */
+/** The shelf itself: two sides, a back, the shelves, a top with a little cream plaque (one baked geometry). */
 function frameParts() {
   const p = [];
   for (const s of [-1, 1]) p.push([BOX, WOOD, [s * (W / 2 - 0.025), H / 2, 0], [0, 0, 0], [0.05, H, D]]);
   p.push([BOX, BACK, [0, H / 2, -D / 2 + 0.015], [0, 0, 0], [W - 0.06, H - 0.02, 0.03]]);
   for (const y of ROWS) p.push([BOX, WOOD, [0, y - 0.02, 0.01], [0, 0, 0], [W - 0.06, 0.04, D - 0.03]]);
   p.push([BOX, WOOD_DARK, [0, H + 0.02, 0.01], [0, 0, 0], [W + 0.08, 0.05, D + 0.06]]);       // the top
-  for (const s of [-1, 1]) p.push([BOX, WOOD_DARK, [s * 0.4, H + 0.14, 0.01], [0, 0, s * -0.5], [0.92, 0.035, D + 0.04]]); // a little roof
-  p.push([BOX, 0xf4ead2, [0, H + 0.075, D / 2 + 0.02], [0, 0, 0], [0.44, 0.08, 0.012]]);    // a name board (painted cream)
+  p.push([BOX, 0xf4ead2, [0, H + 0.02, D / 2 + 0.046], [0, 0, 0], [0.4, 0.045, 0.01]]);      // a little plaque on the front (painted cream)
   return p;
 }
 
