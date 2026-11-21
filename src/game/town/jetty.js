@@ -62,7 +62,7 @@ export class JettySite {
     this.group.add(this.ship);
     // Where she gets on (and off): the middle of the end platform, looking back to the beach.
     const e = this.L(0, this.len - 1.4);
-    this.end = { x: e.x, z: e.z, face: this.face + Math.PI };
+    this.end = { x: e.x, z: e.z, face: this.face + Math.PI, y: DECK }; // (y: up on the deck, not in the sea under it)
     this.t = Math.random() * 10;
     this.cur = null;
     // (Sandy's beach balls never land under the jetty.)

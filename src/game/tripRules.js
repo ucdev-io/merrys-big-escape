@@ -5,7 +5,7 @@
 //   seed     where things are this visit (every dog's game lays the trip out from it: the same sparks, the same
 //            hiding places). A new one when a dog arrives and nobody else from the pack is there.
 //   v        what's been done, by key: a flag (a star-spark found: 's3' = 1), or a thing to carry, one dog at a
-//            time ([0, x, z] lying there, [1, dogId] in that dog's mouth, [2] handed over).
+//            time ([0, x, z, y] lying there (y: how high: a ship has decks), [1, dogId] in that dog's mouth, [2] handed over).
 //   present  which dogs are there.
 // Messages (from a dog): { a: 'enter' } · { a: 'leave' } · { a: 'set', k, v } · { a: 'take', k } ·
 //                        { a: 'drop', k, x, z } · { a: 'done', k }
@@ -67,7 +67,7 @@ export class TripRoom {
         return held ? [] : [set(T, k, [1, pid], pid)];
       case 'drop':
         if (!held || cur[1] !== pid) return [];
-        return [set(T, k, [0, n(msg.x), n(msg.z)], pid)];
+        return [set(T, k, [0, n(msg.x), n(msg.z), n(msg.y, 100)], pid)];
       case 'done':
         if (gone || (held && cur[1] !== pid)) return [];
         return [set(T, k, [2], pid)];
@@ -82,7 +82,7 @@ export class TripRoom {
     if (!T || !T.present.delete(pid)) return out;
     const at = where(pid) ?? { x: 0, z: 0 };
     for (const [k, v] of Object.entries(T.v)) {
-      if (Array.isArray(v) && v[0] === 1 && v[1] === pid) { T.v[k] = [0, n(at.x), n(at.z)]; out.push({ to: 'all', msg: { t: 'trip', id, a: 'set', k, v: T.v[k], by: pid } }); }
+      if (Array.isArray(v) && v[0] === 1 && v[1] === pid) { T.v[k] = [0, n(at.x), n(at.z), n(at.y ?? 0, 100)]; out.push({ to: 'all', msg: { t: 'trip', id, a: 'set', k, v: T.v[k], by: pid } }); }
     }
     return out;
   }

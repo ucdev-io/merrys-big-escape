@@ -336,7 +336,7 @@ export class TownChapter {
     this.player.frozen = false;
     this.pack.watchOthers();
     const back = this.backFrom && (this.portals.out(this.backFrom) ?? (this.backFrom === 'bus' ? this.busStop.outSpot() : null));
-    if (back) { this.teleport(back.x, back.z, back.face); this.backFrom = null; }
+    if (back) { this.teleport(back.x, back.z, back.face); if (back.y) this.player.pos.y = back.y; this.backFrom = null; }
     else this.busStop.arrive(); // (just off the bus? Off she gets at the stop)
   }
 
@@ -470,6 +470,7 @@ export class TownChapter {
     this.player.object.visible = true; // (in case she went by bus)
     this.hud.setAway(false);
     this.teleport(o.x, o.z, o.face ?? 0);
+    if (o.y) this.player.pos.y = o.y; // (a way out up off the ground: the end of the jetty)
     this.musicPlace = null; // (the town's tune again, or its area's)
     music.setAmbient({ birds: 1 });
     this.portals.refresh(); // (the beach pipe's grille, if the sluice was opened)

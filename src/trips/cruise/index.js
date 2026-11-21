@@ -23,6 +23,9 @@ import { SeaLife } from './sealife.js';
  *      higher you jump from, the bigger the splash. Your best is kept.
  *   🎾 Grandad Ted throws a ball down the stern deck for you, again and again. Your best run of fetches is kept.
  *   🐱 Admiral Whiskers, the ship's cat, is hiding somewhere (listen for a meow). Find him and woof!
+ * With friends aboard (this.share: see trips/share.js), the hat, Mrs Pemberton's things and the cat are the pack's:
+ * the same spots for everyone, one dog's mouth at a time, and found or handed over for everybody (a few ⭐ for
+ * the friends who were there, the usual for whoever did it).
  *   🐬 Dolphins come leaping alongside now and then, and a whale blows further off: woof hello!
  *   🔔 Ring the bell at the bow, and 📯 sound the horn by the wheel.
  * Home: down the gangway (starboard, by the pool) into the tender, back to the jetty.
@@ -30,7 +33,6 @@ import { SeaLife } from './sealife.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
-const shuffle = (a) => a.slice().sort(() => Math.random() - 0.5);
 const BEST_KEY = 'merry.trips.v1';
 const bests = () => { try { return JSON.parse(localStorage.getItem(BEST_KEY)) ?? {}; } catch { return {}; } };
 const keepBest = (k, n) => {
@@ -121,7 +123,20 @@ class CruiseChapter extends TripChapter {
     this.fetch = { n: 0, state: 'idle', ball: null, t: 0 };
     this.rang = false;
     this.honked = 0;
+    this.joinShared();
     this.objective();
+  }
+
+  /** The thing to find with key k as it is now (with friends, it's a new one each time a friend puts it down). */
+  item(k) { return this.shared.get(k)?.item ?? this.things[k]; }
+
+  /** With friends aboard: the hat, the lost things and the cat are the pack's (as it is when she arrives, quietly). */
+  joinShared() {
+    if (!this.share) return;
+    this.onShared = (k, v, by) => { if (k === 'cat' && v === 1 && by !== this.share.me && !this.cat.found) this.catFoundBy(by); };
+    this.onSharedDone = (k, by) => (k === 'hat' ? this.hatReturned(by) : this.lostReturned(k, by));
+    for (const k of ['hat', 'lost0', 'lost1']) this.shareItem(k, this.things[k]);
+    if (this.share.v.cat === 1 && !this.cat.found) this.catFoundBy(-1);
   }
 
   /** The ship's coordinates (+ deck height y) → the world's. */
@@ -189,7 +204,7 @@ class CruiseChapter extends TripChapter {
     this.cat.head.add(sailor, sband);
     this.cat.root.scale.setScalar(1.25);
     bakeGroups(this.cat, [this.cat.body, this.cat.head, this.cat.tail], this.cat.eyes); // (its fur and stripes as a few meshes; the eyes stay, to blink)
-    const h = pick(HIDES);
+    const h = HIDES[Math.floor(this.random() * HIDES.length)]; // (the pack's dice: the same hiding place for everyone aboard)
     this.cat.root.position.copy(this.at(h[0], h[1], h[2]));
     this.cat.root.rotation.y = Math.random() * 6.28;
     this.cat.hide = h[3];
@@ -199,14 +214,18 @@ class CruiseChapter extends TripChapter {
   }
 
   makeThings() {
-    const carry = this.actions.carry, spots = shuffle(SPOTS);
+    const carry = this.actions.carry, spots = this.shuffled(SPOTS); // (the pack's dice: the same spots for everyone aboard)
     const put = (kind, s, job) => { const p = this.at(s[0], s[1]); const it = carry.add(kind, p.x, p.z, { job }); it.pos.y = s[2] + 0.02; return it; };
     this.hat = put('captainhat', spots[0], 'captain');
-    const kinds = shuffle(LOST).slice(0, 2);
+    const kinds = this.shuffled(LOST).slice(0, 2);
     this.lost = kinds.map((k, i) => put(k, spots[i + 1], 'pemberton'));
     this.lostNames = kinds.map((k) => this.lost.find((q) => q.kind === k).def.name);
     this.lostDone = 0;
     this.hatDone = false;
+    // The things to find, by key (shared with friends under the same keys: see joinShared).
+    this.things = { hat: this.hat, lost0: this.lost[0], lost1: this.lost[1] };
+    this.lostLeft = new Set(['lost0', 'lost1']);
+    this.lostName = { lost0: this.lostNames[0], lost1: this.lostNames[1] };
     // The tender, bobbing alongside at the foot of the gangway.
     this.tender = tenderModel();
     this.tender.position.set(SHIP.B + 2.3, SEA, PLAN.gangway.z + 8.2);
@@ -249,7 +268,8 @@ class CruiseChapter extends TripChapter {
     this.hud.showToastRaw('🚢', first ? 'All aboard the Sunny Dolphin!' : 'Back aboard the Sunny Dolphin!', 'Stairs go up to the top deck and the sun deck. Captain Poppy’s up by the wheel.', { tip: true });
     sfx.horn?.(0.5);
     this.later.push([1.0, () => this.captainSay(LINES.hello[first ? 0 : 1].replace('{name}', this.name()), 3.4)]);
-    this.later.push([4.5, () => { this.captainSay(this.saved.hats ? LINES.hat[1] : LINES.hat[0], 4.2); this.hud.float('Whoosh! 💨', this.captain.root.position.clone().add(V(0, 2.2, 0))); }]);
+    if (this.hatDone) this.later.push([4.5, () => this.captainSay('Your friends found my hat already! What a crew!', 3.6)]); // (with friends: it's back on her head)
+    else this.later.push([4.5, () => { this.captainSay(this.saved.hats ? LINES.hat[1] : LINES.hat[0], 4.2); this.hud.float('Whoosh! 💨', this.captain.root.position.clone().add(V(0, 2.2, 0))); }]);
   }
 
   captainSay(text, dur = 3) { this.say(text, () => this.captain.root.position.clone().add(V(0, 2.1, 0)), dur); this.captain.wave = 1.2; }
@@ -285,8 +305,9 @@ class CruiseChapter extends TripChapter {
     if (held?.job === 'captain') return this.captain.root.position;
     if (held?.job === 'pemberton') return this.pemberton.root.position;
     if (held?.job === 'ted') return this.ted.root.position;
-    if (!this.hatDone && carry.items.includes(this.hat)) return this.hat.pos;
-    const P = this.player.pos, lost = this.lost.filter((it) => carry.items.includes(it)).sort((a, b) => a.pos.distanceToSquared(P) - b.pos.distanceToSquared(P));
+    const hat = this.item('hat');
+    if (!this.hatDone && carry.items.includes(hat)) return hat.pos;
+    const P = this.player.pos, lost = [...this.lostLeft].map((k) => this.item(k)).filter((it) => carry.items.includes(it)).sort((a, b) => a.pos.distanceToSquared(P) - b.pos.distanceToSquared(P));
     if (lost.length) return lost[0].pos;
     if (!this.cat.found) return this.cat.root.position;
     return null;
@@ -348,12 +369,30 @@ class CruiseChapter extends TripChapter {
     this.hud.showToastRaw('🐱', `Found him ${c.hide}!`, 'Admiral Whiskers trots off to see the captain.');
     // Off he goes, to sit by the captain's feet.
     this.later.push([2.2, () => { const to = this.at(PLAN.captain.x - 0.8, PLAN.captain.z + 0.6, UP); c.hopTo(to, 0); this.catHome = true; }]);
+    this.share?.set('cat', 1);
     this.objective();
   }
 
-  handHat(it) {
+  /** A friend found Admiral Whiskers (by: their id), or he'd been found before she came aboard (by: -1). */
+  catFoundBy(by) {
+    const c = this.cat, to = this.at(PLAN.captain.x - 0.8, PLAN.captain.z + 0.6, UP);
+    c.found = true;
+    if (by === -1) { c.root.position.copy(to); this.catHome = true; this.objective(); return; } // (already sat by the captain)
+    c.startle = 1;
+    sfx.meow?.();
+    this.actions.sparkle(c.root.position.clone().add(V(0, 0.3, 0)), 10);
+    progress.award(4, `${this.friend(by)} found the cat!`);
+    this.hud.showToastRaw('🐱', `<span class="who"></span> found Admiral Whiskers ${c.hide}!`, 'He trots off to see the captain.', { trip: true });
+    this.hud.toast.querySelector('.who').textContent = this.friend(by);
+    this.later.push([2.2, () => { c.hopTo(to, 0); this.catHome = true; }]);
+    this.objective();
+  }
+
+  handHat(k) {
+    const it = this.item(k);
     this.actions.carry.remove(it);
     it.obj.traverse((o) => o.geometry?.dispose());
+    this.shareDone(k); // (with friends: back on her head for everyone)
     this.hatDone = true;
     const hats = (this.saved.hats ?? 0) + 1;
     this.ctx.town.save({ hats });
@@ -375,6 +414,31 @@ class CruiseChapter extends TripChapter {
     this.objective();
   }
 
+  /** A friend gave Captain Poppy her hat back (by: their id), or it was back before she came aboard (by: -1). */
+  hatReturned(by) {
+    if (this.hatDone) return;
+    this.hatDone = true;
+    this.putCapOn();
+    if (by === -1) { this.objective(); return; }
+    // There when it happened: the captain's thanks (and the prize, the first time) for every dog aboard.
+    const hats = (this.saved.hats ?? 0) + 1;
+    this.ctx.town.save({ hats });
+    this.saved = { ...this.saved, hats };
+    const before = progress.stats.captain ?? 0, who = this.friend(by);
+    progress.stat('captain');
+    progress.award(8, `${who} found the captain’s hat!`);
+    sfx.found?.();
+    this.actions.sparkle(this.captain.root.position.clone().add(V(0, 1.9, 0)), 14);
+    this.captainSay(`My hat! Thank you, ${who}! Thank you, all of you!`, 3.4);
+    const prize = COSMETICS.find((c) => c.friend === 'captain' && before < c.jobs && before + 1 >= c.jobs);
+    if (prize) {
+      this.later.push([3.6, () => this.captainSay(LINES.prize, 3.2)]);
+      this.later.push([3.8, () => this.hud.showToastRaw(prize.emoji, `New: ${prize.name}!`, 'From Captain Poppy. Wear it from ☰ → My dog → Dress up.', { trip: true })]);
+    }
+    this.later.push([prize ? 7.4 : 3.6, () => this.personSay(this.pemberton, pick(LINES.pemberton).replace('{thing}', this.lostNames[0]).replace('{thing2}', this.lostNames[1]), 4)]);
+    this.objective();
+  }
+
   putCapOn() {
     if (this.capOn) return;
     this.capOn = true;
@@ -390,10 +454,12 @@ class CruiseChapter extends TripChapter {
     h.add(crown, band, peak, badge);
   }
 
-  handLost(it) {
+  handLost(k) {
+    const it = this.item(k);
     this.actions.carry.remove(it);
     it.obj.traverse((o) => o.geometry?.dispose());
-    this.lost = this.lost.filter((q) => q !== it);
+    this.shareDone(k); // (with friends: back with her for everyone)
+    this.lostLeft.delete(k);
     this.lostDone++;
     progress.stat('luggage');
     sfx.found?.();
@@ -406,6 +472,21 @@ class CruiseChapter extends TripChapter {
       progress.award(20, '🧳 Everything back!');
       sfx.hooray?.();
       this.personSay(this.pemberton, LINES.pAll, 4);
+    }
+    this.objective();
+  }
+
+  /** A friend gave Mrs Pemberton something back (by: their id), or it was back before she came aboard (by: -1). */
+  lostReturned(k, by) {
+    if (!this.lostLeft.delete(k)) return;
+    this.lostDone++;
+    if (by !== -1) {
+      const who = this.friend(by);
+      this.actions.sparkle(this.pemberton.root.position.clone().add(V(0, 1.2, 0)), 10);
+      this.pemberton.wave = 1.2;
+      progress.award(this.lostDone < 2 ? 3 : 6, `${who} found Mrs Pemberton’s ${this.lostName[k]}!`);
+      this.personSay(this.pemberton, this.lostDone < 2 ? `Oh, ${who} found my ${this.lostName[k]}! Lovely dog!` : LINES.pAll, 3.2);
+      if (this.lostDone >= 2) sfx.hooray?.();
     }
     this.objective();
   }
@@ -503,9 +584,10 @@ class CruiseChapter extends TripChapter {
     if (this.later.length) { for (const l of this.later) l[0] -= dt; for (const l of this.later.filter((q) => q[0] <= 0)) l[1](); this.later = this.later.filter((q) => q[0] > 0); }
     const P = this.player, carry = this.actions.carry;
     // Things put down by their owners: handed over.
-    const close = (it, p, r = 2.3) => carry.items.includes(it) && (it.pos.x - p.x) ** 2 + (it.pos.z - p.z) ** 2 < r * r && Math.abs(it.pos.y - p.y) < 1;
-    if (!this.hatDone && close(this.hat, this.captain.root.position)) this.handHat(this.hat);
-    for (const it of this.lost) if (close(it, this.pemberton.root.position, 2.6)) { this.handLost(it); break; }
+    const close = (it, p, r = 2.3) => it && carry.items.includes(it) && !(it.friendAt !== undefined && this.time - it.friendAt < 2.5)
+      && (it.pos.x - p.x) ** 2 + (it.pos.z - p.z) ** 2 < r * r && Math.abs(it.pos.y - p.y) < 1; // (just put down by a friend? Their game hands it over)
+    if (!this.hatDone && close(this.item('hat'), this.captain.root.position)) this.handHat('hat');
+    for (const k of this.lostLeft) if (close(this.item(k), this.pemberton.root.position, 2.6)) { this.handLost(k); break; }
     // A cannonball? (Into the pool from a height: how fast she was falling, not running.)
     if (P.enteredSpeed > 0 && P.inWater) { const fall = Math.max(-P.vy, -(this.lastVy ?? 0)); if (fall >= 3) this.cannonball(fall); }
     this.lastVy = P.vy;
