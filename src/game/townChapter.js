@@ -257,6 +257,7 @@ export class TownChapter {
     });
     // 😈 Naughty things that aren't garden mischief fill the meter too: pinching treats, chasing the postman.
     this.heists.onNaughty = this.life.onNaughty = () => this.catcher.onMischief();
+    this.townDogs.busy = () => !!(this.games.active || this.away || this.travelling || this.catcher.chasing); // (no new games with the town dogs just now)
     // Friends off on trips (and coming back), and friends on the same trip as you.
     const who = (r) => { this.hud.toast.querySelector('.who').textContent = r.name; }; // (names are untrusted: as text)
     this.remotes.onAway = (r, n, was, mine) => {
@@ -413,6 +414,7 @@ export class TownChapter {
     return !!(this.games.active || this.away || this.trips?.busy || this.travelling || !this.hud.card.classList.contains('hidden')
       || P.frozen || P.scripted || P.sledging || this.seasons?.parts?.sledge?.state === 'towed'
       || f?.duchess?.job?.ducklings?.some((k) => k.state === 'following') || f?.extras?.some((e) => e.state === 'follow')
+      || !!this.townDogs?.job
       || (bj?.twistOk && bj.spec?.twist === 'timer'));
   }
 
@@ -670,7 +672,7 @@ export class TownChapter {
     const dj = job ? Math.hypot(job.pos.x - pos.x, job.pos.z - pos.z) : Infinity;
     const next = this.nextPlace();
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
-    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); this.busStop.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.busStop.onDig(pos) || this.buried.onDig(n) || this.beach?.onDig(n) || this.seasons.onDig(n) });
+    const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); this.busStop.onBark(pos); }, onDig: (n) => this.townDogs.onDig(n) || this.portals.onDig(n, pos) || this.busStop.onDig(pos) || this.buried.onDig(n) || this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
     this.crew.update(dt, { barked: acted.barked, canAct });
     this.puzzles.update(dt, canAct, acted.barked); // (woof at Pickles for a game)
