@@ -27,6 +27,8 @@ const THEMES = {
   cruise: { bpm: 124, root: 62, prog: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]], seed: 'cruise', shaker: true, vol: 0.9, lead: 'accordion' },
   // At the Big Dog Show: a jolly brass band in Bb (I IV V I, oom-pah underneath, a bright cornet on top).
   show: { bpm: 112, root: 58, prog: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], seed: 'show', shaker: true, vol: 0.9, lead: 'brass' },
+  // 🤫 Dog Star, the secret space shooter (egg/): a driving synth groove in A minor (i VI III VII), a snappy pulse on top.
+  dogstar: { bpm: 132, root: 57, prog: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]], seed: 'dogstar', shaker: true, vol: 0.85, scale: [0, 3, 5, 7, 10], lead: 'pulse' },
 };
 const PENTA = [0, 2, 4, 7, 9]; // major pentatonic: always sounds friendly
 const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
@@ -201,6 +203,15 @@ class Music {
     o.connect(lp).connect(g).connect(this.bus);
     o.start(t); o.stop(t + dur + 0.12);
     this.osc(A, 'triangle', f, t, dur * 0.85, vol * 0.55, 0.025);
+  }
+  pulse(A, f, t, dur, vol) { // (a bright square wave that snaps shut: arcade-ish)
+    const o = A.ctx.createOscillator(), lp = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
+    o.type = 'square'; o.frequency.value = f;
+    lp.type = 'lowpass'; lp.frequency.setValueAtTime(f * 6, t); lp.frequency.exponentialRampToValueAtTime(f * 1.5, t + dur * 0.6);
+    this.env(g, t, 0.005, vol * 0.3, dur * 0.55);
+    o.connect(lp).connect(g).connect(this.bus);
+    o.start(t); o.stop(t + dur + 0.1);
+    this.osc(A, 'triangle', f / 2, t, dur * 0.5, vol * 0.4, 0.005);
   }
   shaker(A, t, vol) {
     const s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();

@@ -8,6 +8,7 @@ import { DEMO } from '../core/demo.js';
 import { versionLine, whatsNewHtml, newsUnseen, markNewsSeen } from '../core/releases.js';
 import { walk } from '../game/daily.js';
 import { walkHtml } from './walkCard.js';
+import { openDogStar, onSecretTaps, onSecretWord } from '../egg/secret.js';
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
 
@@ -78,7 +79,9 @@ export function showTitle(save) {
       </div>`;
     document.getElementById('hud').appendChild(el);
     let stop = () => {};
-    const finish = (v) => { stop(); autoFullscreen(); el.remove(); resolve(v); };
+    // 🤫 Something hides in the paws up top (see egg/secret.js).
+    const secrets = [onSecretTaps(el.querySelector('.paws'), 5, () => openDogStar()), onSecretWord('sirius', () => openDogStar())];
+    const finish = (v) => { stop(); secrets.forEach((f) => f()); autoFullscreen(); el.remove(); resolve(v); };
     el.querySelectorAll('[data-c]').forEach((b) => (b.onclick = () => finish(b.dataset.c)));
     // Live list of open neighbourhoods on this Wi-Fi: one tap to join.
     const friends = el.querySelector('.friends');

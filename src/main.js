@@ -25,6 +25,7 @@ import { autoFullscreen } from './ui/fullscreen.js';
 import { localSeason } from './game/season.js';
 import { Trips } from './trips/manager.js';
 import { busArrivalNote } from './game/town/busStop.js';
+import { dogStarOpen, openDogStar, onSecretWord } from './egg/secret.js';
 
 // Phones/tablets go fullscreen when you press a play-ish button (it has to come from a tap).
 window.addEventListener('click', (e) => { if (e.target.closest?.('.pill.big, .lobby .solo, .lobby .host, .lobby .join')) autoFullscreen(); }, true);
@@ -86,6 +87,9 @@ const save = loadSave();
 // A pack link (/pack/BONE-42) goes straight into that pack.
 let packCode = packCodeFromUrl();
 const yardDone = save.yardDone || save.escaped;
+
+// (In the workshop, ?dogstar goes straight to the secret space shooter: see egg/secret.js.)
+if (import.meta.env.DEV && params.has('dogstar')) openDogStar();
 
 // Landing page, unless a link already says where to go.
 if (!packCode && !params.has('town') && !params.has('seed')) {
@@ -231,6 +235,8 @@ const applyStats = () => player.setStats(statsFor(progress.level, progress.look)
 applyStats();
 progress.on((e) => { if (e.look || e.levelUp || e.synced || e.amount) applyStats(); });
 createTouchControls(input, follow);
+// 🤫 Type "sirius" for a secret in the stars (see egg/secret.js). The dog sits still while it's open.
+onSecretWord('sirius', () => openDogStar({ player }));
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
   : new YardChapter({ scene, world, player, hud, input, follow, pipeline });
@@ -327,9 +333,10 @@ function frame(now) {
 
   followSun(player.pos);
 
-  pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
+  const covered = dogStarOpen(); // (Dog Star fills the screen: no need to paint the world underneath it)
+  if (!covered) pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
   const r0 = drawn ? 0 : performance.now();
-  pipeline.render(A.scene, camera);
+  if (!covered) pipeline.render(A.scene, camera);
   if (!drawn) firstMs = performance.now() - r0; // (the first picture: every shader made, every shape sent)
   input.endFrame();
   if (++drawn === 2) {

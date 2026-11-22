@@ -1,0 +1,56 @@
+/* ✦ Dog Star: glowing lines on a night sky, over everything (see ./index.js). */
+.dog-star {
+  position: fixed; inset: 0; z-index: 1000; background: #03040b; color: #e8eeff; touch-action: none;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace; user-select: none; -webkit-user-select: none;
+}
+.dog-star canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+.dog-star.playing:not(.menu) canvas { cursor: none; } /* (with a mouse, the ship is the pointer) */
+body:has(.dog-star) .touch { display: none; }
+
+.ds-btn {
+  position: absolute; display: none; place-items: center; width: 44px; height: 44px; padding: 0; cursor: pointer;
+  color: #e8eeff; font: inherit; font-size: 13px; background: rgba(10, 14, 40, 0.5); border: 1.5px solid rgba(207, 224, 255, 0.5); border-radius: 50%;
+}
+.dog-star.playing:not(.menu) .ds-btn { display: grid; }
+.dog-star:not(.ds-touch) .ds-howl { display: none !important; }
+.ds-pause { top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px)); }
+.ds-howl {
+  right: calc(18px + env(safe-area-inset-right, 0px)); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 66px; height: 66px; font-size: 28px; opacity: 0.6;
+  background: conic-gradient(rgba(223, 232, 255, 0.4) var(--fill, 0%), rgba(10, 14, 40, 0.5) 0);
+}
+.ds-howl.ready { opacity: 1; box-shadow: 0 0 14px #dfe8ff, inset 0 0 10px #dfe8ff; animation: ds-pulse 0.7s ease-in-out infinite alternate; }
+@keyframes ds-pulse { to { transform: scale(1.08); } }
+
+.ds-panel {
+  position: absolute; inset: 0; display: none; overflow-y: auto; padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(12px, env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(ellipse at center, rgba(3, 4, 11, 0.6), rgba(3, 4, 11, 0.1) 75%);
+}
+.ds-panel.on { display: flex; }
+.ds-card {
+  width: 100%; max-width: 520px; margin: auto; padding: 18px 20px; text-align: center; border: 1.5px solid rgba(159, 184, 255, 0.45); border-radius: 6px;
+  background: rgba(5, 8, 24, 0.74); box-shadow: 0 0 24px rgba(95, 130, 255, 0.25), inset 0 0 18px rgba(95, 130, 255, 0.12);
+}
+.ds-card h1 { margin: 0 0 6px; font-size: clamp(22px, 6vw, 32px); font-weight: bold; letter-spacing: 0.12em; color: #fff; text-shadow: 0 0 8px #9fb8ff, 0 0 18px #5f82ff; }
+.ds-card h1.ds-logo { font-size: clamp(28px, 8vw, 44px); }
+.ds-card p { margin: 6px 0; font-size: 14px; line-height: 1.45; color: #d6def8; }
+.ds-card b { color: #fff; }
+.ds-card .gold { color: #ffd36b; text-shadow: 0 0 6px rgba(255, 211, 107, 0.6); }
+.ds-card .ds-sub { margin: 0 0 12px; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: #9fb8ff; }
+.ds-shapes span { display: inline-block; margin: 0 6px; white-space: nowrap; }
+.ds-shapes i { font-style: normal; text-shadow: 0 0 6px currentColor; }
+.ds-card .ds-goal { color: #9fb8ff; }
+.ds-card .ds-best { color: #ffe7a3; letter-spacing: 0.08em; }
+.ds-card .ds-score { margin: 2px 0; font-size: 44px; color: #fff; text-shadow: 0 0 10px #ffd36b; }
+.ds-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 14px; }
+.ds-big {
+  padding: 9px 18px; cursor: pointer; font: inherit; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: #e8eeff;
+  background: transparent; border: 1.5px solid rgba(207, 224, 255, 0.6); border-radius: 4px;
+}
+.ds-big:hover, .ds-big:focus-visible { outline: none; border-color: #fff; box-shadow: 0 0 12px rgba(207, 224, 255, 0.6); }
+.ds-big.go { color: #ffe7a3; border-color: #ffd36b; box-shadow: 0 0 10px rgba(255, 211, 107, 0.35); }
+@media (max-height: 520px) {
+  .ds-card { padding: 10px 14px; }
+  .ds-card p { margin: 3px 0; font-size: 12.5px; line-height: 1.35; }
+  .ds-card .ds-sub { margin-bottom: 6px; }
+  .ds-btns { margin-top: 8px; }
+}
