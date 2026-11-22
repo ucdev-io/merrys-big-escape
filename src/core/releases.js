@@ -12,6 +12,13 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.8.3', date: '2026-11-22', title: 'Psst… a secret!',
+    notes: [
+      '✦ Psst… a secret shines somewhere in the game. Can you find it?',
+      '📷 Merry’s page has new stops for days out and something new every day, lots more postcards (all four seasons, the wind and the rain too), and a What’s new list with every update so far.',
+    ],
+  },
+  {
     version: '0.8.2', date: '2026-11-22', title: 'Woof! Real sounds',
     notes: [
       '🔊 Real sounds! Every dog has its own woof (big dogs rumble, little dogs yap), plus digging paws, crunchy snacks, squeaky toys, waves at the beach and the seagulls.',
