@@ -92,6 +92,7 @@ body { min-height: 100svh; }
 .stop[data-id='play'] .words { max-width: 36rem; }
 .stop[data-id='play'] .play { font-size: 34px; margin: 6px 0 14px; }
 .about { font-size: 14px; color: var(--ink-soft); margin: 10px 0 0; }
+.about.secret { font-size: 13px; font-style: italic; opacity: 0.75; } /* (a whisper, not a headline) */
 /* The beta: its version and date (under the first Play button), and what's new (by the last). */
 .beta-line { display: inline-block; font-size: 14px; margin: 10px 0 0; padding: 3px 10px 3px 4px; border-radius: 14px; background: rgba(255, 250, 240, 0.85); color: var(--ink); }
 .beta-line .beta, .whats-new .beta { background: #f2c94c; color: var(--ink); border-radius: 10px; padding: 1px 8px; }
@@ -144,6 +145,16 @@ body.walked .hint { opacity: 0; }
   .stop[data-id='hello'] .tagline { font-size: 20px; }
   .stop[data-id='hello'] .text { font-size: 15px; }
   .play { font-size: 24px; padding: 11px 24px 10px; }
+}
+/* (Narrow phones: a paw for every stop and the Play button still fit across the top.) */
+@media (max-width: 440px) {
+  .bar { gap: 8px; }
+  .trail { gap: 1px; }
+  .trail button { width: 22px; height: 22px; font-size: 10px; }
+}
+@media (max-width: 385px) {
+  .mini-play { padding: 5px 10px 6px; }
+  .mini-play::before { content: '▶'; }
 }
 @media (max-height: 520px) and (orientation: landscape) { /* phones held sideways */
   .card { height: 100svh; padding-top: 58px; grid-template-columns: minmax(240px, 22rem) 1fr; }

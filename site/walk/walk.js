@@ -1,4 +1,4 @@
-import { STOPS, SHOTS, TAGLINE, ABOUT, IPHONE_TIP } from '../shared/content.js';
+import { STOPS, SHOTS, TAGLINE, ABOUT, IPHONE_TIP, SECRET } from '../shared/content.js';
 import { playButtons, prefersStill, bringMerry, dogSwatches } from '../shared/common.js';
 import { RELEASES, COMING, versionLine, niceDate } from '../../src/core/releases.js';
 import { SOUNDS, TOOLS, soundPage } from '../../src/core/credits.js';
@@ -75,7 +75,7 @@ const stops = STOPS.map((s, i) => {
   }
   if (s.id === 'dogs') { extra.className += ' dogs'; dogSwatches(extra); }
   if (s.id === 'play') {
-    extra.innerHTML = `${playHtml(true)}<div class="whats-new"><p class="news-head"><span class="beta"></span></p><ul></ul><p class="coming"></p></div><p class="about"></p><p class="about tip"></p><button type="button" class="credits-link">🙏 Thanks &amp; credits</button>`;
+    extra.innerHTML = `${playHtml(true)}<div class="whats-new"><p class="news-head"><span class="beta"></span></p><ul></ul><p class="coming"></p></div><p class="about"></p><p class="about tip"></p><p class="about secret"></p><button type="button" class="credits-link">🙏 Thanks &amp; credits</button>`;
     extra.querySelector('.credits-link').addEventListener('click', () => showCredits(true));
     // What's new in this beta: the newest version's lines (plain text: they're ours, but no HTML needed).
     const news = extra.querySelector('.whats-new'), r = RELEASES[0];
@@ -84,6 +84,7 @@ const stops = STOPS.map((s, i) => {
     news.querySelector('.coming').textContent = `🐾 ${COMING}`;
     extra.querySelector('.about').textContent = ABOUT;
     extra.querySelector('.tip').textContent = IPHONE_TIP;
+    extra.querySelector('.secret').textContent = SECRET;
   }
   // Postcards: scattered a little differently on each stop.
   const pc = sec.querySelector('.cards');
@@ -99,7 +100,7 @@ const stops = STOPS.map((s, i) => {
     b.dataset.k = (1.25 + j * 0.2).toString(); // (parallax: further postcards move faster)
     b.innerHTML = `<img alt="" loading="${i < 2 ? 'eager' : 'lazy'}" decoding="async"><span class="cap"></span>`;
     b.querySelector('img').src = SHOTS[k].src;
-    b.querySelector('.cap').textContent = { garden: 'Home sweet garden', sniff: 'Follow that smell!', bone: 'A golden bone!', town: 'The neighbourhood', heist: 'Shh… the bakery', woods: 'Conker woods', farm: 'The farm', beach: 'The beach', snow: 'Snow day!' }[k] ?? '';
+    b.querySelector('.cap').textContent = SHOTS[k].cap ?? '';
     pc.appendChild(b);
   });
   journey.appendChild(sec);
