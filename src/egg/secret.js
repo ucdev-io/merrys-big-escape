@@ -11,7 +11,7 @@ let open = false;
 /** Is Dog Star on screen? */
 export const dogStarOpen = () => open;
 
-/** Off to the stars. opts: { player, onEnd({ score, wave, lit, best, newBest }), onClose } (see ./dogstar/index.js). */
+/** Off to the stars. opts: { player, onClose } (see ./dogstar/index.js). */
 export function openDogStar(opts = {}) {
   if (open) return;
   open = true;

@@ -12,9 +12,15 @@ import { placeStars, makeStarfield, SIRIUS } from './sky.js';
  *        ▲ 3 darts at you  ■ 4 bounces about  ⬟ 5 circles and spits stars  ⬢ 6+ drifts after you, hatching triangles
  *      So shooting a hexagon makes a pentagon (which spits)… Rounding one up whole is worth far more.
  *   ✧ Broken shapes leave stardust: it fills your 🌕 howl, a shockwave that knocks a side off everything near.
- *   ★ Clear a wave and a star of Canis Major lights up behind you. The tenth is Sirius, the Dog Star.
+ *   ★ Clear a wave and a star of Canis Major lights up behind you. The tenth is Sirius, the Dog Star. (The stars
+ *      stay lit from one game to the next, so the Big Dog can be finished bit by bit: see ./index.js.)
  */
 export const FIELD = 560;
+/** A phone's field is smaller (everything on it bigger): the shorter side is FIELD_PHONE long. */
+export const FIELD_PHONE = 440;
+export const fieldSize = (w, h) => (Math.min(w, h) < 600 ? FIELD_PHONE : FIELD);
+/** How roomy the field is (1 on a big screen, less on a phone): the distances that matter shrink with it. */
+const room = (G) => Math.min(G.W, G.H) / FIELD;
 const TAU = Math.PI * 2;
 export const TAIL_GAP = 10, TAIL_MAX = 80, TAIL_LIFE = 2.2;
 const MIN_LOOP = 900; // (smallest loop that counts, in square units: a wiggle isn't a lasso)
@@ -40,7 +46,9 @@ export function newGame(W, H, { demo = false, lit = 0 } = {}) {
     tail: [], shots: [], foes: [], bullets: [], dust: [], bits: [], sparks: [], rings: [], loops: [], words: [], comets: [],
     queue: [], spawnT: 0, between: demo ? 0.5 : 1.4, over: false, overT: 0, caughtMost: 0,
     sky: makeStarfield(W, H), stars: placeStars(W, H),
-    events: [], // what happened this step, for the screen around the game: { type: 'wave' | 'lit' | 'dogstar' | 'ready' | 'over' }
+    nearly: null, // { x, y, k }: the bit of tail a loop would close on, when the ship's nearly there (drawn as a glint)
+    tip: null, // a line of help along the bottom (until the first round-up: see ./index.js)
+    events: [], // what happened this step, for the screen around the game: { type: 'wave' | 'lit' | 'dogstar' | 'roundup' | 'ready' | 'over' }
   };
 }
 
@@ -56,7 +64,7 @@ export function refit(G, W, H) {
 
 /**
  * One step. ctl: { kx, ky } keys (−1…1), target { x, y } (the mouse: fly towards it), drag { x, y } (a finger's move
- * since the last step: the ship moves with it), howl (pressed).
+ * since the last step: the ship moves with it), held (a finger's down), howl (pressed).
  */
 export function update(G, dt, ctl) {
   G.t += dt;
@@ -65,6 +73,7 @@ export function update(G, dt, ctl) {
   if (G.demo) ctl = pilot(G, dt);
   moveShip(G, dt, ctl);
   growTail(G);
+  loopHint(G);
   if (!G.demo) fire(G, dt);
   waves(G, dt);
   foes(G, dt);
@@ -88,8 +97,9 @@ function moveShip(G, dt, ctl) {
   if (s.dead) return;
   s.inv = Math.max(0, s.inv - dt);
   const px = s.x, py = s.y, drag = ctl.drag;
-  if (drag && (drag.x || drag.y)) { // a finger: move as it moves (it never covers the ship)
-    s.x += drag.x; s.y += drag.y;
+  if (ctl.held) { // a finger: move exactly as it moves, and stop when it stops (it never covers the ship)
+    s.x += drag?.x ?? 0; s.y += drag?.y ?? 0;
+    s.vx = 0; s.vy = 0; // (no sliding on: frames with no touch news in them, or a still finger, keep it put)
   } else {
     let tvx = 0, tvy = 0, grip = 6;
     if (ctl.kx || ctl.ky) { const l = Math.hypot(ctl.kx, ctl.ky); tvx = (ctl.kx / l) * 400; tvy = (ctl.ky / l) * 400; grip = 12; }
@@ -105,7 +115,6 @@ function moveShip(G, dt, ctl) {
   s.y = clamp(s.y, 12, G.H - 12);
   // How it actually moved (fingers, walls and all): the way it faces, and so the way it fires.
   const vx = (s.x - px) / Math.max(dt, 1e-4), vy = (s.y - py) / Math.max(dt, 1e-4);
-  if (drag && (drag.x || drag.y)) { s.vx = vx; s.vy = vy; }
   s.mvx += (vx - s.mvx) * Math.min(1, dt * 14);
   s.mvy += (vy - s.mvy) * Math.min(1, dt * 14);
   if (Math.hypot(s.mvx, s.mvy) > 40) {
@@ -176,6 +185,21 @@ function inside(pts, x, y) {
   return hit;
 }
 
+/** ➰ Nearly a loop? The nearest older bit of tail the ship could close it on, if that loop would count. */
+const NEARLY = 44;
+function loopHint(G) {
+  G.nearly = null;
+  const s = G.ship, T = G.tail;
+  if (s.dead || T.length < 9) return;
+  let best = -1, bd = NEARLY * NEARLY;
+  for (let i = 0; i < T.length - 6; i++) { // (not the last few: they're always near)
+    const d = (T[i].x - s.x) ** 2 + (T[i].y - s.y) ** 2;
+    if (d < bd) { bd = d; best = i; }
+  }
+  if (best < 0 || Math.abs(area([...T.slice(best), s])) < MIN_LOOP) return;
+  G.nearly = { x: T[best].x, y: T[best].y, k: 1 - Math.sqrt(bd) / NEARLY };
+}
+
 function nearEdge(pts, x, y, r) {
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) if (distToSeg(x, y, pts[j], pts[i]) < r) return true;
   return false;
@@ -190,7 +214,7 @@ function lasso(G, pts) {
   for (const b of G.bullets) if (inside(pts, b.x, b.y)) { b.life = 0; burst(G, b.x, b.y, '#ffb43f', 5, 80); }
   for (const d of G.dust) if (inside(pts, d.x, d.y)) d.pull = true;
   G.loops.push({ pts, x: cx, y: cy, life: 0.7, max: 0.7, color: caught.length ? '#ffd36b' : '#7f8cff' });
-  if (!caught.length) { snd.emptyLoop(); return; }
+  if (!caught.length) { if (!G.demo) snd.emptyLoop(); return; } // (the title screen's show is a quiet one)
   let base = 0;
   for (const f of caught) { base += f.sides * 20; f.caught = { t: 0, x0: f.x, y0: f.y, cx, cy }; }
   const n = caught.length, pts2 = base * n;
@@ -200,7 +224,10 @@ function lasso(G, pts) {
   G.shake = Math.min(16, G.shake + 3 + n * 2);
   const words = n === 1 ? `Rounded up a ${NAMES[caught[0].sides] ?? 'shape'}!` : n === 2 ? 'Double round-up!' : n === 3 ? 'Triple round-up!' : n < 6 ? `Round-up ×${n}! Good dog!` : `×${n}!! WHO’S A GOOD DOG?`;
   say(G, cx, cy - 18, words, n >= 3 ? 22 : 17, '#ffe7a3', 1.4);
-  if (!G.demo) say(G, cx, cy + 10, `+${pts2}`, 20, '#ffffff', 1.1);
+  if (G.demo) return;
+  say(G, cx, cy + 10, `+${pts2}`, 20, '#ffffff', 1.1);
+  G.tip = null;
+  G.events.push({ type: 'roundup', n });
   snd.roundUp(n);
 }
 
@@ -361,14 +388,15 @@ export function verts(f, scale = 1) {
 }
 
 const speedScale = (G) => Math.min(1.7, 1 + (G.wave - 1) * 0.05);
-const maxAlive = (G) => (G.demo ? 3 : Math.min(16, 5 + G.wave));
+// (A smaller field holds fewer at once: a phone's is about three quarters of a big screen's.)
+const maxAlive = (G) => (G.demo ? 3 : Math.round(Math.min(16, 5 + G.wave) * clamp((G.W * G.H) / (FIELD * FIELD * 1.8), 0.7, 1)));
 
 function spawn(G, sides, at = null) {
   const s = G.ship;
   let x = at?.x, y = at?.y;
   for (let tries = 0; !at && tries < 30; tries++) {
     x = 50 + Math.random() * (G.W - 100); y = 50 + Math.random() * (G.H - 100);
-    if (Math.hypot(x - s.x, y - s.y) > 240) break;
+    if (Math.hypot(x - s.x, y - s.y) > 240 * room(G)) break;
   }
   const a = Math.random() * TAU, sp = G.demo ? 35 : 80 + Math.random() * 40;
   const f = {
@@ -471,14 +499,14 @@ function foes(G, dt) {
         f.vx += ((dx / d) * sp - f.vx) * Math.min(1, dt * 1.6);
         f.vy += ((dy / d) * sp - f.vy) * Math.min(1, dt * 1.6);
         f.dashT -= dt;
-        if (f.dashT <= 0 && d < 320 && !s.dead) { f.wind = 0.5; f.ax = dx / d; f.ay = dy / d; f.dashT = 2.6 + Math.random() * 2; }
+        if (f.dashT <= 0 && d < 320 * room(G) && !s.dead) { f.wind = 0.5; f.ax = dx / d; f.ay = dy / d; f.dashT = 2.6 + Math.random() * 2; }
       }
       f.rot = f.wind > 0 ? Math.atan2(f.ay, f.ax) : Math.atan2(f.vy, f.vx);
     } else if (f.sides === 4) { // ■ keeps going, bouncing off the edges
       const sp = Math.hypot(f.vx, f.vy), want = (G.demo ? 35 : 95) * ss;
       if (sp > 1) { f.vx += ((f.vx / sp) * want - f.vx) * Math.min(1, dt); f.vy += ((f.vy / sp) * want - f.vy) * Math.min(1, dt); }
     } else if (f.sides === 5) { // ⬟ keeps its distance, circling, and spits stars
-      const radial = (d - 250) * 1.2, tang = 70 * Math.sign(f.spin);
+      const radial = (d - 250 * room(G)) * 1.2, tang = 70 * Math.sign(f.spin);
       let tvx = (dx / d) * radial - (dy / d) * tang, tvy = (dy / d) * radial + (dx / d) * tang;
       const tl = Math.hypot(tvx, tvy), cap = 150 * ss;
       if (tl > cap) { tvx *= cap / tl; tvy *= cap / tl; }

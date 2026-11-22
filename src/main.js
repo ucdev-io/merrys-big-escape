@@ -322,18 +322,23 @@ function frame(now) {
   const t = timer.getElapsed();
 
   const A = active;
-  player.update(dt, input, follow.yaw, A.world);
-  trips?.update(dt);
-  A.chapter.update(dt);
-  hud.update(dt);
-  A.world.update(t, player.pos);
-  follow.update(dt, player.pos, player.heading, player.speed);
+  // 🤫 While Dog Star's open (egg/), the world waits for the dog: no jobs ticking down, no frogs in space. (Not
+  // with friends, though: their game carries on, so ours does too.)
+  const covered = dogStarOpen(), waiting = covered && !net;
+  if (!waiting) {
+    player.update(dt, input, follow.yaw, A.world);
+    trips?.update(dt);
+    A.chapter.update(dt);
+    hud.update(dt);
+    A.world.update(t, player.pos);
+    follow.update(dt, player.pos, player.heading, player.speed);
+  }
 
   A.sky?.position.copy(camera.position);
 
   followSun(player.pos);
 
-  const covered = dogStarOpen(); // (Dog Star fills the screen: no need to paint the world underneath it)
+  // (Dog Star fills the screen: no need to paint the world underneath it)
   if (!covered) pipeline.adapt(raw); // (unclamped: auto quality needs to know how slow slow is)
   const r0 = drawn ? 0 : performance.now();
   if (!covered) pipeline.render(A.scene, camera);

@@ -1,6 +1,6 @@
 import { unlockAudio } from '../../core/audio.js';
 import { music } from '../../core/music.js';
-import { FIELD, newGame, refit, update } from './play.js';
+import { fieldSize, newGame, refit, update } from './play.js';
 import { draw, drawHud } from './draw.js';
 import { snd } from './sound.js';
 import { SIRIUS } from './sky.js';
@@ -13,9 +13,11 @@ import './dogstar.css';
  *
  *   Fly: drag a finger anywhere (the ship moves as your finger moves) · the mouse (it flies to the pointer) ·
  *        arrows / WASD. You fire where you fly.
- *   Howl: tap 🌕 · Space · a click. Pause: ‖ · Esc · P.
+ *   Howl: tap 🌕 (it lights up when it's ready) · Space · a click. Pause: ‖ · Esc · P.
  *
- * Best score and stars lit are kept on this device (merry.dogstar.v1).
+ * Kept on this device (merry.dogstar.v1): the best score, and the stars of the Big Dog lit so far. They stay lit
+ * from one game to the next, so a child can finish it bit by bit; once Sirius shines, the next game starts a new
+ * night sky (and `whole` counts the Big Dogs finished). Saved as each star lights, and on leaving or starting again.
  */
 const KEY = 'merry.dogstar.v1';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) ?? {}; } catch { return {}; } };
@@ -23,15 +25,12 @@ const keep = (d) => { try { localStorage.setItem(KEY, JSON.stringify({ ...load()
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
-/**
- * Open Dog Star. player: the dog to hold still meanwhile (optional). onEnd({ score, wave, lit, best, newBest }):
- * after each game. onClose: when it's closed.
- */
-export function playDogStar({ player = null, onEnd = null, onClose = null } = {}) {
+/** Open Dog Star. player: the dog to hold still meanwhile (optional). onClose: when it's closed. */
+export function playDogStar({ player = null, onClose = null } = {}) {
   unlockAudio();
   const saved = load();
   if (!saved.found) keep({ found: Date.now() });
-  let best = saved.best ?? 0, bestLit = saved.lit ?? 0;
+  let best = saved.best ?? 0, sky = Math.min(SIRIUS, saved.sky ?? 0), whole = saved.whole ?? 0, looped = !!saved.looped;
 
   const el = document.createElement('div');
   el.className = 'dog-star';
@@ -57,8 +56,9 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
   const probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
   el.appendChild(probe);
-  const field = () => { const k = Math.min(w, h) / FIELD; return { W: w / k, H: h / k, k }; };
+  const field = () => { const k = Math.min(w, h) / fieldSize(w, h); return { W: w / k, H: h / k, k }; };
   function fit() {
+    const tall = h > w;
     w = innerWidth; h = innerHeight;
     dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
@@ -66,15 +66,29 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
     safe = { t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0 };
     const F = field();
     scale = F.k * dpr;
-    if (G) refit(G, F.W, F.H);
+    if (!G) return;
+    refit(G, F.W, F.H);
+    if (mode === 'play' && tall !== h > w) pause(); // (the phone turned round mid-game: everything's moved, so take a breath)
   }
   let G = null;
   fit();
-  const fresh = (demo) => { const F = field(); return newGame(F.W, F.H, demo ? { demo, lit: bestLit } : {}); };
+  // A game carries on lighting the Big Dog from where the last one got to (a new night sky once it's whole).
+  const fresh = (demo) => { const F = field(); return newGame(F.W, F.H, { demo, lit: demo || sky < SIRIUS ? sky : 0 }); };
   G = fresh(true);
 
   // ---- what's on screen: 'title' (the show), 'play', 'paused', 'over' ----
-  let mode = 'title', overShown = false;
+  let mode = 'title', overShown = false, bestBefore = best, counted = null;
+
+  /** Keep the best score and the stars lit (a game in progress counts too: leaving mid-game loses nothing). */
+  function record() {
+    if (!G || G.demo || !G.wave) return;
+    best = Math.max(best, G.score);
+    if (G.lit >= SIRIUS && !G.wholeCounted) { G.wholeCounted = true; whole++; }
+    sky = G.lit;
+    const d = { best, sky, whole };
+    if (counted !== G) { counted = G; d.plays = (load().plays ?? 0) + 1; }
+    keep(d);
+  }
   function show(html, buttons) {
     panel.innerHTML = `<div class="ds-card">${html}<div class="ds-btns"></div></div>`;
     const row = panel.querySelector('.ds-btns');
@@ -101,13 +115,17 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
       <p class="ds-sub">a secret from the night sky</p>
       ${how}
       <p class="ds-shapes"><span><i style="color:#ff4fa3">▲</i> darts</span> <span><i style="color:#3fe0ff">■</i> bounces</span> <span><i style="color:#ffb43f">⬟</i> spits</span> <span><i style="color:#8dff5a">⬢</i> hatches</span></p>
-      <p class="ds-goal">Clear waves to light up the Big Dog, star by star. The tenth is <b>Sirius</b>.</p>
-      ${best ? `<p class="ds-best">Best ${best} · ★ ${bestLit}/${SIRIUS}</p>` : ''}`,
+      <p class="ds-goal">${sky >= SIRIUS ? 'The Big Dog is whole! Fly again to light up a new night sky.'
+        : sky ? `★ ${sky} of ${SIRIUS} stars of the Big Dog lit. Clear waves to light the rest: the tenth is <b>Sirius</b>.`
+        : 'Clear waves to light up the Big Dog, star by star. The tenth is <b>Sirius</b>.'}</p>
+      ${best ? `<p class="ds-best">Best ${best}${whole ? ` · Big Dogs lit ${whole}` : ''}</p>` : ''}`,
     [['▶ Fly!', start, 'go'], ['Leave', close]]);
   }
   function start() {
-    mode = 'play'; overShown = false;
+    record(); // (starting again: the game so far still counts)
+    mode = 'play'; overShown = false; bestBefore = best;
     G = fresh(false);
+    if (!looped) G.tip = touch ? 'Fly a loop round a shape! ➰' : 'Fly a loop round a shape to round it up! ➰';
     hide();
     el.classList.add('playing');
   }
@@ -121,12 +139,9 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
   function resume() { if (mode !== 'paused') return; mode = 'play'; hide(); last = performance.now(); }
   function gameOver() {
     overShown = true;
-    const newBest = G.score > best;
-    if (newBest) best = G.score;
-    bestLit = Math.max(bestLit, G.lit);
-    keep({ best, lit: bestLit, plays: (load().plays ?? 0) + 1 });
-    onEnd?.({ score: G.score, wave: G.wave, lit: G.lit, best, newBest });
-    const cheer = G.lit >= SIRIUS ? 'You lit the Dog Star!' : G.lit ? `${G.lit} star${G.lit === 1 ? '' : 's'} of the Big Dog lit` : 'The Big Dog waits…';
+    record();
+    const newBest = G.score > bestBefore;
+    const cheer = G.wholeCounted ? 'You lit the Dog Star! The Big Dog is whole.' : G.lit ? `${G.lit} of ${SIRIUS} stars of the Big Dog lit: they’ll still be shining next time` : 'The Big Dog waits…';
     show(`<h1>${newBest && G.score ? 'A new best!' : 'Good try!'}</h1>
       <p class="ds-score">${G.score}</p>
       <p class="ds-best">wave ${G.wave} · biggest round-up ×${G.caughtMost} · best ${best}</p>
@@ -155,6 +170,7 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
       else if (e.code === 'Space') howlNow = true;
       if (/^(Arrow|Key[WASD])/.test(e.code)) target = null;
     } else if (mode === 'paused' && (e.code === 'Escape' || e.code === 'KeyP')) resume();
+    else if (mode === 'over' && overShown && (e.code === 'Space' || e.code === 'Enter')) start();
     else if (mode === 'over' && overShown && e.code === 'Escape') close();
   };
   const onKeyUp = (e) => keys.delete(e.code); // (let it carry on to the game too, so its keys don't stick down)
@@ -167,8 +183,8 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
     if (mode === 'title') return; // (the show: buttons only)
     if (mode !== 'play') return;
     if (e.pointerType === 'mouse') { if (e.button === 0 || e.button === 2) howlNow = true; target = toWorld(e); return; }
+    // (Only one finger flies; a second does nothing: a resting thumb mustn't waste a howl. Howling's the 🌕 button.)
     if (dragId === null) { dragId = e.pointerId; dragAt = { x: e.clientX, y: e.clientY }; cv.setPointerCapture?.(e.pointerId); }
-    else howlNow = true; // (a second finger: howl)
   });
   cv.addEventListener('pointermove', (e) => {
     if (mode !== 'play') return;
@@ -187,7 +203,7 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
   howlBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); howlNow = true; });
 
   const onResize = () => fit();
-  const onHide = () => { if (document.hidden) pause(); };
+  const onHide = () => { if (document.hidden) { pause(); record(); } }; // (and kept, in case the tab's being closed)
   const onBlur = () => { keys.clear(); pause(); };
   window.addEventListener('resize', onResize);
   window.addEventListener('blur', onBlur);
@@ -205,9 +221,13 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
     if (mode === 'play' || mode === 'title' || mode === 'over') {
       const kx = (keys.has('ArrowRight') || keys.has('KeyD') ? 1 : 0) - (keys.has('ArrowLeft') || keys.has('KeyA') ? 1 : 0);
       const ky = (keys.has('ArrowDown') || keys.has('KeyS') ? 1 : 0) - (keys.has('ArrowUp') || keys.has('KeyW') ? 1 : 0);
-      update(G, dt, mode === 'play' ? { kx, ky, target, drag, howl: howlNow } : { kx: 0, ky: 0, target: null, drag: null, howl: false });
+      update(G, dt, mode === 'play' ? { kx, ky, target, drag, held: dragId !== null, howl: howlNow } : { kx: 0, ky: 0, target: null, drag: null, howl: false });
       drag = { x: 0, y: 0 };
       howlNow = false;
+      for (const e of G.events) {
+        if (e.type === 'lit' || e.type === 'dogstar') record(); // (a star lit is kept straight away)
+        else if (e.type === 'roundup' && !looped) { looped = true; keep({ looped }); } // (no more loop tips)
+      }
       if (mode === 'play' && G.over) mode = 'over';
       if (mode === 'over' && !overShown) gameOver();
     }
@@ -222,6 +242,7 @@ export function playDogStar({ player = null, onEnd = null, onClose = null } = {}
   if (import.meta.env.DEV) window.__dogStar = { get G() { return G; }, get mode() { return mode; } }; // (for poking at in the workshop)
 
   function close() {
+    record();
     cancelAnimationFrame(raf);
     window.removeEventListener('keydown', onKeyDown, true);
     window.removeEventListener('keyup', onKeyUp, true);

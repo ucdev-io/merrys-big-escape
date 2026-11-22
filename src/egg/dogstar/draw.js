@@ -4,10 +4,15 @@ import { LINE_IDX, SIRIUS } from './sky.js';
 /*
  * 🎨 Drawing Dog Star: glowing lines on the night sky. Every line is stroked two or three times (wide and faint,
  * then thin and bright) and added on top of what's there ('lighter'), so where lines cross they glow brighter,
- * like a vector screen. lite: just the thin line (for a phone that's struggling).
+ * like a vector screen. lite: just the thin line (for a phone that's struggling). The little bits that come in
+ * crowds (sparks, sides knocked off, stardust) are drawn a whole crowd at a time instead: see lines().
  */
 const TAU = Math.PI * 2;
-const SHIP = [[16, 0], [12, 2.8], [5, 5.5], [1, 8], [-3, 13.5], [-7, 5.5], [-9, 2.5], [-9, -2.5], [-7, -5.5], [-3, -13.5], [1, -8], [5, -5.5], [12, -2.8]]; // a whippet's head from above: long nose, ears back
+// 🐕 The ship: a dog's head from above (nose forward, along +x), and two floppy ears that fly back as she speeds up.
+const HALF = [[13, 0], [12.4, 2.5], [9.5, 3.8], [6, 4.6], [4, 6.8], [0, 8.8], [-5, 9], [-9, 6.8], [-11, 3.4], [-11.6, 0]]; // (a round head, a short snout)
+const HEAD = [...HALF, ...HALF.slice(1, -1).reverse().map(([x, y]) => [x, -y])];
+const EAR = [[1.2, 8.6], [1.8, 12.6], [-0.6, 17], [-4.6, 17.8], [-6.8, 14.4], [-5.6, 9]], EAR_AT = [-2, 8.8]; // (one ear, out to the side like a beagle's; the other's its mirror)
+const SHIP_SCALE = 1.35;
 export const FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace';
 
 let lite = false;
@@ -27,6 +32,48 @@ function poly(c, V, close = true) {
   c.moveTo(V[0][0], V[0][1]);
   for (let i = 1; i < V.length; i++) c.lineTo(V[i][0], V[i][1]);
   if (close) c.closePath();
+}
+
+/** An ear, swung back by `swing` (radians) about where it joins the head. side: 1 or −1 (which ear). */
+function ear(swing, side) {
+  const cs = Math.cos(swing), sn = Math.sin(swing), [px, py] = EAR_AT;
+  return EAR.map(([x, y]) => { const dx = x - px, dy = y - py; return [px + dx * cs - dy * sn, (py + dx * sn + dy * cs) * side]; });
+}
+
+/** The dog's head, at the origin facing +x (ears open-ended, so they don't draw a line where they join on). */
+function dogHead(c, swing, alpha, w, plain = false) {
+  const line = plain ? () => { c.strokeStyle = '#fff4d6'; c.globalAlpha = alpha; c.lineWidth = w; c.stroke(); } : (k = 1) => glow(c, '#fff4d6', w * k, alpha);
+  for (const side of [1, -1]) { poly(c, ear(swing, side), false); line(0.85); }
+  poly(c, HEAD); line();
+  c.fillStyle = '#fff4d6'; c.globalAlpha = alpha;
+  for (const y of [-3.8, 3.8]) { c.beginPath(); c.arc(3.2, y, 1.5, 0, TAU); c.fill(); } // eyes
+  c.beginPath(); c.arc(12, 0, 2.2, 0, TAU); c.fill(); // nose
+  c.globalAlpha = 1;
+}
+
+/**
+ * A crowd of little lines (sparks, sides knocked off): grouped by colour and (roughly: four steps) how faded they
+ * are, so it's one path and one or two strokes per group, not two or three strokes each. seg(it) adds its line.
+ * soft: a faint wide stroke under the thin one (skipped when lite).
+ */
+function lines(c, list, w, seg, soft = false) {
+  const groups = new Map();
+  for (const it of list) {
+    const a = Math.ceil(Math.min(1, it.life / it.max) * 4) / 4;
+    if (a <= 0) continue;
+    const key = it.color + a;
+    let g = groups.get(key);
+    if (!g) groups.set(key, (g = { color: it.color, a, items: [] }));
+    g.items.push(it);
+  }
+  for (const g of groups.values()) {
+    c.beginPath();
+    for (const it of g.items) seg(it);
+    c.strokeStyle = g.color;
+    if (soft && !lite) { c.globalAlpha = 0.3 * g.a; c.lineWidth = w * 2.6; c.stroke(); }
+    c.globalAlpha = g.a; c.lineWidth = w; c.stroke();
+  }
+  c.globalAlpha = 1;
 }
 
 /** A twinkle: a little four-pointed glint. */
@@ -74,11 +121,19 @@ export function draw(c, G, view) {
     glow(c, L.color, 2, k);
   }
   tail(c, G);
-  for (const d of G.dust) { // stardust
-    const tw = 0.6 + 0.4 * Math.sin(G.t * 9 + d.phase), a = Math.min(1, d.life / 1.5) * tw, r = 2.2;
-    c.beginPath(); c.moveTo(d.x, d.y - r); c.lineTo(d.x + r, d.y); c.lineTo(d.x, d.y + r); c.lineTo(d.x - r, d.y); c.closePath();
-    glow(c, '#bff6ff', 1, a);
+  // Stardust: little twinkling diamonds, a crowd at a time (grouped by how bright each is just now).
+  const dust = [[], [], [], []];
+  for (const d of G.dust) {
+    const a = Math.min(1, d.life / 1.5) * (0.6 + 0.4 * Math.sin(G.t * 9 + d.phase));
+    dust[Math.min(3, Math.floor(a * 4))].push(d);
   }
+  dust.forEach((list, i) => {
+    if (!list.length) return;
+    const r = 2.2;
+    c.beginPath();
+    for (const d of list) { c.moveTo(d.x, d.y - r); c.lineTo(d.x + r, d.y); c.lineTo(d.x, d.y + r); c.lineTo(d.x - r, d.y); c.closePath(); }
+    glow(c, '#bff6ff', 1, (i + 1) / 4);
+  });
   for (const f of G.foes) shape(c, G, f);
   for (const b of G.bullets) { // a pentagon's star-bullet: a little spinning four-pointed star
     const r = 6;
@@ -90,16 +145,11 @@ export function draw(c, G, view) {
   c.beginPath();
   for (const b of G.shots) { c.moveTo(b.x, b.y); c.lineTo(b.x - b.vx * 0.016, b.y - b.vy * 0.016); }
   glow(c, '#fff1c4', 1.8, 1);
-  for (const b of G.bits) { // the sides knocked off, spinning away
-    const k = b.life / b.max, hx = Math.cos(b.a) * b.len * 0.5, hy = Math.sin(b.a) * b.len * 0.5;
-    c.beginPath(); c.moveTo(b.x - hx, b.y - hy); c.lineTo(b.x + hx, b.y + hy);
-    glow(c, b.color, 1.8, k);
-  }
-  for (const p of G.sparks) {
-    const k = p.life / p.max;
-    c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03);
-    glow(c, p.color, 1.2, k);
-  }
+  lines(c, G.bits, 1.8, (b) => { // the sides knocked off, spinning away
+    const hx = Math.cos(b.a) * b.len * 0.5, hy = Math.sin(b.a) * b.len * 0.5;
+    c.moveTo(b.x - hx, b.y - hy); c.lineTo(b.x + hx, b.y + hy);
+  }, true);
+  lines(c, G.sparks, 1.2, (p) => { c.moveTo(p.x, p.y); c.lineTo(p.x - p.vx * 0.03, p.y - p.vy * 0.03); });
   for (const R of G.rings) {
     const k = R.life / R.max;
     c.beginPath(); c.arc(R.x, R.y, R.r, 0, TAU);
@@ -165,12 +215,17 @@ function constellation(c, G) {
 function tail(c, G) {
   const T = G.tail, s = G.ship;
   if (!T.length || s.dead) return;
-  const pts = [...T, { x: s.x, y: s.y, t: G.t }];
+  const pts = [...T, { x: s.x, y: s.y, t: G.t }], near = G.nearly?.k ?? 0;
   for (let i = 0; i < pts.length - 1; i += 5) { // in short runs, older ones fainter and thinner
     const j = Math.min(pts.length - 1, i + 5), age = (G.t - pts[i].t) / TAIL_LIFE, along = j / pts.length;
     c.beginPath(); c.moveTo(pts[i].x, pts[i].y);
     for (let k = i + 1; k <= j; k++) c.lineTo(pts[k].x, pts[k].y);
-    glow(c, '#ffd36b', 0.8 + along * 1.2, Math.max(0, 1 - age) * (0.25 + 0.75 * along));
+    glow(c, '#ffd36b', (0.8 + along * 1.2) * (1 + near * 0.6), Math.min(1, Math.max(0, 1 - age) * (0.25 + 0.75 * along) * (1 + near)));
+  }
+  // ➰ Nearly a loop: a twinkle where it'll close ("join up here!"), brighter the closer you are.
+  if (G.nearly) {
+    const n = G.nearly, beat = 0.7 + 0.3 * Math.sin(G.t * 20);
+    glint(c, n.x, n.y, (4 + 6 * n.k) * beat, '#ffe7a3', 0.45 + 0.55 * n.k);
   }
 }
 
@@ -220,19 +275,17 @@ function ship(c, G) {
   const s = G.ship;
   if (s.dead) return;
   const blink = s.inv > 0 && s.inv < 100 && Math.floor(G.t * 14) % 2 === 0;
+  // The ears fly back the faster she goes (and flap a little).
+  const sp = Math.min(1, Math.hypot(s.mvx, s.mvy) / 650), swing = 0.12 + 0.5 * sp + Math.sin(G.t * 17) * 0.09 * sp;
   c.save();
-  c.translate(s.x, s.y); c.rotate(s.a); c.scale(1.25, 1.25);
-  poly(c, SHIP);
-  glow(c, '#fff4d6', 1.8, blink ? 0.35 : 1);
-  c.fillStyle = '#fff4d6'; c.globalAlpha = blink ? 0.35 : 1;
-  c.fillRect(5, -4, 2, 2); c.fillRect(5, 2, 2, 2); // eyes
-  c.fillRect(14.5, -1.2, 2.4, 2.4); // nose
+  c.translate(s.x, s.y); c.rotate(s.a); c.scale(SHIP_SCALE, SHIP_SCALE);
+  dogHead(c, swing, blink ? 0.35 : 1, 1.5);
   c.restore();
 }
 
 /**
- * The scores and things over the top, in screen pixels: points (and your best), the wave and stars lit, paws
- * left, and the howl filling up. safe: the phone's notch and corners { t, r, b, l }.
+ * The scores and things over the top, in screen pixels: points (and your best) with the paws left under them, the
+ * wave and stars lit, the howl filling up, and a tip (G.tip) above it. safe: the phone's notch and corners { t, r, b, l }.
  */
 export function drawHud(c, G, { dpr, w, h, safe, best, touch }) {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -250,11 +303,11 @@ export function drawHud(c, G, { dpr, w, h, safe, best, touch }) {
   c.fillText(G.wave ? `WAVE ${G.wave}` : '', w / 2, T + 2);
   c.font = `12px ${FONT}`; c.fillStyle = 'rgba(159, 184, 255, 0.85)';
   c.fillText(`★ ${G.lit}/${SIRIUS}`, w / 2, T + 20);
-  // 🐾 paws left: little dog heads (left of the pause button)
+  // 🐾 paws left: little dog heads, under the score (out of the way of the middle, however many there are)
   for (let i = 0; i < G.lives; i++) {
     c.save();
-    c.translate(R - 62 - i * 24, T + 12); c.rotate(-Math.PI / 2); c.scale(0.7, 0.7);
-    poly(c, SHIP); c.strokeStyle = '#fff4d6'; c.lineWidth = 2; c.stroke();
+    c.translate(L + 11 + i * 25, T + 58); c.rotate(-Math.PI / 2); c.scale(0.55, 0.55);
+    dogHead(c, 0.2, 1, 2.2, true);
     c.restore();
   }
   // 🌕 the howl: a bar along the bottom (on a touch screen, the button fills up too)
@@ -265,4 +318,9 @@ export function drawHud(c, G, { dpr, w, h, safe, best, touch }) {
   c.fillRect(bx + 2, by + 2, (bw - 4) * G.howl, 4);
   c.textAlign = 'center'; c.textBaseline = 'bottom'; c.font = `11px ${FONT}`; c.fillStyle = 'rgba(223, 232, 255, 0.7)';
   c.fillText(G.howl >= 1 ? (touch ? 'HOWL READY: TAP 🌕' : 'HOWL READY: SPACE / CLICK') : 'HOWL', w / 2, by - 3);
+  if (G.tip && G.wave) { // ➰ help, until it's done once
+    c.font = `bold 14px ${FONT}`; c.fillStyle = '#ffe7a3'; c.globalAlpha = 0.7 + 0.3 * Math.sin(G.t * 4);
+    c.fillText(G.tip, w / 2, by - 24);
+    c.globalAlpha = 1;
+  }
 }
