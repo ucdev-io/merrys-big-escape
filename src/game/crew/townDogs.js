@@ -107,7 +107,7 @@ export class TownDogs {
 
   /** A speech bubble over their head, with their name (there are a lot of dogs about). */
   say(e, text, dur = 3.2) {
-    if (!text) return;
+    if (!text || !this.hud.card.classList.contains('hidden')) return; // (no chatting over a card)
     this.hud.say(`${this.emoji(e)} <b>${e.pal.name}:</b> ${text}`, () => e.pos.clone().add(V(0, 0.95 * e.size + 0.2, 0)), dur);
   }
 

@@ -59,7 +59,7 @@ export class Crew {
   }
   /** One of them says something (with their name, so you get to know who's who). */
   say(m, key, dur = 3) {
-    if (!m.cd) return;
+    if (!m.cd || !this.hud.card.classList.contains('hidden')) return; // (no chatting over a card)
     const head = () => m.cd.pos.clone().add(V(0, 0.95 * m.cd.size + 0.15, 0));
     this.hud.say(`${m.pal.emoji} <b>${m.pal.name}:</b> ${this.line(key, { pal: m.pal.name })}`, head, dur);
   }
@@ -112,6 +112,7 @@ export class Crew {
     const m = this.member(id);
     if (dog && !m.cd) this.makeDog(m, at, dog);
     else if (!m.cd) { this.makeDog(m, at); }
+    else if (dog && m.cd.dog !== dog) dog.root.removeFromParent(); // (already had a dog for them, say a pal made on another device: no statue left behind)
     m.mode = 'waiting';
     if (!first) { this.choose(m, pals.following().length < MAX_CREW ? 'come' : 'home'); return; }
     const skill = SKILLS[pal.skill];

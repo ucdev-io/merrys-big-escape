@@ -12,6 +12,15 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
+    version: '0.9.0', date: '2026-11-23', title: 'Merry’s crew',
+    notes: [
+      '🐾 Ten dogs live around town: in the park, by the pond, on bakery street, down the alley, in the woods, at the farm and on the beach. Each one has a game to play: hide-and-seek, fetch, a race, a howl-along, copy the tricks and more. Win and they’re your pal!',
+      '🐕 Your crew: up to three pals follow you everywhere. They hop, paddle and tunnel after you, woof when you woof and copy your tricks. Near a pink-ringed team bone, a crew dog gives you a leg-up!',
+      '🏡 The rest of your pals hang out in your garden. Walk up to one and woof to swap them in, or pick your crew from ☰ → My crew.',
+      '📖 Every pal gets a page in your Sniff Book (🐾 Friends). Can you make friends with all ten?',
+    ],
+  },
+  {
     version: '0.8.3', date: '2026-11-22', title: 'Psst… a secret!',
     notes: [
       '✦ Psst… a secret shines somewhere in the game. Can you find it?',

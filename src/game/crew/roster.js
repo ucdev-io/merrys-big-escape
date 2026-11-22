@@ -21,7 +21,7 @@ export const PALS = [
   { id: 'barnaby', emoji: '🐻', name: 'Barnaby', breed: 'bernie', alt: 'cloud', home: 'pond', want: 'swim', skill: 'big',
     blurb: 'A big, gentle Bernese who won’t get his paws wet. Big enough to give anyone a leg-up.' },
   { id: 'tank', emoji: '🛡️', name: 'Tank', breed: 'bruno', alt: 'winston', home: 'garden', want: 'dig', skill: 'dig',
-    blurb: 'A Staffy stuck behind his garden fence, longing for an adventure.' },
+    blurb: 'A Staffy stuck behind his garden gate, longing for an adventure.' },
   { id: 'pebble', emoji: '🪨', name: 'Pebble', breed: 'mochi', alt: 'frankie', home: 'alley', want: 'copy', skill: 'look',
     blurb: 'A pug who knows every trick in the book, and wants to see yours.' },
   { id: 'sprout', emoji: '🌱', name: 'Sprout', breed: 'peanut', alt: 'pompom', home: 'street', want: 'chase', skill: 'quick',
