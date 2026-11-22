@@ -226,6 +226,7 @@ export class HUD {
     const list = this.card.querySelector('.menu-list');
     const item = (label, fn) => { const b = el('button', 'pill big menu-item'); b.textContent = label; b.onclick = fn; list.appendChild(b); return b; };
     item('🐶 My dog', () => this.showMyDog());
+    if (this.onCrew) item('🐾 My crew', () => this.onCrew());
     const w = item(`📅 Today’s walk · ${walk.doneCount}/3`, () => this.showWalk());
     if (walk.unseen) w.classList.add('dot');
     item('❓ How to play', () => this.showHelp());

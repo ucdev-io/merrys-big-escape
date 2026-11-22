@@ -108,7 +108,7 @@ export class TownChapter {
     // with you (up to three) or hang out in your garden.
     this.crew = new Crew({
       scene, world, hud, player, actions: this.actions, follow, dogName: () => this.profile().name,
-      homeGarden: () => this.world.homes?.[this.homeSlot ?? 0]?.garden?.rect,
+      homeGarden: () => this.world.homes?.[this.homeSlot ?? 0]?.garden?.rect, bones: () => this.bones.list,
     });
     this.townDogs = this.friends.add(new TownDogs({ ...friendly, crew: this.crew }));
     globalThis.__mark?.('setup: friends');
@@ -646,7 +646,7 @@ export class TownChapter {
     const door = canAct && !paw ? this.portals.hint(pos, this.actions.nose()) ?? this.busStop.prompt(pos) : null; // (a way into a trip: the alley's drain… or the bus stop)
     this.portals.update(pos, dt);
     this.hud.setPawAction(paw?.act === 'dig' ? 'dig' : paw?.act ?? door?.paw ?? this.beach?.pawAct ?? this.seasons.pawAct ?? 'dig');
-    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? b.hint ?? this.buried.hint ?? this.shelf.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
+    if (canAct) this.hud.setPrompt(door?.text ?? this.heists.prompt ?? paw?.text ?? (b.hint && (this.crew.boneHint ?? b.hint)) ?? this.buried.hint ?? this.shelf.hint ?? this.friends.hint ?? this.woods?.hint ?? this.beach?.hint ?? this.seasons.prompt ?? this.puzzles.hint);
     this.friends.update(dt, P, canAct, { sniffing: canAct && this.input.sniff, nose: this.actions.nose() });
 
     // Discover places by walking into them (an area's place: by going in past its gate).
@@ -693,10 +693,10 @@ export class TownChapter {
     if ((here?.kind ?? 'town') !== this.musicPlace) { this.musicPlace = here?.kind ?? 'town'; music.setPlace(this.musicPlace); }
 
     // Cars: they stop and honk for dogs in the road, and only ever give a gentle bonk.
-    const others = [...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position);
+    const others = this.crew.positions([...this.remotes.dogs.values()].filter((r) => r.dog.root.visible).map((r) => r.dog.root.position)); // (and your crew)
     if (this.traffic.update(dt, P, others).bonked) this.hud.float('Bonk! 💫', this.actions.anchor());
     // Things to stand on that move: other dogs' backs (the co-op boost!), and the cars' bonnets and roofs (a ride!).
-    P.platforms = this.traffic.platforms(this.remotes.platforms());
+    P.platforms = this.traffic.platforms(this.crew.platforms(this.remotes.platforms())); // (and a crew dog giving you a leg-up)
 
     // Compass: toward a game's next target, home with loot, whatever the current job needs, a BBQ party, or the next place to discover.
     // (A job can point the compass somewhere else — near, not on, something to sniff out — or hide it.)

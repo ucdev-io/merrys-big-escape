@@ -30,7 +30,7 @@ export const pals = {
 
   /** Who's following you (ids: pals only, at most MAX_CREW). */
   following() {
-    const ids = load()[dogKey()];
+    const all = load(), ids = all[dogKey()] ?? all.local; // (a dog just saved on the game server keeps the crew it had on this device)
     return (Array.isArray(ids) ? ids : []).filter((id) => PAL[id] && pals.isPal(id)).slice(0, MAX_CREW);
   },
   setFollowing(ids) {
