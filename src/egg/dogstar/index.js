@@ -41,8 +41,11 @@ export function playDogStar({ player = null, onClose = null } = {}) {
   document.body.appendChild(el);
   const cv = el.querySelector('canvas'), c = cv.getContext('2d');
   const panel = el.querySelector('.ds-panel'), pauseBtn = el.querySelector('.ds-pause'), howlBtn = el.querySelector('.ds-howl');
-  const touch = matchMedia('(pointer: coarse)').matches;
+  // A touch screen gets the 🌕 button: one that says it's a touch screen, or any the moment a finger lands on it
+  // (a laptop with a touch screen says it's a mouse one, and there's no second-finger howl any more).
+  let touch = matchMedia('(pointer: coarse)').matches;
   el.classList.toggle('ds-touch', touch);
+  el.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !touch) { touch = true; el.classList.add('ds-touch'); } }, true);
 
   // Hold the dog still, and swap the music for ours.
   const froze = !!player && !player.frozen;
@@ -103,7 +106,7 @@ export function playDogStar({ player = null, onClose = null } = {}) {
     row.querySelector('button')?.focus({ preventScroll: true });
   }
   const hide = () => { panel.classList.remove('on'); el.classList.remove('menu'); panel.innerHTML = ''; document.activeElement?.blur?.(); };
-  const how = touch
+  const how = () => touch
     ? '<p>Drag anywhere to fly. <b>You fire where you fly.</b></p><p>Loop your <b class="gold">tail</b> right round shapes to round them up whole: more in one loop, more points.</p><p>Every hit knocks a side off. Stardust fills your 🌕 howl.</p>'
     : '<p><b>Mouse</b>, <b>arrows</b> or <b>WASD</b> to fly. <b>You fire where you fly.</b></p><p>Loop your <b class="gold">tail</b> right round shapes to round them up whole: more in one loop, more points.</p><p>Every hit knocks a side off. Stardust fills your howl (<b>Space</b> or <b>click</b>). <b>Esc</b> pauses.</p>';
 
@@ -113,7 +116,7 @@ export function playDogStar({ player = null, onClose = null } = {}) {
     el.classList.remove('playing');
     show(`<h1 class="ds-logo">✦ DOG STAR ✦</h1>
       <p class="ds-sub">a secret from the night sky</p>
-      ${how}
+      ${how()}
       <p class="ds-shapes"><span><i style="color:#ff4fa3">▲</i> darts</span> <span><i style="color:#3fe0ff">■</i> bounces</span> <span><i style="color:#ffb43f">⬟</i> spits</span> <span><i style="color:#8dff5a">⬢</i> hatches</span></p>
       <p class="ds-goal">${sky >= SIRIUS ? 'The Big Dog is whole! Fly again to light up a new night sky.'
         : sky ? `★ ${sky} of ${SIRIUS} stars of the Big Dog lit. Clear waves to light the rest: the tenth is <b>Sirius</b>.`

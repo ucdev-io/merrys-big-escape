@@ -18,7 +18,7 @@ const playHtml = (big) => `<a class="play" data-play href="/play/"><span class="
 // ---------- sheets: cards that pop up over the walk (Thanks & credits, What's new) ----------
 // While one's up, swipes and the wheel scroll it instead of walking Merry along.
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-let sheetOpen = null;
+let sheetOpen = null, sheetFrom = null;
 function makeSheet(label, html) {
   const el = document.createElement('div');
   el.className = 'sheet';
@@ -34,11 +34,18 @@ function makeSheet(label, html) {
 }
 function showSheet(el) {
   if (sheetOpen) sheetOpen.hidden = true;
+  if (el && !sheetOpen) sheetFrom = document.activeElement; // (where to go back to afterwards)
   sheetOpen = el;
-  if (!el) return;
-  el.hidden = false;
-  el.querySelector('.panel').scrollTop = 0;
-  el.querySelector('.close').focus({ preventScroll: true });
+  // Everything behind a sheet is out of reach while it's up: Tab stays in the sheet (and can't walk Merry off behind it).
+  for (const n of document.body.children) if (!n.classList.contains('sheet')) n.inert = !!el;
+  if (el) {
+    el.hidden = false;
+    el.querySelector('.panel').scrollTop = 0;
+    el.querySelector('.close').focus({ preventScroll: true });
+  } else {
+    sheetFrom?.focus?.({ preventScroll: true });
+    sheetFrom = null;
+  }
 }
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetOpen) showSheet(null); });
 
@@ -64,9 +71,18 @@ const news = makeSheet('What’s new', `<h2 class="hand">What’s new ✨</h2><p
 
 /** Put picture k (a key of SHOTS) on postcard b: the photo, its caption, and what it shows (for screen readers). */
 function showShot(b, k) {
+  b.dataset.want = k; // (and forget any other picture still on its way: see showShotWhenReady)
   b.querySelector('img').src = SHOTS[k].src;
   b.querySelector('.cap').textContent = SHOTS[k].cap ?? '';
   b.setAttribute('aria-label', `Bigger picture: ${SHOTS[k].alt}`);
+}
+/** The same, once the picture's arrived: so the photo and its caption change together (‹ › in the big view). */
+function showShotWhenReady(b, k) {
+  b.dataset.want = k;
+  const im = new Image(), put = () => { if (b.dataset.want === k) showShot(b, k); };
+  im.onload = im.onerror = put;
+  im.src = SHOTS[k].src;
+  if (im.complete) put();
 }
 
 // ---------- build the stops ----------
@@ -147,6 +163,9 @@ const stops = STOPS.map((s, i) => {
   return { s, sec, card, dot, posts: [...pc.querySelectorAll('.postcard')] };
 });
 playButtons();
+// (The little Play button at the top is just ▶ on a narrow phone: it keeps its words for screen readers.)
+const mini = document.querySelector('.mini-play'), miniSays = mini?.querySelector('.label').textContent;
+mini?.setAttribute('aria-label', miniSays === 'Play' ? 'Play the demo' : miniSays);
 
 // ---------- where we are ----------
 const H = () => stops[0].sec.offsetHeight || innerHeight;
@@ -155,7 +174,7 @@ const go = (i) => { i = Math.max(0, Math.min(N - 1, i)); scrollTo({ top: i * H()
 document.querySelector('.news-link')?.addEventListener('click', (e) => { e.preventDefault(); showSheet(news); });
 addEventListener('keydown', (e) => {
   if (sheetOpen || e.target.closest?.('input, textarea')) return;
-  if (open) { // a big postcard: the arrows go through that stop's pictures
+  if (open && open.all.length > 1) { // a big postcard: the arrows go through that stop's pictures (just one? they walk on)
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); }
     return;
   }
@@ -297,19 +316,28 @@ function tick(now) {
 requestAnimationFrame(tick);
 
 // ---------- postcards: tap for a big one (‹ › go through all that stop's pictures) ----------
-let open = null;
+let open = null, landing = null; // landing: a postcard on its way back down to its place, { b, t }
 const nav = document.createElement('div');
 nav.className = 'shot-nav';
 nav.hidden = true;
-nav.innerHTML = '<button type="button" class="prev" aria-label="Previous picture">‹</button><span class="count"></span><button type="button" class="next" aria-label="Next picture">›</button>';
+nav.innerHTML = '<button type="button" class="prev" aria-label="Previous picture">‹</button><span class="count" aria-live="polite"></span><button type="button" class="next" aria-label="Next picture">›</button>';
 document.body.appendChild(nav);
 nav.querySelector('.prev').addEventListener('click', () => step(-1));
 nav.querySelector('.next').addEventListener('click', () => step(1));
+const count = () => { nav.querySelector('.count').textContent = `${open.at + 1} / ${open.all.length}`; };
 function step(d) {
   if (!open || open.all.length < 2) return;
   open.at = (open.at + d + open.all.length) % open.all.length;
-  showShot(open.b, open.all[open.at]);
-  nav.querySelector('.count').textContent = `${open.at + 1} / ${open.all.length}`;
+  showShotWhenReady(open.b, open.all[open.at]);
+  count();
+}
+/** Put a postcard that's still flying home straight back in its place (a quick second tap mustn't catch it mid-air). */
+function land() {
+  if (!landing) return;
+  const { b, t } = landing;
+  landing = null;
+  clearTimeout(t);
+  b.classList.remove('big'); b.style.transition = ''; b.style.left = b.style.top = b.style.width = '';
 }
 document.addEventListener('click', (e) => {
   if (e.target.closest('.shot-nav')) return;
@@ -317,30 +345,35 @@ document.addEventListener('click', (e) => {
   const more = e.target.closest('.more-shots');
   const b = more ? stops[Number(more.dataset.stop)].posts.at(-1) : e.target.closest('.postcard');
   if (!b) return;
+  land();
   const all = stops[Number(b.dataset.stop)].s.shots, at = more ? stops[Number(more.dataset.stop)].posts.length : Number(b.dataset.at);
   if (more) showShot(b, all[at]);
+  for (const k of all) new Image().src = SHOTS[k].src; // (the rest of this stop's pictures, on their way for ‹ ›)
+  // As big as fits: the screen's width, or its height less the ‹ › bar (when there is one), whichever's smaller.
+  const navH = all.length > 1 ? 68 : 0, room = innerHeight - 24 - navH;
+  const w = Math.min(innerWidth * 0.92, 1100, (room - 48) * (1280 / 652)), h = w * (652 / 1280) + 48;
   const r = b.getBoundingClientRect();
-  const w = Math.min(innerWidth * 0.92, 1100), h = w * (652 / 1280) + 48;
   b.classList.add('big');
   Object.assign(b.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px` });
   b.style.setProperty('--px', '0px');
   open = { b, r, all, at };
-  if (all.length > 1) { nav.hidden = false; nav.querySelector('.count').textContent = `${at + 1} / ${all.length}`; }
+  if (all.length > 1) { nav.hidden = false; count(); nav.querySelector('.next').focus({ preventScroll: true }); }
   requestAnimationFrame(() => {
     b.style.transition = still ? 'none' : 'left 0.35s ease, top 0.35s ease, width 0.35s ease, transform 0.35s ease';
-    Object.assign(b.style, { left: `${(innerWidth - w) / 2}px`, top: `${Math.max(12, (innerHeight - h) / 2)}px`, width: `${w}px` });
+    Object.assign(b.style, { left: `${(innerWidth - w) / 2}px`, top: `${Math.max(12, 12 + (room - h) / 2)}px`, width: `${w}px` });
     b.style.setProperty('--r', '0deg');
   });
 });
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) close(); });
-addEventListener('scroll', () => open && close(), { passive: true });
-function close() {
+addEventListener('scroll', () => open && close({ refocus: false }), { passive: true }); // (walked off: don't pull focus back here)
+/** Back down to its place, showing its own picture again (the arrows' focus goes back to it, for keyboards). */
+function close({ refocus = true } = {}) {
   const { b, r, all } = open;
   open = null;
+  const keys = nav.contains(document.activeElement);
   nav.hidden = true;
+  showShot(b, all[Number(b.dataset.at)]);
   Object.assign(b.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px` });
-  setTimeout(() => {
-    b.classList.remove('big'); b.style.transition = ''; b.style.left = b.style.top = b.style.width = '';
-    showShot(b, all[Number(b.dataset.at)]); // (back to its own picture)
-  }, still ? 0 : 360);
+  landing = { b, t: setTimeout(land, still ? 0 : 360) };
+  if (refocus && keys) b.focus({ preventScroll: true });
 }

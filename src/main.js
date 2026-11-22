@@ -235,11 +235,12 @@ const applyStats = () => player.setStats(statsFor(progress.level, progress.look)
 applyStats();
 progress.on((e) => { if (e.look || e.levelUp || e.synced || e.amount) applyStats(); });
 createTouchControls(input, follow);
-// 🤫 Type "sirius" for a secret in the stars (see egg/secret.js). The dog sits still while it's open.
-onSecretWord('sirius', () => openDogStar({ player }));
 const chapter = inTown
   ? new TownChapter({ scene, world, player, hud, input, follow, pipeline, net, welcome, prefillCode })
   : new YardChapter({ scene, world, player, hud, input, follow, pipeline });
+// 🤫 Type "sirius" for a secret in the stars (see egg/secret.js). The dog sits still while it's open. Not in the middle
+// of a game (Bone Rush, Zoomies Dash…), though: their clocks are real time, so it'd be over by the time she was back.
+onSecretWord('sirius', () => { if (!chapter.games?.active) openDogStar({ player }); });
 const setupAt = performance.now();
 // Leaving (into the neighbourhood, say): give the graphics memory back now rather than whenever the old
 // page is finally thrown away, so the next page has all of it (a big town needs it on a phone). Back to

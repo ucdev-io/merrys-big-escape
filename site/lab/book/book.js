@@ -10,7 +10,6 @@ const still = prefersStill();
 const PAGES = STOPS.slice(1); // (the welcome is the cover)
 const N = PAGES.length;
 const TAB_COLS = ['#f2a0b4', '#f6d06a', '#b69be0', '#9cbf6a', '#8fc4d8', '#f08a6a', '#c2d98a', '#f9d98e'];
-const CAPS = { garden: 'Home sweet garden', sniff: 'Follow that smell!', bone: 'A golden bone!', town: 'The neighbourhood', heist: 'Shh… the bakery', woods: 'Conker woods', farm: 'The farm', beach: 'The beach', snow: 'Snow day!' };
 const TRICKS = { bow: 'Merry does a play bow', spin: 'Merry chases her tail', sit: 'Merry sits nicely', dance: 'Merry does a happy dance', roll: 'Merry rolls over', howl: 'Merry howls at the sky' };
 const narrow = () => matchMedia('(max-width: 760px)').matches;
 const $ = (s, r = document) => r.querySelector(s);
@@ -45,7 +44,7 @@ function rightPage(p) {
       b.setAttribute('aria-label', `Bigger picture: ${SHOTS[k].alt}`);
       b.innerHTML = '<img alt="" decoding="async"><span class="cap"></span>';
       b.querySelector('img').src = SHOTS[k].src;
-      b.querySelector('.cap').textContent = CAPS[k];
+      b.querySelector('.cap').textContent = SHOTS[k].cap ?? ''; // (each picture's caption lives with it, in content.js)
       snaps.appendChild(b);
     });
     el.appendChild(snaps);

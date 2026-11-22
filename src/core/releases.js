@@ -1,6 +1,7 @@
 /*
- * 🗒️ Merry's Big Escape is in beta: what's new in each version, newest first. The game's title screen (and ☰ → ✨
- * What's new) and Merry's page (site/) both show the latest version, when it came out, and what's in it.
+ * 🗒️ Merry's Big Escape is in beta: what's new in each version, newest first. This is the whole log: nothing's ever
+ * taken out. The game's title screen (and ☰ → ✨ What's new) shows the latest couple; Merry's page (site/) names the
+ * latest on its last card, and its What's new pop-up lists every one.
  *
  * A new version: add it at the top (version, date as YYYY-MM-DD, a title, a few short lines a kid can read) and set
  * package.json's "version" to match.

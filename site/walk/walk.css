@@ -116,14 +116,18 @@ body { min-height: 100svh; }
 .sheet ul { margin: 0 0 6px; padding-left: 20px; }
 .sheet li { margin: 2px 0; }
 .sheet a { color: inherit; }
-.sheet .close { display: block; margin: 14px auto 0; border: 0; border-radius: 999px; background: var(--sun); color: var(--ink); font-size: 22px; padding: 6px 22px 8px; cursor: pointer; }
+.sheet .close { /* (stays in reach at the bottom however long the sheet is: What's new has every update) */
+  display: block; position: sticky; bottom: 0; margin: 14px auto 0; border: 0; border-radius: 999px; background: var(--sun); color: var(--ink);
+  font-size: 22px; padding: 6px 22px 8px; cursor: pointer; box-shadow: 0 0 0 10px var(--paper);
+}
 .sheet .news-ver { margin: 0 0 4px; color: var(--ink-soft); }
 .sheet .release h3 { font-size: 21px; margin: 18px 0 4px; }
 .sheet .release h3 small { font-weight: normal; font-size: 14px; color: var(--ink-soft); white-space: nowrap; }
 .sheet .coming { margin: 14px 0 0; color: var(--ink-soft); }
 /* "+3 more" under a stop's postcards, and the ‹ 2 / 6 › under a big one. */
 .more-shots {
-  position: absolute; left: calc(var(--l, 10%) + var(--pw) - 7.2em); top: calc(var(--t, 14%) + var(--pw) * 0.5 + 28px); z-index: 2; padding: 3px 12px 5px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  position: absolute; left: calc(var(--l, 10%) + var(--pw) - 7.2em); top: calc(var(--t, 14%) + var(--pw) * 0.5 + 28px); z-index: 2;
+  display: inline-flex; align-items: center; min-height: 44px; padding: 3px 14px 5px; border-radius: 999px; cursor: pointer; white-space: nowrap;
   border: 1.5px solid rgba(59, 43, 37, 0.35); background: #fffaf0; color: var(--ink); font-size: 19px; box-shadow: 0 6px 14px rgba(59, 43, 37, 0.2);
 }
 .shot-nav {
@@ -181,8 +185,9 @@ body.walked .hint { opacity: 0; }
   .words { padding: 12px 16px 14px; }
   .title { font-size: 30px; }
   .text { font-size: 15px; }
-  .cards { height: 52svh; align-self: start; }
-  .postcard { width: min(30vw, 280px); top: 0; }
+  .cards { height: 52svh; align-self: start; --pw: min(30vw, 280px); }
+  .postcard { top: 0; }
+  .more-shots { left: auto; right: 2%; top: calc(var(--pw) * 0.5 + 26px); font-size: 16px; } /* (the pile pokes off the edge here: keep the tag on screen) */
   .stop[data-id='hello'] .card { justify-items: start; text-align: left; padding-left: max(5vw, 20px); padding-top: 56px; }
   .stop[data-id='hello'] .words { max-width: 56vw; }
   .stop[data-id='hello'] .title { font-size: 46px; }
