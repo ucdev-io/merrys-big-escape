@@ -58,7 +58,7 @@ export class Carry {
     for (const it of this.items) {
       const reach = (it.buried ? r + 0.3 : r) + (it.def.reach ?? 0); // (long things can be grabbed from further off)
       const d = Math.hypot(it.pos.x - nose.x, it.pos.z - nose.z);
-      if (d < reach && d < bd && Math.abs(it.pos.y - this.player.pos.y) < 0.7) { bd = d; best = it; }
+      if (d < reach && d < bd && Math.abs(it.pos.y - this.player.pos.y) < (it.floats ? 1.1 : 0.7)) { bd = d; best = it; } // (floating on a pond: big dogs swim low)
     }
     return best;
   }

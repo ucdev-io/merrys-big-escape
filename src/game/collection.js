@@ -83,4 +83,15 @@ export const FRIENDS = [
   { any: ['freed', 'escapes'], emoji: '🏠', name: 'The dogs at Sunny Paws', blurb: 'Dogs waiting in the pound, hoping somebody lets them out.', hint: 'Doug takes naughty dogs somewhere…', times: 'Set free:', count: 'freed' },
   { any: ['agility', 'tricks', 'seek', 'catches', 'rosettes'], emoji: '🏆', name: 'The Big Dog Show', blurb: 'The judge, Ruby and her frisbees, and dogs from all over town.', hint: 'Something’s on at the showground… (a day out by bus)', times: 'Rosettes:', count: 'rosettes' },
   { any: ['dogsmet'], emoji: '🐕', name: 'Dogs out for a walk', blurb: 'The dogs being walked round the blocks.', hint: 'Dogs walk round the town with their people…', times: 'Said hello' },
+  // 🐾 The town dogs: friends for your crew (see crew/townDogs.js).
+  { any: ['palbiscuit'], emoji: '🍪', name: 'Biscuit', blurb: 'A beagle in the park whose nose is never off the ground. Loves hide-and-seek.', hint: 'Somebody in the park is all nose…', times: 'Pals! Played' },
+  { any: ['palbonnie'], emoji: '🎀', name: 'Bonnie', blurb: 'A golden retriever in the park who would play fetch all day.', hint: 'Somebody in the park has a ball…', times: 'Pals! Played' },
+  { any: ['palnoodle'], emoji: '🌭', name: 'Noodle', blurb: 'A sausage dog on bakery street who lives for snacks.', hint: 'Somebody long and hungry hangs about bakery street…', times: 'Pals! Played' },
+  { any: ['palbarnaby'], emoji: '🐻', name: 'Barnaby', blurb: 'A big, gentle Bernese by the pond who won’t get his paws wet.', hint: 'Somebody big and fluffy sits by the pond…', times: 'Pals! Played' },
+  { any: ['paltank'], emoji: '🛡️', name: 'Tank', blurb: 'A Staffy who was stuck behind his garden gate, longing for an adventure.', hint: 'Somebody’s stuck behind a garden gate, not far from home…', times: 'Pals! Played' },
+  { any: ['palpebble'], emoji: '🪨', name: 'Pebble', blurb: 'A pug down the alley who knows every trick in the book.', hint: 'Somebody down the alley loves to show off…', times: 'Pals! Played' },
+  { any: ['palsprout'], emoji: '🌱', name: 'Sprout', blurb: 'A tiny Chihuahua who zooms round the streets near home.', hint: 'Somebody tiny zooms round the pavements near home…', times: 'Pals! Played' },
+  { any: ['palzip'], emoji: '⚡', name: 'Zip', blurb: 'A farm collie who races everything: sheep, tractors, the wind.', hint: 'Somebody at the farm wants a race…', times: 'Pals! Played' },
+  { any: ['palwillow'], emoji: '🍃', name: 'Willow', blurb: 'A greyhound who loves a long run on the sand.', hint: 'Somebody on the beach loves a long run…', times: 'Pals! Played' },
+  { any: ['palfern'], emoji: '🌿', name: 'Fern', blurb: 'A husky who lives in the woods and sings to the trees.', hint: 'Somebody in the woods sings to the trees…', times: 'Pals! Played' },
 ];
