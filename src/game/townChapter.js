@@ -38,6 +38,8 @@ import { tripByN, TRIPS } from '../trips/registry.js';
 import { TripShare } from '../trips/share.js';
 import { TownPuzzles } from './town/puzzles.js';
 import { RideCars } from '../net/rideCars.js';
+import { Crew } from './crew/crew.js';
+import { TownDogs } from './crew/townDogs.js';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -102,6 +104,13 @@ export class TownChapter {
     const friendly = { scene, world, hud, player, actions: this.actions, friends: this.friends, seed: this.layout.seed, dogName: () => this.profile().name };
     this.friends.add(new NutAndMeg(friendly));
     this.friends.add(new Pepper(friendly));
+    // 🐾 The town dogs (each with a game to play before they'll be friends) and your crew: the pals who come along
+    // with you (up to three) or hang out in your garden.
+    this.crew = new Crew({
+      scene, world, hud, player, actions: this.actions, follow, dogName: () => this.profile().name,
+      homeGarden: () => this.world.homes?.[this.homeSlot ?? 0]?.garden?.rect,
+    });
+    this.townDogs = this.friends.add(new TownDogs({ ...friendly, crew: this.crew }));
     globalThis.__mark?.('setup: friends');
     this.actions.onCarry = (kind) => { this.pack.sendCarry(kind); this.refreshObjective(); };
     // People out and about (the postman, dog walkers), and ice creams from the van.
@@ -663,6 +672,7 @@ export class TownChapter {
     const goal = job && (dj <= ds || dj < 18 || !smell) ? job.pos : smell ? smell.pos : next ? V(next.place.x, 0, next.place.z) : null;
     const acted = this.actions.update(dt, { canAct, goal, onBark: () => { this.friends.onBark(pos); this.seasons.onBark(pos); this.busStop.onBark(pos); }, onDig: (n) => this.portals.onDig(n, pos) || this.busStop.onDig(pos) || this.buried.onDig(n) || this.beach?.onDig(n) || this.seasons.onDig(n) });
     this.life.update(dt, { barked: acted.barked, canAct });
+    this.crew.update(dt, { barked: acted.barked, canAct });
     this.puzzles.update(dt, canAct, acted.barked); // (woof at Pickles for a game)
     this.busStop.update(dt);
     this.catcher.update(dt, { barked: acted.barked, canAct });
