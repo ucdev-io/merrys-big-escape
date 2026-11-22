@@ -15,40 +15,61 @@ const tpl = document.getElementById('stop');
 const N = STOPS.length;
 const playHtml = (big) => `<a class="play" data-play href="/play/"><span class="label">▶ Play the demo</span>${big ? '<small>Free · in your browser</small>' : ''}</a>`;
 
-// ---------- build the stops ----------
-// ---------- Thanks & credits: a card that pops up from the last stop ----------
-// Who recorded the sounds, and the code and font it's built with. While it's up, swipes and the wheel scroll the
-// list instead of walking Merry along.
-let creditsOpen = false;
-const credits = document.createElement('div');
-credits.className = 'credits';
-credits.hidden = true;
-credits.setAttribute('role', 'dialog');
-credits.setAttribute('aria-modal', 'true');
-credits.setAttribute('aria-label', 'Thanks and credits');
-{
-  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+// ---------- sheets: cards that pop up over the walk (Thanks & credits, What's new) ----------
+// While one's up, swipes and the wheel scroll it instead of walking Merry along.
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+let sheetOpen = null;
+function makeSheet(label, html) {
+  const el = document.createElement('div');
+  el.className = 'sheet';
+  el.hidden = true;
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
+  el.setAttribute('aria-label', label);
+  el.innerHTML = `<div class="panel">${html}<button type="button" class="close hand">Back to Merry</button></div>`;
+  el.querySelector('.close').addEventListener('click', () => showSheet(null));
+  el.addEventListener('click', (e) => { if (e.target === el) showSheet(null); }); // a tap outside the card
+  document.body.appendChild(el);
+  return el;
+}
+function showSheet(el) {
+  if (sheetOpen) sheetOpen.hidden = true;
+  sheetOpen = el;
+  if (!el) return;
+  el.hidden = false;
+  el.querySelector('.panel').scrollTop = 0;
+  el.querySelector('.close').focus({ preventScroll: true });
+}
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetOpen) showSheet(null); });
+
+// Thanks & credits: who recorded the sounds, and the code and font it's built with.
+const credits = (() => {
   const link = (url, text, title = '') => `<a href="${url}" target="_blank" rel="noopener"${title ? ` title="${esc(title)}"` : ''}>${esc(text)}</a>`;
   const groups = new Map();
   for (const [, what, title, id, by] of SOUNDS) {
     if (!groups.has(what)) groups.set(what, []);
     groups.get(what).push(link(soundPage(id, by), by, title));
   }
-  credits.innerHTML = `<div class="panel"><h2 class="hand">Thanks &amp; credits 🙏</h2>` +
+  return makeSheet('Thanks and credits', `<h2 class="hand">Thanks &amp; credits 🙏</h2>` +
     `<p>The real woofs, splashes, crunches, waves and gulls are recordings shared freely (CC0) on ${link('https://freesound.org', 'freesound.org')}. Thank you to:</p>` +
     `<ul>${[...groups].map(([what, who]) => `<li><b>${what[0].toUpperCase() + what.slice(1)}:</b> ${who.join(', ')}</li>`).join('')}</ul>` +
-    `<p>Built with:</p><ul>${TOOLS.map(([name, url, lic]) => `<li>${link(url, name)} (${lic})</li>`).join('')}</ul>` +
-    `<button type="button" class="close hand">Back to Merry</button></div>`;
+    `<p>Built with:</p><ul>${TOOLS.map(([name, url, lic]) => `<li>${link(url, name)} (${lic})</li>`).join('')}</ul>`);
+})();
+
+// What's new: every update so far, newest first (the whole log is kept in src/core/releases.js).
+const news = makeSheet('What’s new', `<h2 class="hand">What’s new ✨</h2><p class="news-ver">${esc(versionLine())}</p>` +
+  RELEASES.map((r) => `<section class="release"><h3>${esc(r.version)} · ${esc(r.title)} <small>${esc(niceDate(r.date))}</small></h3>` +
+    `<ul>${r.notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></section>`).join('') +
+  `<p class="coming">🐾 ${esc(COMING)}</p>`);
+
+/** Put picture k (a key of SHOTS) on postcard b: the photo, its caption, and what it shows (for screen readers). */
+function showShot(b, k) {
+  b.querySelector('img').src = SHOTS[k].src;
+  b.querySelector('.cap').textContent = SHOTS[k].cap ?? '';
+  b.setAttribute('aria-label', `Bigger picture: ${SHOTS[k].alt}`);
 }
-document.body.appendChild(credits);
-function showCredits(on) {
-  creditsOpen = on;
-  credits.hidden = !on;
-  if (on) { credits.querySelector('.panel').scrollTop = 0; credits.querySelector('.close').focus({ preventScroll: true }); }
-}
-credits.querySelector('.close').addEventListener('click', () => showCredits(false));
-credits.addEventListener('click', (e) => { if (e.target === credits) showCredits(false); }); // a tap outside the card
-addEventListener('keydown', (e) => { if (e.key === 'Escape' && creditsOpen) showCredits(false); });
+
+// ---------- build the stops ----------
 
 const stops = STOPS.map((s, i) => {
   const sec = tpl.content.firstElementChild.cloneNode(true);
@@ -75,34 +96,46 @@ const stops = STOPS.map((s, i) => {
   }
   if (s.id === 'dogs') { extra.className += ' dogs'; dogSwatches(extra); }
   if (s.id === 'play') {
-    extra.innerHTML = `${playHtml(true)}<div class="whats-new"><p class="news-head"><span class="beta"></span></p><ul></ul><p class="coming"></p></div><p class="about"></p><p class="about tip"></p><p class="about secret"></p><button type="button" class="credits-link">🙏 Thanks &amp; credits</button>`;
-    extra.querySelector('.credits-link').addEventListener('click', () => showCredits(true));
-    // What's new in this beta: the newest version's lines (plain text: they're ours, but no HTML needed).
-    const news = extra.querySelector('.whats-new'), r = RELEASES[0];
-    news.querySelector('.beta').textContent = `✨ New in ${r.version}: ${r.title} (${niceDate(r.date)})`;
-    for (const t of r.notes) { const li = document.createElement('li'); li.textContent = t; news.querySelector('ul').appendChild(li); }
-    news.querySelector('.coming').textContent = `🐾 ${COMING}`;
-    extra.querySelector('.about').textContent = ABOUT;
+    // What's new: the newest update's name, and a tap for every update so far (in a pop-up, so the card never overflows).
+    extra.innerHTML = `${playHtml(true)}<button type="button" class="news-btn"><span class="beta"></span> <span class="all">Every update so far ›</span></button><p class="about coming"></p><p class="about made"></p><p class="about tip"></p><p class="about secret"></p><button type="button" class="credits-link">🙏 Thanks &amp; credits</button>`;
+    const r = RELEASES[0];
+    extra.querySelector('.news-btn .beta').textContent = `✨ New in ${r.version}: ${r.title}`;
+    extra.querySelector('.news-btn').addEventListener('click', () => showSheet(news));
+    extra.querySelector('.credits-link').addEventListener('click', () => showSheet(credits));
+    extra.querySelector('.coming').textContent = `🐾 ${COMING}`;
+    extra.querySelector('.made').textContent = ABOUT;
     extra.querySelector('.tip').textContent = IPHONE_TIP;
     extra.querySelector('.secret').textContent = SECRET;
   }
-  // Postcards: scattered a little differently on each stop.
-  const pc = sec.querySelector('.cards');
-  (s.shots ?? []).forEach((k, j, all) => {
+  // Postcards: scattered a little differently on each stop. Three at most; the rest are in the big view (‹ ›).
+  const pc = sec.querySelector('.cards'), all = s.shots ?? [], shown = all.slice(0, 3);
+  shown.forEach((k, j) => {
     const b = document.createElement('button');
     b.className = 'postcard';
     b.type = 'button';
-    b.setAttribute('aria-label', `Bigger picture: ${SHOTS[k].alt}`);
-    const spread = all.length > 1;
-    b.style.setProperty('--l', spread ? `${4 + j * (all.length === 2 ? 38 : 24)}%` : '14%');
+    const spread = shown.length > 1;
+    b.style.setProperty('--l', spread ? `${4 + j * (shown.length === 2 ? 38 : 24)}%` : '14%');
     b.style.setProperty('--t', spread ? `${6 + (j % 2) * 26}%` : '12%');
     b.dataset.r = (spread ? [-6, 4, -2][j] : (i % 2 ? 3 : -3)).toString();
     b.dataset.k = (1.25 + j * 0.2).toString(); // (parallax: further postcards move faster)
+    b.dataset.stop = String(i);
+    b.dataset.at = String(j);
     b.innerHTML = `<img alt="" loading="${i < 2 ? 'eager' : 'lazy'}" decoding="async"><span class="cap"></span>`;
-    b.querySelector('img').src = SHOTS[k].src;
-    b.querySelector('.cap').textContent = SHOTS[k].cap ?? '';
+    showShot(b, k);
     pc.appendChild(b);
   });
+  if (all.length > shown.length) { // "+3 more": opens the big view on the first one not pinned up
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'more-shots hand';
+    more.dataset.stop = String(i);
+    const n = all.length - shown.length, last = pc.lastElementChild;
+    more.textContent = `+${n} more 📷`;
+    more.setAttribute('aria-label', n === 1 ? '1 more picture' : `${n} more pictures`);
+    more.style.setProperty('--l', last.style.getPropertyValue('--l')); // (tucked under the corner of the last postcard)
+    more.style.setProperty('--t', last.style.getPropertyValue('--t'));
+    pc.appendChild(more);
+  }
   journey.appendChild(sec);
   // A paw on the trail for each stop.
   const dot = document.createElement('button');
@@ -111,17 +144,21 @@ const stops = STOPS.map((s, i) => {
   dot.setAttribute('aria-label', s.label);
   dot.onclick = () => go(i);
   trail.appendChild(dot);
-  return { s, sec, card, dot, posts: [...pc.children] };
+  return { s, sec, card, dot, posts: [...pc.querySelectorAll('.postcard')] };
 });
 playButtons();
 
 // ---------- where we are ----------
 const H = () => stops[0].sec.offsetHeight || innerHeight;
 const go = (i) => { i = Math.max(0, Math.min(N - 1, i)); scrollTo({ top: i * H(), behavior: still ? 'auto' : 'smooth' }); };
-// "What's new?" (under the first Play button): walk to the last stop, where it's listed.
-document.querySelector('.news-link')?.addEventListener('click', (e) => { e.preventDefault(); go(N - 1); });
+// "What's new?" (under the first Play button): every update so far.
+document.querySelector('.news-link')?.addEventListener('click', (e) => { e.preventDefault(); showSheet(news); });
 addEventListener('keydown', (e) => {
-  if (creditsOpen || e.target.closest?.('input, textarea')) return;
+  if (sheetOpen || e.target.closest?.('input, textarea')) return;
+  if (open) { // a big postcard: the arrows go through that stop's pictures
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); }
+    return;
+  }
   if (e.key === 'ArrowRight') { e.preventDefault(); go(Math.round(scrollY / H()) + 1); }
   if (e.key === 'ArrowLeft') { e.preventDefault(); go(Math.round(scrollY / H()) - 1); }
 });
@@ -129,7 +166,7 @@ addEventListener('keydown', (e) => {
 // Trackpads can go sideways too: two fingers to the left goes on, like turning a page.
 let wheelUntil = 0;
 addEventListener('wheel', (e) => {
-  if (e.ctrlKey || open || creditsOpen) return;
+  if (e.ctrlKey || open || sheetOpen) return;
   e.preventDefault();
   const now = performance.now(), d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
   if (now < wheelUntil) { wheelUntil = Math.max(wheelUntil, now + 220); return; }
@@ -145,7 +182,7 @@ addEventListener('wheel', (e) => {
 const root = document.documentElement;
 let drag = null, settleT = 0;
 addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'touch' || !e.isPrimary || open || creditsOpen) return;
+  if (e.pointerType !== 'touch' || !e.isPrimary || open || sheetOpen) return;
   clearTimeout(settleT);
   drag = { x: e.clientX, y: e.clientY, y0: scrollY, axis: null, moved: 0, t: performance.now(), vt: performance.now(), vm: 0, v: 0 };
 }, { passive: true });
@@ -165,7 +202,7 @@ addEventListener('pointermove', (e) => {
   scrollTo({ top, behavior: 'instant' });
 }, { passive: true });
 // (iPhones: stop the page scrolling under the finger. One finger only, so pinching still zooms.)
-addEventListener('touchmove', (e) => { if (e.touches.length === 1 && !open && !creditsOpen) e.preventDefault(); }, { passive: false });
+addEventListener('touchmove', (e) => { if (e.touches.length === 1 && !open && !sheetOpen) e.preventDefault(); }, { passive: false });
 function endDrag(e) {
   if (!drag || !e.isPrimary) return;
   const d = drag;
@@ -259,18 +296,36 @@ function tick(now) {
 }
 requestAnimationFrame(tick);
 
-// ---------- postcards: tap for a big one ----------
+// ---------- postcards: tap for a big one (‹ › go through all that stop's pictures) ----------
 let open = null;
+const nav = document.createElement('div');
+nav.className = 'shot-nav';
+nav.hidden = true;
+nav.innerHTML = '<button type="button" class="prev" aria-label="Previous picture">‹</button><span class="count"></span><button type="button" class="next" aria-label="Next picture">›</button>';
+document.body.appendChild(nav);
+nav.querySelector('.prev').addEventListener('click', () => step(-1));
+nav.querySelector('.next').addEventListener('click', () => step(1));
+function step(d) {
+  if (!open || open.all.length < 2) return;
+  open.at = (open.at + d + open.all.length) % open.all.length;
+  showShot(open.b, open.all[open.at]);
+  nav.querySelector('.count').textContent = `${open.at + 1} / ${open.all.length}`;
+}
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('.postcard');
+  if (e.target.closest('.shot-nav')) return;
   if (open) { close(); return; }
+  const more = e.target.closest('.more-shots');
+  const b = more ? stops[Number(more.dataset.stop)].posts.at(-1) : e.target.closest('.postcard');
   if (!b) return;
+  const all = stops[Number(b.dataset.stop)].s.shots, at = more ? stops[Number(more.dataset.stop)].posts.length : Number(b.dataset.at);
+  if (more) showShot(b, all[at]);
   const r = b.getBoundingClientRect();
   const w = Math.min(innerWidth * 0.92, 1100), h = w * (652 / 1280) + 48;
   b.classList.add('big');
   Object.assign(b.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px` });
   b.style.setProperty('--px', '0px');
-  open = { b, r };
+  open = { b, r, all, at };
+  if (all.length > 1) { nav.hidden = false; nav.querySelector('.count').textContent = `${at + 1} / ${all.length}`; }
   requestAnimationFrame(() => {
     b.style.transition = still ? 'none' : 'left 0.35s ease, top 0.35s ease, width 0.35s ease, transform 0.35s ease';
     Object.assign(b.style, { left: `${(innerWidth - w) / 2}px`, top: `${Math.max(12, (innerHeight - h) / 2)}px`, width: `${w}px` });
@@ -280,8 +335,12 @@ document.addEventListener('click', (e) => {
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && open) close(); });
 addEventListener('scroll', () => open && close(), { passive: true });
 function close() {
-  const { b, r } = open;
+  const { b, r, all } = open;
   open = null;
+  nav.hidden = true;
   Object.assign(b.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px` });
-  setTimeout(() => { b.classList.remove('big'); b.style.transition = ''; b.style.left = b.style.top = b.style.width = ''; }, still ? 0 : 360);
+  setTimeout(() => {
+    b.classList.remove('big'); b.style.transition = ''; b.style.left = b.style.top = b.style.width = '';
+    showShot(b, all[Number(b.dataset.at)]); // (back to its own picture)
+  }, still ? 0 : 360);
 }
