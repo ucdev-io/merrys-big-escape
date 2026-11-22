@@ -18,7 +18,8 @@ function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } ca
 function store(all) { try { localStorage.setItem(KEY, JSON.stringify(all)); } catch { /* private mode */ } }
 
 const listeners = new Set();
-const tell = () => { for (const fn of listeners) fn(); };
+let cache = null; // { key, ids }: who's following (asked for many times a frame)
+const tell = () => { cache = null; for (const fn of listeners) fn(); };
 
 export const pals = {
   /** Friends with this town dog? */
@@ -30,8 +31,11 @@ export const pals = {
 
   /** Who's following you (ids: pals only, at most MAX_CREW). */
   following() {
-    const all = load(), ids = all[dogKey()] ?? all.local; // (a dog just saved on the game server keeps the crew it had on this device)
-    return (Array.isArray(ids) ? ids : []).filter((id) => PAL[id] && pals.isPal(id)).slice(0, MAX_CREW);
+    const key = dogKey();
+    if (cache?.key === key) return cache.ids;
+    const all = load(), ids = all[key] ?? all.local; // (a dog just saved on the game server keeps the crew it had on this device)
+    cache = { key, ids: (Array.isArray(ids) ? ids : []).filter((id) => PAL[id] && pals.isPal(id)).slice(0, MAX_CREW) };
+    return cache.ids;
   },
   setFollowing(ids) {
     const all = load();

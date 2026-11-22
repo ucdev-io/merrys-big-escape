@@ -443,14 +443,14 @@ export class Crew {
       this.wasInside = false;
       return;
     }
-    if (!this.gardenShown) {
-      this.gardenShown = true;
-      for (const m of garden) {
-        const s = this.gardenSpot(rect);
-        if (!s) continue;
-        if (!m.cd) this.makeDog(m, s); else { m.cd.root.visible = true; m.cd.place(s.x, s.z, s.heading); }
-        m.g = null;
-      }
+    const arriving = !this.gardenShown;
+    this.gardenShown = true;
+    for (const m of garden) {
+      if (m.cd?.root.visible && !arriving) continue; // (out already: just new pals, or ones just home, to bring out)
+      const s = this.gardenSpot(rect);
+      if (!s) continue;
+      if (!m.cd) this.makeDog(m, s); else { m.cd.root.visible = true; m.cd.place(s.x, s.z, s.heading); }
+      m.g = null;
     }
     // Coming home: they all come running to say hello.
     if (inside && !this.wasInside && canAct) {
