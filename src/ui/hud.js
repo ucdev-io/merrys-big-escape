@@ -288,6 +288,7 @@ export class HUD {
       <h3>🐾 Tips</h3><ul class="help-tips">
         <li>Friends need a hand! <b>Gus</b> (an old basset hound in the park) keeps losing things, and <b>Duchess</b> at the pond keeps losing her ducklings. The compass points the way.</li>
         <li><b>Nut &amp; Meg</b>, the squirrel twins in the park, love hide-and-seek. They hide up the trees: sniff out the right one, then woof at it!</li>
+        <li><b>🐾 Your crew!</b> Ten dogs live around town (and out in the woods, at the farm and on the beach), and each has a game to play. Make friends and they join your crew: up to three follow you everywhere, woof when you woof and copy your tricks. The rest hang out in your garden: walk up to one and woof to swap them in (or ☰ → My crew). Near a pink-ringed team bone, a crew dog gives you a leg-up!</li>
         <li><b>Pepper</b> the hedgehog would love a walk to the park's flowerbeds. She follows you slowly — and if Mowbot the robot mower comes near, woof to shoo it away!</li>
         <li>Walk up to the <b>📋 Lost &amp; Found board</b> by your gate to pick a job: lost things, deliveries, kites stuck up high, runaway hens, things Pickles has pinched… Trickier jobs (🐾🐾🐾) earn more stars, and a twist (🤫 no barking, ⏱️ be quick…) earns a bonus. Walk back to the board to swap a job.</li>
         <li>Pick things up with <b>🐾</b> (or E) and carry them in your mouth. Woofing drops them!</li>
@@ -298,7 +299,7 @@ export class HUD {
         <li><b>🎒 Treasures</b>: everything you dig up goes in your 📖 Sniff Book, and on the treasure shelf by your front door. Can you fill it?</li>
         <li><b>🧩 Puzzles</b> (☰ → Puzzles): Pickles sits on your garden fence and dares you to a <b>Paw Match</b>, and a <b>📮 postcard jigsaw</b> turns the view into a puzzle. No running about needed!</li>
         <li><b>Sniff</b> to see what's around: smells puff up wisps, and a golden trail leads to the closest. Get your nose right up to it!</li>
-        <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back to grab one.</li>
+        <li>Too high? Find a crate, bench or car to climb. Pink-ringed bones are <b>team bones</b>: stand on a friend's back (or a crew dog's) to grab one.</li>
         <li>Cars honk if you're in the road. Bump into one and you'll lose a bit of puff — so look both ways!</li>
         <li><b>Double-tap jump</b> for a huge jump over fences and hedges. It uses some of your zoomies.</li>
         <li>Knock a <b>bin</b> over and gobble what falls out: 🍕 super speed · 🧀 super jumps · 🍩 endless zoomies · 🌭 everything!</li>
