@@ -49,6 +49,7 @@ export const pals = {
     if (!PAL[id]) return { first: false, room: false };
     const first = !pals.isPal(id);
     progress.stat(palStat(id));
+    if (first) progress.stat('pals'); // (how many pals: for the Sniff Book and Today's walk)
     tell();
     return { first, room: pals.following().length < MAX_CREW };
   },

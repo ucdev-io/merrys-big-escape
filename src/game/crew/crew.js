@@ -15,7 +15,8 @@ const TRAIL_STEP = 0.35;   // metres between breadcrumbs on the leader's path
 const TRAIL_MAX = 160;     // breadcrumbs kept (about 55 m of path)
 const LAG = [1.5, 2.6, 3.7]; // how far back along the path each follower walks
 const TOO_FAR = 26;        // further behind than this (along the path): tunnel to catch up
-const NEAR_HOME = 50, FAR_HOME = 70; // pals in your garden come out when you're this near it (and go in past FAR_HOME)
+const NEAR_HOME = 50, FAR_HOME = 70;
+const SHADOWS = 24;        // pals further away than this from the leader cast no shadow // pals in your garden come out when you're this near it (and go in past FAR_HOME)
 
 // Where each pal lives, as a hint on the crew card before you've met them.
 const WHERE = {
@@ -36,7 +37,8 @@ const WHERE = {
 export class Crew {
   constructor({ scene, world, hud, player, actions, follow, dogName, homeGarden, bones = () => [] }) {
     Object.assign(this, { scene, world, hud, player, actions, follow, dogName, homeGarden, bones });
-    this.ctx = { scene, world, groundAt: (x, z) => world.heightAt?.(x, z) ?? 0, fx: actions };
+    this.ctx = { scene, world, groundAt: (x, z) => world.heightAt?.(x, z) ?? 0, fx: actions, time: () => this.time };
+    this.time = 0;
     this.members = new Map(); // id → { id, pal, cd: CrewDog|null, mode: 'follow'|'help'|'waiting'|'leaving'|'garden', … }
     this.trail = [];
     this.started = false;
@@ -220,6 +222,7 @@ export class Crew {
 
   update(dt, { barked = false, canAct = true } = {}) {
     const P = this.player;
+    this.time += dt;
     for (let i = this.queue.length - 1; i >= 0; i--) { const q = this.queue[i]; q.t -= dt; if (q.t <= 0) { this.queue.splice(i, 1); q.fn(); } }
     if (!this.started) {
       if (P.frozen) return;
@@ -251,10 +254,13 @@ export class Crew {
     }
     this.separate(fol);
     this.updateGarden(dt, barked, canAct);
+    // Shadows only close by (as everything else out in town).
+    for (const m of this.members.values()) if (m.cd?.root.visible) m.cd.shadow(flat(m.cd.pos, P.pos) < SHADOWS);
 
     // Join in: a woof and they woof too; a trick and they do it too.
     if (barked) fol.forEach((m) => this.queue.push({ t: 0.15 + Math.random() * 0.45, fn: () => this.woof(m) }));
-    if (P.emoted) fol.forEach((m) => this.queue.push({ t: 0.25 + Math.random() * 0.5, fn: () => this.copy(m, P.emoted) }));
+    const trick = P.emoted;
+    if (trick) fol.forEach((m) => this.queue.push({ t: 0.25 + Math.random() * 0.5, fn: () => this.copy(m, trick) }));
     // And a little chatter now and then.
     this.chatT -= dt;
     if (this.chatT <= 0 && fol.length) {
@@ -273,8 +279,7 @@ export class Crew {
 
   copy(m, kind) {
     if (!m.cd || m.cd.speed > 0.6 || m.cd.swim > 0.3) return;
-    m.cd.sitting = false;
-    m.cd.dog.emote(kind);
+    m.cd.trick(kind);
     if (kind === 'howl') sfx.howl?.(m.cd.dog.breed.bark, 0.35);
   }
 
@@ -285,9 +290,10 @@ export class Crew {
     if (m.k === undefined || m.k < 0 || m.k >= t.length) m.k = this.nearestCrumb(cd.pos).i;
     const lag = LAG[i] * (0.8 + 0.25 * cd.size);
     let goal = this.lagIndex(lag);
-    // The leader's up on top of something: wait at the bottom.
+    // The leader's up on top of something: wait at the bottom. (Back down again, over a hedge say: on they come,
+    // hopping it too.)
     let waiting = false;
-    while (goal > 0 && t[goal].high) { goal--; waiting = true; }
+    if (t[t.length - 1].high) while (goal > 0 && t[goal].high) { goal--; waiting = true; }
     if (waiting && Math.random() < dt * 0.08 && flat(cd.pos, P.pos) < 12) this.say(m, 'wait', 2.4);
     // Resting: the leader's stopped. Find a spot round them and sit (once it's caught up along the path).
     const behind = t[goal].s - t[Math.min(m.k, goal)].s;

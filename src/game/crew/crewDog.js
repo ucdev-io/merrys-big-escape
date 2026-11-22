@@ -7,6 +7,7 @@ const launch = (h) => Math.sqrt(2 * GRAVITY * h);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const HOP_MAX = 1.6;  // the tallest thing a pal hops over (hedges, fences, benches, bins); walls and houses they go round
 const TURN = 9;       // radians a second, at most
+const NEAR = 5;       // metres round a pal to look for things to bump into (it gathers them again within 2 m of moving)
 
 /*
  * 🐕 One pal's body out in the world: walking, trotting and galloping to where it's told, hopping over hedges and
@@ -42,6 +43,21 @@ export class CrewDog {
 
   get size() { return this.dog.breed.size; }
   get r() { return 0.26 * this.size; }
+  /** Do a trick ('spin', 'bow'…: see EMOTES in dog.js), even if it was sitting. */
+  trick(kind) {
+    this.sitting = false;
+    this.dog.emote(kind);
+    this.trickT = this.dog.emoteT ?? 2;
+  }
+
+  /** Shadows on or off (they're dear: a dog's skin is its biggest shape, drawn again for the shadow map). */
+  shadow(on) {
+    if (on === this.shadowOn) return;
+    this.shadowOn = on;
+    if (!this.casters) { this.casters = []; this.root.traverse((o) => { if (o.isMesh && o.castShadow) this.casters.push(o); }); }
+    for (const o of this.casters) o.castShadow = on;
+  }
+
   /** Its back, as something the player can stand on (a leg-up). */
   back() { const s = this.size; return { x: this.pos.x, z: this.pos.z, r: 0.34 * s, top: this.pos.y + (this.dog.bodyY + 0.08) * s }; }
 
@@ -50,6 +66,7 @@ export class CrewDog {
 
   /** Pop up at (x, z) at once (no tunnel), facing `heading`. */
   place(x, z, heading = this.heading) {
+    this.nearC = null;
     this.pos.set(x, this.ctx.groundAt(x, z), z);
     this.heading = heading;
     this.root.rotation.y = heading;
@@ -82,9 +99,24 @@ export class CrewDog {
     }
   }
 
+  /**
+   * Just the colliders round about (within NEAR of where they were last gathered, gathered again every couple of
+   * seconds or after a few steps): the town has over a thousand, and a pal only ever bumps into a handful.
+   */
+  near() {
+    const p = this.pos, N = this.nearC;
+    if (N && Math.abs(p.x - N.x) < 2 && Math.abs(p.z - N.z) < 2 && this.ctx.time() - N.t < 2) return N.cols;
+    const C = this.ctx.world.colliders, x = p.x, z = p.z, R = NEAR;
+    const cols = Object.create(Object.getPrototypeOf(C)); // (the same resolve / surfaceAt, over fewer things)
+    cols.circles = C.circles.filter((c) => Math.abs(c.x - x) < R + c.r && Math.abs(c.z - z) < R + c.r);
+    cols.boxes = C.boxes.filter((b) => b.x1 > x - R && b.x0 < x + R && b.z1 > z - R && b.z0 < z + R);
+    this.nearC = { x, z, t: this.ctx.time(), cols };
+    return cols;
+  }
+
   /** The highest thing in the way at (x, z) that's taller than a step from `feet`, or 0. */
   obstacleTop(x, z, feet) {
-    const C = this.ctx.world.colliders, r = this.r, lim = feet + 0.3;
+    const C = this.near(), r = this.r, lim = feet + 0.3;
     let top = 0;
     for (const c of C.circles) if (c.top > lim && c.top > top && (x - c.x) ** 2 + (z - c.z) ** 2 < (c.r + r) ** 2) top = c.top;
     for (const b of C.boxes) if (b.top > lim && b.top > top && x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r) top = b.top;
@@ -141,13 +173,13 @@ export class CrewDog {
       }
       p.x += sx * step;
       p.z += sz * step;
-      this.ctx.world.colliders.resolve(p, this.r, this.grounded ? 0.3 : 0.06);
+      this.near().resolve(p, this.r, this.grounded ? 0.3 : 0.06);
     }
     // Up and down: gravity, the ground (or whatever low thing it's on), and floating in water.
     let base = this.ctx.groundAt(p.x, p.z);
     const w2 = waterAt(this.ctx.world.water, p.x, p.z);
     if (w2 && !w2.wade) base = (w2.surface - (dog.bodyY + 0.03) * size) * w2.depth + base * (1 - w2.depth);
-    const ground = this.ctx.world.colliders.surfaceAt(p.x, p.z, p.y, this.grounded ? 0.3 : 0.05, null, undefined, base);
+    const ground = this.near().surfaceAt(p.x, p.z, p.y, this.grounded ? 0.3 : 0.05, null, undefined, base);
     this.vy -= GRAVITY * dt;
     p.y += this.vy * dt;
     if (p.y <= ground && this.vy <= 0) {
@@ -166,7 +198,9 @@ export class CrewDog {
     }
     this.inWater = inW;
 
-    // Sitting down when it's stopped for a while (and up again to go).
+    // Sitting down when it's stopped for a while (and up again to go). Not in the middle of a trick.
+    this.trickT = Math.max(0, (this.trickT ?? 0) - dt);
+    if (this.trickT > 0) this.sitting = false;
     if (this.speed > 0.4 || !this.grounded || this.swim > 0.3) {
       if (this.sitting) { this.sitting = false; dog.stopEmote(); }
     } else if (this.sitting) {
