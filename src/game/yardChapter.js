@@ -142,7 +142,7 @@ export class YardChapter {
       this.hud.setObjective(`Sniff out buried treasure! <b>${n}/${TREASURES.length}</b>`, 'Sniffing shows a golden trail to the nearest treasure.', { icon: '🦴', short: `${n}/${TREASURES.length}` });
     } else if (!this.found.includes('tunnel')) {
       const t = this.spots.get('tunnel');
-      this.hud.setObjective(t.revealed ? 'Dig a tunnel under the fence! Dig dig dig!' : 'Something smells like <b>freedom</b>… sniff out the soft spot by the fence!', '', { icon: '🕳️', short: '!' });
+      this.hud.setObjective(t.revealed ? 'Dig a tunnel under the fence! Dig dig dig!' : 'Something smells like <b>freedom</b>… sniff out the soft spot by the fence!', '', { icon: '🕳️', short: t.revealed ? '🐾' : '👃' });
     } else {
       this.hud.setObjective('You escaped! 🎉', '', { icon: '🎉' });
     }
@@ -204,6 +204,7 @@ export class YardChapter {
       if (Math.random() < 0.4) this.pickles.say('dig', { cooldown: 25 });
       return false;
     }
+    if (this.spots.reveal(near)) this.refreshObjective(); // (dug straight into it, without sniffing first: found anyway)
     this.actions.dirtBurst(near.pos, 8);
     near.progress++;
     this.hud.float(pick(['dig!', 'scratch!', 'dig dig!']), near.pos.clone().add(V(0, 0.5, 0)), 'dig');

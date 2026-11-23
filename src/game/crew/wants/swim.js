@@ -115,13 +115,13 @@ class Swim extends Game {
 
   target() {
     if (this.td.carry.held === this.item && this.item) return { pos: this.e.pos, emoji: '🐻' };
-    return { pos: this.item?.pos ?? this.to, emoji: '🪵' };
+    return { pos: this.item?.pos ?? this.to, emoji: '🪵', mark: !!this.item };
   }
 
   objective() {
     const held = this.item && this.td.carry.held === this.item;
     return held
-      ? { icon: '🪵', title: `Take the stick back to ${this.name}!`, sub: `${this.round}/${ROUNDS} · he’s waiting on the bank.` }
+      ? { icon: '🪵', title: `Take the stick back to ${this.name}!`, sub: `${this.round}/${ROUNDS} · he’s waiting on the bank.`, short: `↩ ${this.td.emoji(this.e)}` }
       : { icon: '🪵', title: `Fetch ${this.name}’s stick <b>${this.round}/${ROUNDS}</b>`, sub: this.pond?.frozen ? 'It’s out on the ice! Grab it 🐾' : 'It’s floating on the pond. Swim out and grab it 🐾!' };
   }
 }

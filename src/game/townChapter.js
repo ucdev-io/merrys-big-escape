@@ -551,7 +551,8 @@ export class TownChapter {
   refreshObjective() {
     const n = this.state.discovered.length, total = this.places.length;
     const job = this.friends?.objective();
-    if (job) { this.hud.setObjective(job.title, job.sub, { icon: job.icon, short: job.icon }); return; }
+    // (Tucked away, the pill keeps something to go on: the job's own short hint, else its count, like 1/3.)
+    if (job) { this.hud.setObjective(job.title, job.sub, { icon: job.icon, short: job.short ?? job.title.match(/\d+\/\d+/)?.[0] ?? '' }); return; }
     const nb = this.state.bones.length, tb = this.bones?.count ?? 0;
     const bones = tb ? `✨🦴 Golden bones found: <b>${nb}/${tb}</b>` : '';
     if (n < total) this.hud.setObjective(`Explore ${this.layout.name}! Places found <b>${n}/${total}</b>`, bones, { icon: '🗺️', short: `${n}/${total}` });
@@ -718,5 +719,8 @@ export class TownChapter {
       const label = `${aim.label} · ${Math.round(Math.hypot(dx, dz))}m`;
       if (label !== this.compassLabel) { this.compassLabel = label; this.compass.lastChild.innerHTML = label; } // (only when it changes: new words mean the page lays itself out again)
     } else if (!this.compass.classList.contains('hidden')) this.compass.classList.add('hidden');
+    // A pal's ball (or treat, or stick) to fetch: a big bouncing pin over it once it's near, so it can't be missed.
+    const pin = job?.mark && canAct && !covered && dj < 35 ? job.pos : null;
+    this.hud.mark(pin, pin ? job.emoji : '');
   }
 }

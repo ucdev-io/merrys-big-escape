@@ -81,13 +81,23 @@ export function createTouchControls(input, follow) {
 
   for (const b of wrap.querySelectorAll('button')) {
     const name = b.dataset.b, hold = !!b.dataset.hold;
+    let downAt = 0, keep = 0;
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       b.classList.add('down');
       input.touchButtons.add(name);
       b.setPointerCapture(e.pointerId);
+      downAt = performance.now();
+      clearTimeout(keep);
     });
-    const release = () => { b.classList.remove('down'); if (hold) input.touchButtons.delete(name); };
+    const release = () => {
+      if (!b.classList.contains('down')) return;
+      b.classList.remove('down');
+      if (!hold) return;
+      // (A quick tap on 👃 still has a good sniff, as if it were held for a moment: little fingers tap, they don't hold.)
+      if (name === 'sniff' && performance.now() - downAt < 400) { keep = setTimeout(() => input.touchButtons.delete(name), 1600); return; }
+      input.touchButtons.delete(name);
+    };
     b.addEventListener('pointerup', release);
     b.addEventListener('pointercancel', release);
     b.addEventListener('contextmenu', (e) => e.preventDefault());

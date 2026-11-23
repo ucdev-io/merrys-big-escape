@@ -54,13 +54,13 @@ class Treat extends Game {
 
   target() {
     if (this.held) return { pos: this.e.pos, emoji: '🌭' };
-    return { pos: this.item.pos, emoji: CARRYABLES[this.kind].emoji };
+    return { pos: this.item.pos, emoji: CARRYABLES[this.kind].emoji, mark: true };
   }
 
   objective() {
     const what = `${CARRYABLES[this.kind].emoji} ${CARRYABLES[this.kind].name}`;
     return this.held
-      ? { icon: '🌭', title: `Take the ${this.held.def.name} to ${this.name}!`, sub: 'He’s drooling already.' }
+      ? { icon: '🌭', title: `Take the ${this.held.def.name} to ${this.name}!`, sub: 'He’s drooling already.', short: `↩ ${this.td.emoji(this.e)}` }
       : { icon: '🌭', title: `Find ${this.name} a ${what}`, sub: 'It’s somewhere nearby, twinkling. Grab it 🐾 and bring it back!' };
   }
 }

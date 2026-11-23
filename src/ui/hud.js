@@ -20,7 +20,7 @@ import { medalsHtml } from '../game/medals.js';
 import { collection, BURIED_PLACES, BEACH_KINDS, NOTES, FRIENDS } from '../game/collection.js';
 
 const el = (tag, cls, html = '') => { const e = document.createElement(tag); if (cls) e.className = cls; e.innerHTML = html; return e; };
-const _v = new THREE.Vector3();
+const _v = new THREE.Vector3(), _pin = new THREE.Vector3();
 const HELD_FRESH_MS = 90000; // (town news held back while she was off on a trip: older than this when she's back, it's dropped)
 
 /** All the HTML overlay bits: objective, prompts, speech bubbles, Sniff Book, cards. */
@@ -84,6 +84,8 @@ export class HUD {
     this.emoteBar.onclick = (ev) => { const b = ev.target.closest('[data-e]'); if (b) { this.onEmote?.(b.dataset.e); this.emoteBar.classList.add('hidden'); } };
     tr.append(this.xpPill, this.mischiefPill, this.emoteBtn, this.bookBtn, this.menuBtn);
     this.root.appendChild(this.emoteBar);
+    this.pin = el('div', 'spot-pin hidden', '<span></span>'); // (see mark())
+    this.root.appendChild(this.pin);
     this.levelBanner = el('div', 'levelup');
     this.root.appendChild(this.levelBanner);
     this.levelBanner.onclick = () => { this.levelBanner.classList.remove('show'); this.showWardrobe(); };
@@ -589,6 +591,15 @@ export class HUD {
     }));
   }
 
+  /**
+   * A big bouncing pin over something to fetch (a pal's ball, a treat, a stick), so a small thing in a big town can't be
+   * missed on a phone: pos (kept, it follows the thing) and its emoji, or null to take it down. Only while it's on screen.
+   */
+  mark(pos, emoji = '') {
+    this.pinAt = pos;
+    if (pos && emoji !== this.pinEmoji) { this.pinEmoji = emoji; this.pin.firstChild.textContent = emoji; }
+  }
+
   /** Little word that pops up and floats away (WOOF!, sniff sniff…). */
   float(text, pos, cls = '') {
     const e = el('div', `floater ${cls}`, text);
@@ -633,6 +644,13 @@ export class HUD {
       b.e.style.opacity = Math.min(1, b.t * 3);
       return true;
     });
+    let pinned = false;
+    if (this.pinAt) {
+      const s = this.project(_pin.copy(this.pinAt).setY(this.pinAt.y + 0.3));
+      pinned = !s.behind && s.x > 0 && s.x < window.innerWidth && s.y > 125 && s.y < window.innerHeight; // (not up among the top row of buttons: far off, the compass has it)
+      if (pinned) this.pin.style.transform = `translate(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px) translate(-50%, -100%)`;
+    }
+    if (pinned === this.pin.classList.contains('hidden')) this.pin.classList.toggle('hidden', !pinned);
     this.floaters = this.floaters.filter((f) => {
       f.t += dt;
       if (f.t > 1.2) { f.e.remove(); return false; }

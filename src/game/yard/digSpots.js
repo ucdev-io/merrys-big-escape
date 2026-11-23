@@ -61,6 +61,16 @@ export class DigSpots {
     return this.list.filter((s) => !s.done && (s.key === 'tunnel' ? treasuresFound >= treasureCount : true));
   }
 
+  /** Sniffed out (or dug right into): the mound shows. True if it's the tunnel. */
+  reveal(s) {
+    if (s.revealed) return false;
+    s.revealed = true;
+    s.group.visible = true;
+    sfx.pop();
+    this.actions.hud.float('!', s.pos.clone().add(V(0, 0.6, 0)), 'dig');
+    return s.key === 'tunnel';
+  }
+
   /**
    * @returns {{ nearest, near, reached, prompt, revealedTunnel }}
    *   nearest: closest active spot (for the scent trail) · near: diggable spot under the dog
@@ -78,13 +88,7 @@ export class DigSpots {
         else if (d < 1.3 && pos.y < s.reach) prompt = 'Too high! Find something to jump up on 📦';
         continue;
       }
-      if (!s.revealed && sniffing && d < 5) {
-        s.revealed = true;
-        s.group.visible = true;
-        sfx.pop();
-        this.actions.hud.float('!', s.pos.clone().add(V(0, 0.6, 0)), 'dig');
-        if (s.key === 'tunnel') revealedTunnel = true;
-      }
+      if (!s.revealed && sniffing && d < 5 && this.reveal(s)) revealedTunnel = true;
       if (s.revealed) {
         s.reveal = Math.min(1, s.reveal + dt * 2);
         const k = Math.max(0.001, s.reveal) * (1 + (s.progress / s.need) * 0.4);
@@ -98,7 +102,8 @@ export class DigSpots {
         this.actions.smellPuff(s.pos, 0xd9b98a);
       }
     }
-    const near = active.find((s) => !s.reach && s.revealed && hd(s.pos, pos) < 1.05 && pos.y < 0.3) ?? null;
+    // (Forgiving: half a step off still digs it, and digging right on a spot that hasn't been sniffed out yet finds it anyway.)
+    const near = active.find((s) => !s.reach && hd(s.pos, pos) < (s.revealed ? 1.5 : 1.2) && pos.y < 0.3) ?? null;
     return { nearest, near, reached, prompt, revealedTunnel };
   }
 }

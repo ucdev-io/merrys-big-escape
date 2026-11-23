@@ -87,12 +87,12 @@ class Fetch extends Game {
 
   target() {
     if (this.item && this.td.carry.held === this.item) return { pos: this.e.pos, emoji: '🎾' };
-    return { pos: this.item?.pos ?? V(this.to.x, 0, this.to.z), emoji: '🎾' };
+    return { pos: this.item?.pos ?? V(this.to.x, 0, this.to.z), emoji: '🎾', mark: !!this.item }; // (a pin over it once it lands)
   }
 
   objective() {
     const held = this.item && this.td.carry.held === this.item;
-    return held ? { icon: '🎾', title: `Bring the ball back to ${this.name}!`, sub: `${this.round}/${ROUNDS}` }
+    return held ? { icon: '🎾', title: `Bring the ball back to ${this.name}!`, sub: `${this.round}/${ROUNDS}`, short: `↩ ${this.td.emoji(this.e)}` }
       : { icon: '🎾', title: `Fetch ${this.name}’s ball <b>${this.round}/${ROUNDS}</b>`, sub: 'Grab it 🐾 and bring it back!' };
   }
 }

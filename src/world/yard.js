@@ -78,8 +78,9 @@ export function buildYard(seed = 'biscuit-yard') {
   const beds = [[-5, -7.4, 5, 1.3], [4.6, -7.4, 4.2, 1.3], [-9.2, -0.5, 1.2, 4.5]];
   for (const [x, z, w, d] of beds) group.add(flowerBed(x, z, w, d, rng, null));
   group.add(paddlingPool(3, 2.2, null));
-  // Paddling pool: a rim to hop over (or stand on), and shallow water inside to splash about in.
-  for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; col.circle(3 + Math.cos(a) * 1.0, 2.2 + Math.sin(a) * 1.0, 0.17, 0.42); }
+  // Paddling pool: a rim to hop over (or stand on), and shallow water inside to splash about in. From the water (its floor's
+  // 0.1 up) the rim's just low enough to walk out over, so nobody gets stuck in there; getting in still takes a hop.
+  for (let i = 0; i < 16; i++) { const a = (i / 16) * Math.PI * 2; col.circle(3 + Math.cos(a) * 1.0, 2.2 + Math.sin(a) * 1.0, 0.17, 0.4); }
   col.circle(3, 2.2, 0.86, 0.1);
   // Things to jump up on.
   group.add(crate(-3.55, -2.85, 0.3, 1.1));  // under the washing line — the way up to the sock
