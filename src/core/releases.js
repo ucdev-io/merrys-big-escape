@@ -18,6 +18,7 @@ export const RELEASES = [
       '🐕 Your crew: up to three pals follow you everywhere. They hop, paddle and tunnel after you, woof when you woof and copy your tricks. Near a pink-ringed team bone, a crew dog gives you a leg-up!',
       '🏡 The rest of your pals hang out in your garden. Walk up to one and woof to swap them in, or pick your crew from ☰ → My crew.',
       '📖 Every pal gets a page in your Sniff Book (🐾 Friends). Can you make friends with all ten?',
+      '🐾 Easier for little paws: a ball, treat or stick to fetch gets a big bouncing arrow, a quick tap on 👃 has a sniff, digging half a step off still counts, and you can walk out of the paddling pool.',
     ],
   },
   {
