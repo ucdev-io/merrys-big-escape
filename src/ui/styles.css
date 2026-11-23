@@ -628,6 +628,14 @@ body.touch-mode .stamina { bottom: calc(180px + var(--sa-b)); }
   .jg-card, .jg-board { width: min(100%, calc((100vh - 190px) * var(--ar))); margin: 4px auto; }
   .jg-card.done, .jg-card.pick { width: min(100%, calc((100vh - 250px) * var(--ar))); }
 }
+/* A new pal's card on a sideways phone: all of it fits, the four buttons of a full crew too (no scrolling to find them). */
+@media (max-height: 520px) {
+  .big-card .page:has(.pal-new) { padding: 10px 18px 12px; }
+  .big-card .page:has(.pal-new) h1 { font-size: 28px; }
+  .big-card .page:has(.pal-new) p { font-size: 17px; margin: 4px 0; }
+  .big-card .page:has(.pal-new) .btns { margin-top: 8px; gap: 8px; }
+  .big-card .page:has(.pal-new) .pill.big { font-size: 19px; padding: 5px 16px; }
+}
 /* (A friend's speech bubble from just before stays out of the way of a puzzle, or the menu.) */
 .big-card:not(.hidden):has(.pm-grid, .jg-board, .jg-card, .puzzles, .pm-offer, .menu-list) ~ .bubble { visibility: hidden; }
 

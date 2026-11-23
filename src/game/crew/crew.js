@@ -124,7 +124,7 @@ export class Crew {
     let chosen = false;
     const wrap = (fn) => () => { chosen = true; fn(); };
     this.hud.showCard(`
-      <h1>${m.pal.emoji} New pal: ${pal.name}!</h1>
+      <h1 class="pal-new">${m.pal.emoji} New pal: ${pal.name}!</h1>
       <p>${pal.blurb}</p>
       <p>Good at: <b>${skill.emoji} ${skill.name}</b></p>
       <p>${full ? `Your crew’s full (${MAX_CREW} at a time). Swap someone, or ${pal.name} can wait in your garden.` : `${pal.name} wants to join your crew!`}</p>`,
