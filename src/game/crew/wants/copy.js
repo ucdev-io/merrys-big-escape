@@ -10,7 +10,8 @@ const TRICKS = ['bow', 'spin', 'sit', 'roll', 'dance', 'howl'];
 const SEE = 9; // she has to see you do it
 
 const label = (id) => `${EMOTE[id].emoji} ${EMOTE[id].name}`;
-const how = (id) => `😀 menu, or key ${EMOTE[id].key}`;
+const touch = () => document.body.classList.contains('touch-mode'); // (phones: no keys to mention)
+const how = (id) => touch() ? 'tap 😀' : `😀 menu, or key ${EMOTE[id].key}`;
 
 /**
  * 🎭 Copycat (Pebble, down the alley): she does a trick, you do the same one (the 😀 tricks, or keys 1–6).
@@ -83,7 +84,7 @@ class Copy extends Game {
   end() { this.e.dog.stopEmote(); }
 
   objective() {
-    return { icon: '🎭', title: `Copy ${this.name}’s tricks <b>${this.round}/3</b>`, sub: 'Watch, then do the same trick: tap 😀 (or keys 1–6).' };
+    return { icon: '🎭', title: `Copy ${this.name}’s tricks <b>${this.round}/3</b>`, sub: `Watch, then do the same trick: tap 😀${touch() ? '' : ' (or keys 1–6)'}.` };
   }
 
   get hint() {
@@ -152,7 +153,7 @@ class Howl extends Game {
   end() { this.e.dog.stopEmote(); }
 
   objective() {
-    return { icon: '🐺', title: `Howl with ${this.name} <b>${this.n}/3</b>`, sub: 'When she howls, howl back: 😀 → 🐺 Howl (or key 5).' };
+    return { icon: '🐺', title: `Howl with ${this.name} <b>${this.n}/3</b>`, sub: `When she howls, howl back: 😀 → 🐺 Howl${touch() ? '' : ' (or key 5)'}.` };
   }
 
   get hint() { return this.phase === 'listen' || this.phase === 'count' ? `Howl back! 🐺 (${how('howl')})` : null; }
