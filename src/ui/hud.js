@@ -91,7 +91,7 @@ export class HUD {
     this.levelBanner.onclick = () => { this.levelBanner.classList.remove('show'); this.showWardrobe(); };
     this.updateXp();
     progress.on((e) => {
-      if (e.amount) this.float(`+${e.amount} ⭐ ${e.reason ?? ''}`.trim(), this.dogAnchor?.() ?? new THREE.Vector3(), 'xp');
+      if (e.amount) this.points(e.amount); // (a green +N: the ⭐ is for levels, up in the pill)
       if (e.levelUp) this.celebrateLevel(e.levelUp, e.unlocked);
       if (e.look) this.onLook?.(e.look);
       this.updateXp();
@@ -170,7 +170,7 @@ export class HUD {
       + (items ? `<div class="new">New: ${items}<br><small>Tap to dress up!</small></div>` : '');
     this.levelBanner.classList.remove('show'); void this.levelBanner.offsetWidth; this.levelBanner.classList.add('show');
     clearTimeout(this._lvT);
-    this._lvT = setTimeout(() => this.levelBanner.classList.remove('show'), 5500);
+    this._lvT = setTimeout(() => this.levelBanner.classList.remove('show'), 9000); // (long enough for a slow reader to tap it)
     this.onLevelUp?.(level);
   }
 
@@ -600,11 +600,45 @@ export class HUD {
     if (pos && emoji !== this.pinEmoji) { this.pinEmoji = emoji; this.pin.firstChild.textContent = emoji; }
   }
 
-  /** Little word that pops up and floats away (WOOF!, sniff sniff…). */
+  /**
+   * Little word that pops up and floats away (WOOF!, sniff sniff…). One message in one spot: a new word near one that's
+   * still showing takes its place (three conkers in a row are one message, not three), and the points for it ride
+   * along on it as a green +N (see points()).
+   */
   float(text, pos, cls = '') {
-    const e = el('div', `floater ${cls}`, text);
+    let f = this.floaters.find((q) => q.t < 0.9 && !q.ptsOnly && q.pos.distanceToSquared(pos) < 2.25);
+    if (f) { f.t = 0; f.pos.copy(pos); } else f = this.addFloater(pos);
+    f.e.className = `floater ${cls}`;
+    f.w.innerHTML = text;
+    // (Points that popped up a moment ago on their own, for this same thing: they join this word.)
+    const p = this.ptsF;
+    if (p && p !== f && p.ptsOnly && p.t < 0.3 && p.pos.distanceToSquared(pos) < 4) { this.addPoints(f, p.n); p.t = 99; }
+  }
+
+  /** Points earned: a green +N on the word that's showing (or on its own over the dog), adding up while it's there. */
+  points(n) {
+    let f = this.ptsF;
+    if (!(f && f.t < 1 && this.floaters.includes(f))) {
+      const at = this.dogAnchor?.() ?? new THREE.Vector3();
+      f = this.floaters.find((q) => q.t < 0.35 && !q.ptsOnly && q.pos.distanceToSquared(at) < 4);
+      if (!f) { f = this.addFloater(at); f.ptsOnly = true; f.e.className = 'floater pts-only'; }
+    }
+    this.addPoints(f, n);
+    f.t = Math.min(f.t, 0.25); // (still adding up: it stays a moment longer)
+  }
+
+  addPoints(f, n) {
+    f.n = (f.n ?? 0) + n;
+    f.pts.textContent = `+${f.n}`;
+    this.ptsF = f;
+  }
+
+  addFloater(pos) {
+    const e = el('div', 'floater', '<span class="w"></span><span class="pts"></span>');
     this.root.appendChild(e);
-    this.floaters.push({ e, pos: pos.clone(), t: 0, dx: (Math.random() - 0.5) * 30 });
+    const f = { e, w: e.firstChild, pts: e.lastChild, pos: pos.clone(), t: 0, dx: (Math.random() - 0.5) * 30, n: 0 };
+    this.floaters.push(f);
+    return f;
   }
 
   /** opts.onClose: called once when this card goes (hidden, or another card takes its place). */
@@ -653,9 +687,11 @@ export class HUD {
     if (pinned === this.pin.classList.contains('hidden')) this.pin.classList.toggle('hidden', !pinned);
     this.floaters = this.floaters.filter((f) => {
       f.t += dt;
-      if (f.t > 1.2) { f.e.remove(); return false; }
+      if (f.t > 1.2) { f.e.remove(); if (this.ptsF === f) this.ptsF = null; return false; }
       const s = this.project(f.pos);
-      f.e.style.transform = `translate(${s.x + f.dx * f.t}px, ${s.y - f.t * 60}px) translate(-50%, -100%) scale(${0.8 + Math.min(f.t * 4, 0.4)})`;
+      // (Kept on screen, below the top row of buttons: with the camera down low by a tree, the dog's head can be off the top.)
+      const x = Math.min(window.innerWidth - 60, Math.max(60, s.x + f.dx * f.t)), y = Math.min(window.innerHeight - 40, Math.max(110, s.y - f.t * 60));
+      f.e.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%) scale(${0.8 + Math.min(f.t * 4, 0.4)})`;
       f.e.style.opacity = s.behind ? 0 : 1 - Math.max(0, (f.t - 0.7) / 0.5);
       return true;
     });

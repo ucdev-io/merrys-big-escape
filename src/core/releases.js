@@ -19,6 +19,7 @@ export const RELEASES = [
       '🏡 The rest of your pals hang out in your garden. Walk up to one and woof to swap them in, or pick your crew from ☰ → My crew.',
       '📖 Every pal gets a page in your Sniff Book (🐾 Friends). Can you make friends with all ten?',
       '🐾 Easier for little paws: a ball, treat or stick to fetch gets a big bouncing arrow, a quick tap on 👃 has a sniff, digging half a step off still counts, and you can walk out of the paddling pool.',
+      '✨ Less clutter: one message at a time, with your points as a green +20 (grab five conkers and it counts up). Pickles’ real hints glow yellow 💡, the camera swings round more gently, and after you escape the garden you go straight into the neighbourhood.',
     ],
   },
   {

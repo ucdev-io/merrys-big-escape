@@ -310,7 +310,7 @@ export class YardChapter {
     const pack = loadSave().pendingPack;
     const go = pack
       ? [`Join pack ${pack} →`, () => { writeSave({ chapter: 'town', pendingPack: null }); location.href = packPath(pack); }]
-      : ['Into the neighbourhood →', () => { writeSave({ chapter: 'town' }); location.href = `${HOME}?town`; }];
+      : ['Into the neighbourhood →', () => { writeSave({ chapter: 'town', straightIn: true }); location.href = `${HOME}?town`; }]; // (no "Who's playing?" on the way: same dog)
     this.hud.showCard(`
       <h1 class="who"></h1>
       <p>With a squeaky duck, a smelly sock, an ancient biscuit<br>and a very muddy nose, <span class="who2"></span> is free!</p>

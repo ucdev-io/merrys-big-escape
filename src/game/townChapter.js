@@ -295,11 +295,20 @@ export class TownChapter {
     this.refreshObjective();
     this.player.frozen = true;
     if (welcome) { this.pack.attach(net, welcome); this.begin(); } // arrived via a pack link
+    else if (this.straightIn()) { this.begin(); this.pack.open(); } // just escaped the garden: no "Who's playing?", off she goes
     else this.showLobby();
     globalThis.__mark?.('setup: mud, lobby');
   }
 
   // ---------- lobby & pack ----------
+
+  /** Through the tunnel from the garden a moment ago, as the dog just played: straight into the town (once). */
+  straightIn() {
+    const s = loadSave();
+    if (!s.straightIn) return false;
+    writeSave({ straightIn: false });
+    return !!s.profile;
+  }
 
   profile() { return loadSave().profile ?? { breed: this.player.breedKey, name: BREEDS[this.player.breedKey].dogName }; }
 

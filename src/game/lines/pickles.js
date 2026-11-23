@@ -24,6 +24,8 @@ export const PICKLES_LINES = {
   ],
 
   idle: [
+    'Statue practice? Very good.',
+    'Waiting for something? So am I. Dinner.',
     'Is that a nose or a carrot?',
     'I can see the WHOLE neighbourhood from up here.',
     'Dogs. So much running. So little thinking.',
@@ -297,7 +299,7 @@ export const PICKLES_LINES = {
     'If you find a fish down there, it’s mine.',
     'Do you even know what you’re looking for?',
     'Very messy. Very dog.',
-    'Try sniffing first. It’s what the nose is FOR.',
+    '💡 Try sniffing first 👃. It’s what the nose is FOR.',
   ],
   jump: [
     'Boing! Very undignified.',
@@ -369,13 +371,10 @@ export const PICKLES_LINES = {
     'I saw nothing. NOTHING.',
     'Ooh, you’re in trouble now.',
   ],
-  stuck: [
-    'Have you broken? Hello?',
-    'Are you… thinking? Careful.',
-    'Statue practice? Very good.',
-    'Waiting for something? So am I. Dinner.',
-    'Lost? Use that big nose. Hold sniff.',
-    'Treasure doesn’t dig itself up, you know.',
+  stuck: [ // (a real hint: standing still for ages usually means lost)
+    'Lost? Use that big nose! Tap 👃, then follow the golden trail.',
+    'Treasure doesn’t dig itself up. Sniff 👃, follow the trail, then dig 🐾.',
+    'Have you broken? Sniff 👃! The trail shows where to go.',
   ],
   gnome: [
     'You scared Gerald!',

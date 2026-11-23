@@ -139,7 +139,7 @@ export function showLobby({ hud, profile, current = null, seed = null, townName 
     n.className = 'dogchip new';
     n.innerHTML = '<span class="plus">＋</span><span class="dn">New dog</span>';
     n.onclick = () => { touched = true; chooseDog(null); };
-    row.appendChild(n);
+    row.prepend(n); // (first: easy to find, however many dogs there are)
     wrap.querySelector('.mydogs').classList.remove('hidden');
     const mine = dogs.find((d) => d.id === current);
     if (!touched) chooseDog(mine ?? null);

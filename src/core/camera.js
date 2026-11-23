@@ -106,7 +106,7 @@ export class FollowCamera {
       const behind = heading + Math.PI;
       const diff = wrap(behind - this.yaw);
       const facing = THREE.MathUtils.smoothstep(Math.cos(diff), -0.4, 0.6);
-      const rate = clamp(speed / 4, 0.25, 1) * (0.25 + 0.75 * facing) * 1.6;
+      const rate = clamp(speed / 4, 0.25, 1) * (0.25 + 0.75 * facing) * 0.8; // (gently: half the old 1.6, so "left" doesn't keep changing under a small thumb)
       this.yaw += diff * (1 - Math.exp(-dt * rate));
     }
 

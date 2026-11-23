@@ -133,6 +133,10 @@ body.touch-mode .boosts { bottom: 177px; }
 .floater { position: absolute; left: 0; top: 0; font-size: 26px; font-weight: bold; color: var(--ink); text-shadow: 0 2px 0 var(--paper), 0 -2px 0 var(--paper), 2px 0 0 var(--paper), -2px 0 0 var(--paper); white-space: nowrap; }
 .floater.sniff { font-size: 20px; color: #9a6a3a; }
 .floater.dig { font-size: 22px; color: #7a5236; }
+/* Points ride on the word as a green +N (hud.points); on their own when there's no word. */
+.floater .pts { color: #2e8b3d; margin-left: 0.3em; }
+.floater .pts:empty, .floater .w:empty { display: none; }
+.floater.pts-only .pts { margin-left: 0; }
 
 /* A pin over something to fetch: an emoji and an arrow, bobbing (hud.mark). */
 .spot-pin { position: absolute; left: 0; top: 0; pointer-events: none; }
@@ -204,7 +208,8 @@ body.touch-mode .touch { display: block; }
 .style-picker kbd { font-family: inherit; font-size: 13px; opacity: 0.6; }
 .style-blurb { width: 100%; text-align: center; font-size: 15px; opacity: 0.75; }
 .bubble.offscreen::after { display: none; }
-.bubble.offscreen.cat::before { content: "🐱  "; } /* (Pickles; everyone in town says their own emoji) */
+.bubble.offscreen.cat::before { content: "🐱  "; }
+.bubble.hint { background: #fff1b8 !important; border-color: #b8901f; font-weight: bold; } /* (Pickles; everyone in town says their own emoji) */
 
 /* Compass toward the next place: top middle on a big screen; on a phone it goes with the goal, top left
    (it's in .top-left, so 'fixed' here keeps it in the middle of the screen) */

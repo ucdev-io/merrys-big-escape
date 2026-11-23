@@ -4,6 +4,9 @@ import { Voice } from '../dialogue.js';
 import { PICKLES_LINES, PICKLES_WORDS } from '../lines/pickles.js';
 import { sfx } from '../../core/audio.js';
 
+/** What she says that's a real hint, not a joke (and any line starting 💡). */
+const HINTS = new Set(['stuck', 'sockHint', 'hint']);
+
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -39,7 +42,9 @@ export class Pickles {
   say(situation, { cooldown = 0, force = false, dur = 3.5 } = {}) {
     const line = this.voice.say(situation, this.vars(), { cooldown, force });
     if (!line) return false;
-    this.hud.say(line, this.anchor, dur, 'cat'); // ('cat': off screen, it says who's talking)
+    // A real hint (💡) looks different from her jokes: a yellow bubble you can spot without reading it.
+    const hint = HINTS.has(situation) || line.startsWith('💡');
+    this.hud.say(hint && !line.startsWith('💡') ? `💡 ${line}` : line, this.anchor, hint ? Math.max(dur, 5) : dur, hint ? 'cat hint' : 'cat'); // ('cat': off screen, it says who's talking)
     return true;
   }
 
