@@ -5,7 +5,8 @@ import { ring } from '../homes.js';
 
 const PACE = 3.1;    // a bit slower than your trot (3.4)…
 const BURST = 5.4;   // …but a dash when you get close
-const CATCH = 1.15;  // this close: caught!
+const CATCH = 1.35;  // this close: caught! (a lunge)
+const TIRE = 45;     // he tires over this long: slower, and longer, more frequent puffs (so everybody catches him in the end)
 const TIME = 75;     // then he's too puffed to go on (and so are you)
 
 /**
@@ -30,8 +31,12 @@ class Chase extends Game {
     const e = this.e, h = e.home, d = flat(P.pos, e.pos);
     this.t += dt;
     this.pose = { happy: 1 };
-    if (this.phase === 'ready') { lookAt(e.dog.root, P.pos.x, P.pos.z, dt); if (this.t >= 0) { this.phase = 'run'; this.t = 0; } return; }
-    if (d < CATCH + 0.25 * e.size && Math.abs(P.pos.y - e.pos.y) < 1) return 'win';
+    if (this.phase === 'ready') { // (and he's off! A zoom away first, so there's a chase)
+      lookAt(e.dog.root, P.pos.x, P.pos.z, dt);
+      if (this.t >= 0) { this.phase = 'run'; this.t = 0; this.burstT = 1.3; this.burstCD = 3; this.td.hud.float('zoom!', e.pos.clone().setY(0.9), 'sniff'); }
+      return;
+    }
+    if (this.t > 1 && d < CATCH + 0.25 * e.size && Math.abs(P.pos.y - e.pos.y) < 1) return 'win';
     if (this.t > TIME || this.away(dt, e.pos, 40, 10)) return 'stop';
     if (!h.block) return; // (no streets here: he just bounces about)
     // Which way round the block gets him away from you?
@@ -43,13 +48,14 @@ class Chase extends Game {
     if (this.puffT > 0) {
       this.puffT -= dt;
       lookAt(e.dog.root, P.pos.x, P.pos.z, dt, 6);
-      if (d < 2.4 && this.puffT > 0.4) this.puffT = 0.4; // (you're nearly on him: one last dash!)
+      if (d < 2.4 && this.puffT > 0.8) this.puffT = 0.8; // (you're nearly on him: pounce, quick, before his last dash!)
       return;
     }
-    if (this.puffIn <= 0) { this.puffIn = 4.5 + Math.random() * 2.5; this.puffT = 1.8; this.say('puff', {}, 1.8); return; }
+    const tired = Math.min(1, this.t / TIRE);
+    if (this.puffIn <= 0) { this.puffIn = 4.5 - 1.8 * tired + Math.random() * 2.5; this.puffT = 1.8 + 1.2 * tired; this.say('puff', {}, 1.8); return; }
     if (d < 2.6 && this.burstCD <= 0) { this.burstT = 0.8; this.burstCD = 2.6; this.td.hud.float('zoom!', e.pos.clone().setY(0.9), 'sniff'); }
     if (d < 6 && Math.random() < dt * 0.25) this.say('during', {}, 2);
-    const v = this.burstT > 0 ? BURST : PACE * (d > 14 ? 0.7 : 1); // (waits for you a bit if you're miles behind)
+    const v = this.burstT > 0 ? BURST * (1 - 0.15 * tired) : PACE * (1 - 0.22 * tired) * (d > 14 ? 0.7 : 1); // (waits for you a bit if you're miles behind)
     e.s += v * dt * e.dir;
     const r = ring(h.block, e.s, e.dir);
     e.pos.x = r.x; e.pos.z = r.z;

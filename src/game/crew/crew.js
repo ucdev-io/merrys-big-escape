@@ -60,8 +60,8 @@ export class Crew {
   /** One of them says something (with their name, so you get to know who's who). */
   say(m, key, dur = 3) {
     if (!m.cd || !this.hud.card.classList.contains('hidden')) return; // (no chatting over a card)
-    const head = () => m.cd.pos.clone().add(V(0, 0.95 * m.cd.size + 0.15, 0));
-    this.hud.say(`${m.pal.emoji} <b>${m.pal.name}:</b> ${this.line(key, { pal: m.pal.name })}`, head, dur);
+    m.head ??= () => m.cd.pos.clone().add(V(0, 0.95 * m.cd.size + 0.15, 0)); // (the same anchor each time: a new line replaces their last one)
+    this.hud.say(`${m.pal.emoji} <b>${m.pal.name}:</b> ${this.line(key, { pal: m.pal.name })}`, m.head, dur);
   }
 
   get followers() { return pals.following().map((id) => this.members.get(id)).filter((m) => m?.cd && (m.mode === 'follow' || m.mode === 'help')); }

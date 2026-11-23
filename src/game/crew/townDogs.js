@@ -93,6 +93,9 @@ export class TownDogs {
     }
   }
 
+  /** A card open (a new pal, the menu…): nobody chats or starts a game behind it. */
+  get carded() { return !this.hud.card.classList.contains('hidden'); }
+
   // ---------- talking ----------
 
   emoji(e) { return e.pal.emoji ?? PAL_EMOJI[e.id] ?? '🐶'; }
@@ -107,8 +110,9 @@ export class TownDogs {
 
   /** A speech bubble over their head, with their name (there are a lot of dogs about). */
   say(e, text, dur = 3.2) {
-    if (!text || !this.hud.card.classList.contains('hidden')) return; // (no chatting over a card)
-    this.hud.say(`${this.emoji(e)} <b>${e.pal.name}:</b> ${text}`, () => e.pos.clone().add(V(0, 0.95 * e.size + 0.2, 0)), dur);
+    if (!text || this.carded) return; // (no chatting over a card)
+    e.head ??= () => e.pos.clone().add(V(0, 0.95 * e.size + 0.2, 0)); // (the same anchor each time: a new line replaces their last one)
+    this.hud.say(`${this.emoji(e)} <b>${e.pal.name}:</b> ${text}`, e.head, dur);
   }
 
   woof(e, vol = 0.6) {
@@ -170,6 +174,8 @@ export class TownDogs {
       this.idle(e, dt, P, canAct, d);
     }
     if (g) {
+      // (Somebody else offered a job mid-game, say Sandy at the beach? It waits: the compass stays on this game.)
+      if (this.job && this.friends.focus !== this.job) { this.friends.focus = this.job; this.friends.onChange?.(); }
       const r = g.update(dt, P, { canAct });
       if (this.game === g && g.e.dog.root.visible !== !g.e.hidden) g.e.dog.root.visible = !g.e.hidden;
       if (this.game === g) this.animate(g.e, dt, g.pose ?? {});
@@ -226,7 +232,7 @@ export class TownDogs {
       this.say(e, this.line(e, 'hello'), 3);
       return;
     }
-    if (d < askR && e.cool <= 0 && !this.game && !this.busy() && !(W.canAsk && !W.canAsk(this, e, P))) return this.begin(e);
+    if (d < askR && e.cool <= 0 && !this.game && !this.busy() && !this.carded && !(W.canAsk && !W.canAsk(this, e, P))) return this.begin(e);
     if (e.talkT > 0 || d > 7.5) return;
     if (this.game && d < askR + 1) { e.talkT = 14; this.say(e, this.line(e, 'busy', { other: this.game.e.pal.name }), 2.8); return; }
     e.talkT = 13 + Math.random() * 8;
