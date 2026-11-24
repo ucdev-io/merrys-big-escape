@@ -4,7 +4,8 @@
  * latest on its last card, and its What's new pop-up lists every one.
  *
  * A new version: add it at the top (version, date as YYYY-MM-DD, a title, a few short lines a kid can read) and set
- * package.json's "version" to match.
+ * package.json's "version" to match. Once it's pushed, `npm run release` tags it (v0.9.0 and so on) and puts the
+ * notes on GitHub's Releases page.
  */
 
 export const CHANNEL = 'Beta';
@@ -12,7 +13,7 @@ export const COMING = 'More trips, towns and surprises are on the way!';
 
 export const RELEASES = [
   {
-    version: '0.9.0', date: '2026-11-23', title: 'Merry’s crew',
+    version: '0.9.0', date: '2026-11-24', title: 'Merry’s crew',
     notes: [
       '🐾 Ten dogs live around town: in the park, by the pond, on bakery street, down the alley, in the woods, at the farm and on the beach. Each one has a game to play: hide-and-seek, fetch, a race, a howl-along, copy the tricks and more. Win and they’re your pal!',
       '🐕 Your crew: up to three pals follow you everywhere. They hop, paddle and tunnel after you, woof when you woof and copy your tricks. Near a pink-ringed team bone, a crew dog gives you a leg-up!',

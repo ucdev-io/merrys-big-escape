@@ -10,7 +10,8 @@
     "site": "vite build -c site/vite.config.js && npm run demo",
     "site:dev": "vite -c site/vite.config.js --port 5183 --host",
     "preview": "vite preview",
-    "play": "vite build && node server/index.js"
+    "play": "vite build && node server/index.js",
+    "release": "node scripts/release.mjs"
   },
   "dependencies": {
     "qrcode": "^1.5.4",
